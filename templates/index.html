@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Lady J Salon & Day Spa
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+
+<header class="header">
+
+    <a class="brand" href="#top">
+
+        <strong>
+            LADY J
+        </strong>
+
+        <span>
+            SALON & DAY SPA
+        </span>
+
+    </a>
+
+
+    <nav>
+
+        <a href="#services">
+            Services
+        </a>
+
+        <a href="#about">
+            About
+        </a>
+
+        <a href="#visit">
+            Visit
+        </a>
+
+    </nav>
+
+
+    <a href="#booking" class="book-button">
+        Book now
+    </a>
+
+</header>
+
+
+
+<main id="top">
+
+
+<!-- HERO -->
+
+<section class="hero">
+
+
+    <div class="hero-copy">
+
+
+        <span class="open-pill">
+            Open every day • 10 AM–6 PM
+        </span>
+
+
+        <h1>
+
+            Your next beauty
+            appointment starts here.
+
+        </h1>
+
+
+        <p>
+
+            Discover professional salon and spa services,
+            see clear TT$ pricing and reserve your preferred
+            appointment in minutes.
+
+        </p>
+
+
+        <div class="hero-actions">
+
+            <a href="#services" class="primary">
+                Explore services
+            </a>
+
+            <a
+                href="https://wa.me/18683745517"
+                class="secondary"
+            >
+                WhatsApp us
+            </a>
+
+        </div>
+
+
+        <div class="trust-row">
+
+            <span>
+                ✓ International experience
+            </span>
+
+            <span>
+                ✓ Free parking
+            </span>
+
+            <span>
+                ✓ Open 7 days
+            </span>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="hero-image">
+
+        <img
+            src="{{ url_for('static', filename='images/facials.jpg') }}"
+            alt="Lady J facial treatment"
+        >
+
+        <div class="floating-card">
+
+            <span>
+                POPULAR
+            </span>
+
+            <strong>
+                Classic Facial
+            </strong>
+
+            <b>
+                TT$450
+            </b>
+
+            <button
+                type="button"
+                data-service="skin-02"
+                class="quick-book"
+            >
+                Book
+            </button>
+
+        </div>
+
+    </div>
+
+
+</section>
+
+
+
+<!-- LOCATION QUICK INFO -->
+
+<section class="quick-info">
+
+
+    <div>
+
+        <span>
+            LOCATION
+        </span>
+
+        <strong>
+            On My Way Plaza
+        </strong>
+
+        <small>
+            Petit Valley
+        </small>
+
+    </div>
+
+
+    <div>
+
+        <span>
+            HOURS
+        </span>
+
+        <strong>
+            10 AM–6 PM
+        </strong>
+
+        <small>
+            Monday–Sunday
+        </small>
+
+    </div>
+
+
+    <div>
+
+        <span>
+            PARKING
+        </span>
+
+        <strong>
+            Free
+        </strong>
+
+        <small>
+            Right at our doors
+        </small>
+
+    </div>
+
+
+    <div>
+
+        <span>
+            CONTACT
+        </span>
+
+        <strong>
+            868-374-5517
+        </strong>
+
+        <small>
+            Call or WhatsApp
+        </small>
+
+    </div>
+
+
+</section>
+
+
+
+<!-- SERVICES -->
+
+<section id="services" class="services">
+
+
+    <div class="section-title">
+
+        <span>
+            BEAUTY, YOUR WAY
+        </span>
+
+        <h2>
+            Find your service
+        </h2>
+
+        <p>
+            Browse by category or search exactly what you need.
+        </p>
+
+    </div>
+
+
+
+    <div class="service-tools">
+
+
+        <input
+            id="serviceSearch"
+            type="search"
+            placeholder="Search services"
+        >
+
+
+        <div class="category-scroll">
+
+
+            <button
+                class="category active"
+                data-category="All"
+            >
+                All
+            </button>
+
+
+            {% for category in categories %}
+
+            <button
+                class="category"
+                data-category="{{ category }}"
+            >
+                {{ category }}
+            </button>
+
+            {% endfor %}
+
+
+        </div>
+
+
+    </div>
+
+
+
+    <div class="service-grid">
+
+
+        {% for service in services %}
+
+
+        <article
+            class="service"
+            data-category="{{ service.category }}"
+            data-name="{{ service.name|lower }}"
+        >
+
+
+            <div>
+
+
+                <span class="service-category">
+                    {{ service.category }}
+                </span>
+
+
+                <h3>
+                    {{ service.name }}
+                </h3>
+
+
+                <small>
+                    {{ service.minutes }} min
+                </small>
+
+
+            </div>
+
+
+
+            <div class="service-action">
+
+
+                <strong>
+                    TT${{ service.price }}
+                </strong>
+
+
+                <button
+                    type="button"
+                    class="quick-book"
+                    data-service="{{ service.id }}"
+                >
+                    Book
+                </button>
+
+
+            </div>
+
+
+        </article>
+
+
+        {% endfor %}
+
+
+    </div>
+
+
+    <p class="price-note">
+
+        Prices are shown in Trinidad & Tobago dollars.
+        Final pricing may vary for selected hair and customised services.
+
+    </p>
+
+
+</section>
+
+
+
+<!-- PROMOTION -->
+
+<section class="promo">
+
+
+    <img
+        src="{{ url_for('static', filename='images/fifty-plus.jpg') }}"
+        alt="Lady J 50 plus beauty offer"
+    >
+
+
+    <div>
+
+
+        <span>
+            SPECIAL OFFERS
+        </span>
+
+
+        <h2>
+            Confidence looks good at every age.
+        </h2>
+
+
+        <p>
+
+            Ask about special 50+ offers across hair,
+            skin, nails, waxing, brows and lashes.
+
+        </p>
+
+
+        <a
+            href="https://wa.me/18683745517"
+            class="gold-button"
+        >
+            See current offers
+        </a>
+
+
+    </div>
+
+
+</section>
+
+
+
+<!-- ABOUT -->
+
+<section id="about" class="about">
+
+
+    <div>
+
+
+        <span class="eyebrow">
+            PROFESSIONAL CARE
+        </span>
+
+
+        <h2>
+
+            International expertise.
+            Personal attention.
+
+        </h2>
+
+
+        <p>
+
+            Lady J Salon & Day Spa is led by a
+
+            <strong>
+                Master Cosmetologist and International Educator
+            </strong>
+
+            with professional licensing experience across the
+
+            <strong>
+                United Kingdom, United States,
+                Barbados and Trinidad & Tobago.
+            </strong>
+
+        </p>
+
+
+        <p>
+
+            Our approach combines professional knowledge
+            with thoughtful service for diverse hair textures,
+            skin tones, ages and individual beauty goals.
+
+        </p>
+
+
+        <div class="badges">
+
+            <span>
+                All hair textures
+            </span>
+
+            <span>
+                All skin tones
+            </span>
+
+            <span>
+                All ages
+            </span>
+
+        </div>
+
+
+    </div>
+
+
+
+    <img
+        src="{{ url_for('static', filename='images/lashes-brows.jpg') }}"
+        alt="Lady J lashes and brows"
+    >
+
+
+</section>
+
+
+
+<!-- BOOKING -->
+
+<section id="booking" class="booking">
+
+
+    <div class="booking-heading">
+
+        <span>
+            BOOK YOUR VISIT
+        </span>
+
+        <h2>
+            Choose. Tap. Book.
+        </h2>
+
+        <p>
+            No complicated forms. Pick your service,
+            day and preferred time.
+        </p>
+
+    </div>
+
+
+
+    <form
+        id="bookingForm"
+        action="/book"
+        method="POST"
+        class="booking-card"
+    >
+
+
+        <!-- SERVICE -->
+
+        <div class="form-section">
+
+
+            <label>
+                Service
+            </label>
+
+
+            <select
+                id="serviceSelect"
+                name="service_id"
+                required
+            >
+
+                <option value="">
+                    Choose your service
+                </option>
+
+                {% for category in categories %}
+
+                <optgroup label="{{ category }}">
+
+                    {% for service in services if service.category == category %}
+
+                    <option value="{{ service.id }}">
+
+                        {{ service.name }}
+                        — TT${{ service.price }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </optgroup>
+
+                {% endfor %}
+
+            </select>
+
+
+        </div>
+
+
+
+        <!-- DATE -->
+
+        <div class="form-section">
+
+
+            <label>
+                Choose a day
+            </label>
+
+
+            <input
+                id="appointmentDate"
+                name="appointment_date"
+                type="hidden"
+                required
+            >
+
+
+            <div class="calendar">
+
+
+                <div class="calendar-header">
+
+
+                    <button
+                        type="button"
+                        id="prevMonth"
+                    >
+                        ‹
+                    </button>
+
+
+                    <strong id="calendarTitle">
+                    </strong>
+
+
+                    <button
+                        type="button"
+                        id="nextMonth"
+                    >
+                        ›
+                    </button>
+
+
+                </div>
+
+
+                <div class="weekday-row">
+
+                    <span>Sun</span>
+                    <span>Mon</span>
+                    <span>Tue</span>
+                    <span>Wed</span>
+                    <span>Thu</span>
+                    <span>Fri</span>
+                    <span>Sat</span>
+
+                </div>
+
+
+                <div
+                    id="calendarGrid"
+                    class="calendar-grid"
+                >
+                </div>
+
+
+                <div
+                    id="selectedDate"
+                    class="selected-date"
+                >
+                    Select your preferred day
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- TIME -->
+
+        <div class="form-section">
+
+
+            <label>
+                Choose a time
+            </label>
+
+
+            <input
+                id="appointmentTime"
+                name="appointment_time"
+                type="hidden"
+                required
+            >
+
+
+            <div class="time-label">
+
+                <strong>
+                    Standard hours
+                </strong>
+
+                <span>
+                    10 AM–6 PM
+                </span>
+
+            </div>
+
+
+            <div class="time-grid">
+
+
+                {% for value, label in [
+                    ("10:00","10 AM"),
+                    ("11:00","11 AM"),
+                    ("12:00","12 PM"),
+                    ("13:00","1 PM"),
+                    ("14:00","2 PM"),
+                    ("15:00","3 PM"),
+                    ("16:00","4 PM"),
+                    ("17:00","5 PM")
+                ] %}
+
+
+                <button
+                    type="button"
+                    class="time"
+                    data-time="{{ value }}"
+                >
+                    {{ label }}
+                </button>
+
+
+                {% endfor %}
+
+
+            </div>
+
+
+
+            <div class="time-label extended-title">
+
+                <strong>
+                    Extended hours
+                </strong>
+
+                <span>
+                    Convenience fee applies
+                </span>
+
+            </div>
+
+
+            <div class="time-grid">
+
+
+                {% for value, label in [
+                    ("08:00","8 AM"),
+                    ("09:00","9 AM"),
+                    ("18:00","6 PM"),
+                    ("19:00","7 PM"),
+                    ("20:00","8 PM")
+                ] %}
+
+
+                <button
+                    type="button"
+                    class="time extended"
+                    data-time="{{ value }}"
+                >
+                    {{ label }}
+                </button>
+
+
+                {% endfor %}
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- CUSTOMER -->
+
+        <div class="form-section">
+
+
+            <label>
+                Your details
+            </label>
+
+
+            <input
+                name="customer_name"
+                type="text"
+                placeholder="Your name"
+                required
+            >
+
+
+            <input
+                name="phone"
+                type="tel"
+                placeholder="WhatsApp or phone"
+                required
+            >
+
+
+            <input
+                name="email"
+                type="email"
+                placeholder="Email (optional)"
+            >
+
+
+        </div>
+
+
+
+        <!-- EXACT TIME -->
+
+        <label class="exact-time">
+
+
+            <input
+                type="checkbox"
+                name="exact_time"
+                value="yes"
+            >
+
+
+            <span>
+
+                <strong>
+                    Secure my exact appointment time
+                </strong>
+
+                <small>
+
+                    Hold this specific time exclusively
+                    with a non-refundable reservation deposit.
+                    Your deposit is applied to your service total.
+
+                </small>
+
+            </span>
+
+
+        </label>
+
+
+
+        <button
+            class="submit-booking"
+            type="submit"
+        >
+
+            Request appointment
+
+            <span>
+                →
+            </span>
+
+        </button>
+
+
+        <p class="booking-note">
+
+            Standard appointment requests are confirmed
+            based on availability.
+
+        </p>
+
+
+    </form>
+
+
+</section>
+
+
+
+<!-- LOCATION -->
+
+<section id="visit" class="visit">
+
+
+    <div class="visit-card">
+
+
+        <span>
+            VISIT LADY J
+        </span>
+
+
+        <h2>
+            Easy to find.
+            Even easier to visit.
+        </h2>
+
+
+        <address>
+
+            <strong>
+                On My Way Plaza
+            </strong>
+
+            <p>
+                In front of West Hills Condos
+            </p>
+
+            <p>
+                Petit Valley, Trinidad & Tobago
+            </p>
+
+        </address>
+
+
+
+        <div class="parking">
+
+            <strong>
+                Free parking
+            </strong>
+
+            <p>
+                Park directly in front of the salon doors.
+            </p>
+
+        </div>
+
+
+        <a
+            href="https://wa.me/18683745517"
+            class="primary"
+        >
+            WhatsApp 868-374-5517
+        </a>
+
+
+    </div>
+
+
+
+    <div class="hours">
+
+
+        <span class="open-pill">
+            OPEN 7 DAYS
+        </span>
+
+
+        <h3>
+            Salon hours
+        </h3>
+
+
+        {% for day in [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+        ] %}
+
+
+        <div>
+
+            <span>
+                {{ day }}
+            </span>
+
+            <strong>
+                10 AM–6 PM
+            </strong>
+
+        </div>
+
+
+        {% endfor %}
+
+
+        <p>
+
+            Early and later appointments may be
+            available with a convenience fee.
+
+        </p>
+
+
+    </div>
+
+
+</section>
+
+
+</main>
+
+
+
+<div class="mobile-book-bar">
+
+    <a href="#booking">
+        Book appointment
+    </a>
+
+</div>
+
+
+
+<footer>
+
+    <strong>
+        LADY J
+    </strong>
+
+    <span>
+        Salon & Day Spa • Petit Valley
+    </span>
+
+    <span>
+        @LadyJSalon • 868-374-5517
+    </span>
+
+</footer>
+
+
+
+<script
+    src="{{ url_for('static', filename='app.js') }}"
+></script>
+
+
+</body>
+
+</html>
