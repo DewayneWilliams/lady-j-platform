@@ -1,0 +1,462 @@
+# ============================================================
+# LADY J PLATFORM - PUBLIC REPOSITORY SECURITY .gitignore
+# ============================================================
+
+# ------------------------------------------------------------
+# ENVIRONMENT VARIABLES / SECRETS
+# ------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.env
+
+secrets/
+secret/
+credentials/
+credential/
+private/
+private_data/
+secure/
+keys/
+
+# ------------------------------------------------------------
+# PASSWORD / TOKEN / CREDENTIAL FILES
+# ------------------------------------------------------------
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+*.kdbx
+
+credentials.csv
+credentials.json
+service-account*.json
+service_account*.json
+client-secret*.json
+client_secret*.json
+oauth*.json
+
+# ------------------------------------------------------------
+# SSH
+# ------------------------------------------------------------
+.ssh/
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+known_hosts
+
+# ------------------------------------------------------------
+# CLOUD CREDENTIALS
+# ------------------------------------------------------------
+.aws/
+.azure/
+.gcloud/
+
+aws-credentials*
+aws_credentials*
+azureProfile.json
+accessTokens.json
+application_default_credentials.json
+
+# ------------------------------------------------------------
+# PYTHON
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+.venv/
+venv/
+env/
+ENV/
+
+.python-version
+
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+develop-eggs/
+downloads/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+
+# ------------------------------------------------------------
+# FLASK
+# ------------------------------------------------------------
+instance/
+.flaskenv
+
+# Local config files that may contain secrets
+config.py
+settings.py
+local_settings.py
+config.local.*
+settings.local.*
+*.local.py
+
+# ------------------------------------------------------------
+# DATABASES
+# ------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+
+*.sql
+*.dump
+*.bak
+*.backup
+
+database/
+databases/
+db_backups/
+database_backups/
+dumps/
+
+# ------------------------------------------------------------
+# MYSQL / POSTGRES LOCAL CONFIG
+# ------------------------------------------------------------
+.my.cnf
+.pgpass
+pgpass.conf
+
+# ------------------------------------------------------------
+# CUSTOMER / USER / BUSINESS DATA
+# ------------------------------------------------------------
+uploads/
+private_uploads/
+customer_data/
+customers/
+user_data/
+users_data/
+client_data/
+clients/
+member_data/
+members_data/
+
+exports/
+backups/
+archive/
+archives/
+
+# ------------------------------------------------------------
+# SENSITIVE DATA FILES
+# ------------------------------------------------------------
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.parquet
+*.feather
+*.jsonl
+*.ndjson
+
+# Keep intentionally public sample data if needed
+!sample_data/
+!sample_data/**
+!examples/
+!examples/**
+
+# ------------------------------------------------------------
+# AI / MACHINE LEARNING
+# ------------------------------------------------------------
+models/
+model_artifacts/
+artifacts/
+checkpoints/
+weights/
+runs/
+mlruns/
+
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.onnx
+*.ckpt
+*.safetensors
+
+# ------------------------------------------------------------
+# JUPYTER
+# ------------------------------------------------------------
+.ipynb_checkpoints/
+
+# ------------------------------------------------------------
+# VECTOR DATABASES / LOCAL AI STORES
+# ------------------------------------------------------------
+chroma/
+chroma_db/
+faiss_index/
+vector_store/
+vector_db/
+
+# ------------------------------------------------------------
+# NODE / JAVASCRIPT
+# ------------------------------------------------------------
+node_modules/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.npm/
+.yarn/
+.pnpm-store/
+
+# ------------------------------------------------------------
+# FRONTEND BUILD OUTPUT
+# ------------------------------------------------------------
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+vite.config.local.*
+dist/
+build/
+
+# ------------------------------------------------------------
+# DOCKER LOCAL / SECRET FILES
+# ------------------------------------------------------------
+docker-compose.override.yml
+compose.override.yml
+
+.docker/
+docker-secrets/
+docker_secrets/
+
+# ------------------------------------------------------------
+# KUBERNETES
+# ------------------------------------------------------------
+kubeconfig
+*kubeconfig*
+.kube/
+
+*secret*.yaml
+*secret*.yml
+*secrets*.yaml
+*secrets*.yml
+
+# ------------------------------------------------------------
+# TERRAFORM
+# ------------------------------------------------------------
+.terraform/
+
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+
+terraform.tfstate
+terraform.tfstate.backup
+
+crash.log
+crash.*.log
+
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Do not ignore Terraform lock file
+!.terraform.lock.hcl
+
+# ------------------------------------------------------------
+# ANSIBLE / INFRASTRUCTURE SECRETS
+# ------------------------------------------------------------
+vault-password*
+vault_password*
+*.vault
+
+# ------------------------------------------------------------
+# CI/CD LOCAL SECRETS
+# ------------------------------------------------------------
+.github/secrets/
+.gitlab-secrets/
+ci-secrets/
+
+# ------------------------------------------------------------
+# PAYMENT / THIRD-PARTY LOCAL CONFIG
+# ------------------------------------------------------------
+stripe*
+!stripe.example*
+twilio*
+!twilio.example*
+paypal*
+!paypal.example*
+
+# ------------------------------------------------------------
+# CERTIFICATE / SSL GENERATED FILES
+# ------------------------------------------------------------
+ssl/
+certs/
+certificates/
+
+# ------------------------------------------------------------
+# LOGS
+# ------------------------------------------------------------
+*.log
+logs/
+log/
+
+# ------------------------------------------------------------
+# TESTING / COVERAGE
+# ------------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+hypothesis/
+
+# ------------------------------------------------------------
+# STATIC ANALYSIS / CACHE
+# ------------------------------------------------------------
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.dmypy.json
+dmypy.json
+
+# ------------------------------------------------------------
+# TEMPORARY FILES
+# ------------------------------------------------------------
+tmp/
+temp/
+temporary/
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+
+# ------------------------------------------------------------
+# IDE / EDITOR
+# ------------------------------------------------------------
+.vscode/
+.idea/
+
+*.code-workspace
+
+# ------------------------------------------------------------
+# OPERATING SYSTEM
+# ------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ------------------------------------------------------------
+# WINDOWS
+# ------------------------------------------------------------
+$RECYCLE.BIN/
+
+# ------------------------------------------------------------
+# MACOS
+# ------------------------------------------------------------
+.Spotlight-V100
+.Trashes
+
+# ------------------------------------------------------------
+# LOCAL DEVELOPMENT FILES
+# ------------------------------------------------------------
+local/
+dev/
+development/
+
+*.local
+*.local.*
+local-config.*
+local_config.*
+
+# ------------------------------------------------------------
+# EMAIL / SMTP LOCAL CONFIG
+# ------------------------------------------------------------
+smtp-config*
+smtp_config*
+mail-config*
+mail_config*
+
+# ------------------------------------------------------------
+# AUTHENTICATION / SESSION FILES
+# ------------------------------------------------------------
+sessions/
+session_data/
+auth_data/
+tokens/
+
+# ------------------------------------------------------------
+# BACKUP / OLD COPIES
+# ------------------------------------------------------------
+*.old
+*.orig
+*.backup
+*.copy
+
+# ------------------------------------------------------------
+# GENERATED REPORTS / PRIVATE EXPORTS
+# ------------------------------------------------------------
+reports/private/
+reports/generated/
+generated_reports/
+
+# ------------------------------------------------------------
+# SECURITY SCANNER OUTPUT
+# ------------------------------------------------------------
+security-reports/
+security_reports/
+scan-results/
+scan_results/
+
+# ------------------------------------------------------------
+# LOCAL API COLLECTION ENVIRONMENTS
+# ------------------------------------------------------------
+postman_environment*.json
+insomnia*.json
+
+# ------------------------------------------------------------
+# LOCAL MEDIA / LARGE FILES
+# ------------------------------------------------------------
+media/private/
+media/uploads/
+videos/private/
+images/private/
+
+# ------------------------------------------------------------
+# PERSONAL NOTES / INTERNAL DOCUMENTATION
+# ------------------------------------------------------------
+internal/
+internal_docs/
+private_docs/
+notes/private/
+
+# ------------------------------------------------------------
+# NEVER IGNORE SAFE PUBLIC EXAMPLES
+# ------------------------------------------------------------
+!.env.example
+!README.md
+!requirements.txt
+!pyproject.toml
+!Dockerfile
+!docker-compose.yml
+!compose.yml
+!package.json
+!package-lock.json
+!requirements-dev.txt
