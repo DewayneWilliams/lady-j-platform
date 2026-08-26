@@ -1,1038 +1,608 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#9f0056">
+  <title>Lady J Salon & Day Spa | Book Appointment</title>
 
-    <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        Lady J Salon & Day Spa
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='style.css') }}"
-    >
-
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
-
 <body>
+  <div class="page">
 
+    <header class="topbar">
+      <a class="brand" href="#top">
+        <span class="brand-badge">LJ</span>
 
-<header class="header">
-
-    <a class="brand" href="#top">
-
-        <strong>
-            LADY J
-        </strong>
-
-        <span>
-            SALON & DAY SPA
+        <span class="brand-copy">
+          <strong>LADY J</strong>
+          <small>SALON & DAY SPA</small>
         </span>
+      </a>
 
-    </a>
-
-
-    <nav>
-
-        <a href="#services">
-            Services
-        </a>
-
-        <a href="#about">
-            About
-        </a>
-
-        <a href="#visit">
-            Visit
-        </a>
-
-    </nav>
+      <a href="#booking" class="top-book">BOOK NOW</a>
+    </header>
 
 
-    <a href="#booking" class="book-button">
-        Book now
-    </a>
+    <main id="top">
 
-</header>
+      <section class="hero">
+        <div class="hero-copy">
+          <span class="hero-label">LADY J SALON & DAY SPA</span>
 
+          <h1>
+            Your Beauty.
+            <span>Your Time.</span>
+          </h1>
 
+          <p>Book your salon and spa appointment in minutes.</p>
 
-<main id="top">
+          <div class="hero-meta">
+            <span>Tue–Sat</span>
+            <i></i>
+            <span>10 AM–6 PM</span>
+            <i></i>
+            <span>Petit Valley</span>
+          </div>
 
-
-<!-- HERO -->
-
-<section class="hero">
-
-
-    <div class="hero-copy">
-
-
-        <span class="open-pill">
-            Open every day • 10 AM–6 PM
-        </span>
-
-
-        <h1>
-
-            Your next beauty
-            appointment starts here.
-
-        </h1>
-
-
-        <p>
-
-            Discover professional salon and spa services,
-            see clear TT$ pricing and reserve your preferred
-            appointment in minutes.
-
-        </p>
-
-
-        <div class="hero-actions">
-
-            <a href="#services" class="primary">
-                Explore services
-            </a>
-
-            <a
-                href="https://wa.me/18683745517"
-                class="secondary"
-            >
-                WhatsApp us
-            </a>
-
+          <a href="#services" class="hero-cta shimmer">
+            BOOK APPOINTMENT
+          </a>
         </div>
 
 
-        <div class="trust-row">
-
-            <span>
-                ✓ International experience
-            </span>
-
-            <span>
-                ✓ Free parking
-            </span>
-
-            <span>
-                ✓ Open 7 days
-            </span>
-
+        <div class="hero-image-wrap">
+          <img
+            src="{{ url_for('static', filename='Images/LadyJ_Outside.jpg') }}"
+            alt="Lady J Salon and Day Spa storefront"
+            class="hero-image"
+          >
         </div>
+      </section>
 
-    </div>
 
+      <section class="booking-layout" id="booking">
 
+        <div class="booking-main">
 
-    <div class="hero-image">
+          <!-- SERVICES -->
 
-        <img
-            src="{{ url_for('static', filename='images/facials.jpg') }}"
-            alt="Lady J facial treatment"
-        >
+          <section class="booking-section" id="services">
+            <div class="section-head">
+              <span class="step">01</span>
 
-        <div class="floating-card">
+              <div>
+                <span class="section-label">START HERE</span>
+                <h2>Choose Your Services</h2>
+                <p>Select one or more services from any category.</p>
+              </div>
+            </div>
 
-            <span>
-                POPULAR
-            </span>
+            <div id="serviceCategories" class="service-categories"></div>
+          </section>
 
-            <strong>
-                Classic Facial
-            </strong>
 
-            <b>
-                TT$450
-            </b>
+          <!-- DATE + TIME -->
 
-            <button
-                type="button"
-                data-service="skin-02"
-                class="quick-book"
-            >
-                Book
-            </button>
+          <section class="booking-section">
+            <div class="section-head">
+              <span class="step">02</span>
 
-        </div>
-
-    </div>
-
-
-</section>
-
-
-
-<!-- LOCATION QUICK INFO -->
-
-<section class="quick-info">
-
-
-    <div>
-
-        <span>
-            LOCATION
-        </span>
-
-        <strong>
-            On My Way Plaza
-        </strong>
-
-        <small>
-            Petit Valley
-        </small>
-
-    </div>
-
-
-    <div>
-
-        <span>
-            HOURS
-        </span>
-
-        <strong>
-            10 AM–6 PM
-        </strong>
-
-        <small>
-            Monday–Sunday
-        </small>
-
-    </div>
-
-
-    <div>
-
-        <span>
-            PARKING
-        </span>
-
-        <strong>
-            Free
-        </strong>
-
-        <small>
-            Right at our doors
-        </small>
-
-    </div>
-
-
-    <div>
-
-        <span>
-            CONTACT
-        </span>
-
-        <strong>
-            868-374-5517
-        </strong>
-
-        <small>
-            Call or WhatsApp
-        </small>
-
-    </div>
-
-
-</section>
-
-
-
-<!-- SERVICES -->
-
-<section id="services" class="services">
-
-
-    <div class="section-title">
-
-        <span>
-            BEAUTY, YOUR WAY
-        </span>
-
-        <h2>
-            Find your service
-        </h2>
-
-        <p>
-            Browse by category or search exactly what you need.
-        </p>
-
-    </div>
-
-
-
-    <div class="service-tools">
-
-
-        <input
-            id="serviceSearch"
-            type="search"
-            placeholder="Search services"
-        >
-
-
-        <div class="category-scroll">
-
-
-            <button
-                class="category active"
-                data-category="All"
-            >
-                All
-            </button>
-
-
-            {% for category in categories %}
-
-            <button
-                class="category"
-                data-category="{{ category }}"
-            >
-                {{ category }}
-            </button>
-
-            {% endfor %}
-
-
-        </div>
-
-
-    </div>
-
-
-
-    <div class="service-grid">
-
-
-        {% for service in services %}
-
-
-        <article
-            class="service"
-            data-category="{{ service.category }}"
-            data-name="{{ service.name|lower }}"
-        >
-
-
-            <div>
-
-
-                <span class="service-category">
-                    {{ service.category }}
-                </span>
-
-
-                <h3>
-                    {{ service.name }}
-                </h3>
-
-
-                <small>
-                    {{ service.minutes }} min
-                </small>
-
-
+              <div>
+                <span class="section-label">YOUR VISIT</span>
+                <h2>Choose Date & Time</h2>
+                <p>Appointments are available up to 60 days in advance.</p>
+              </div>
             </div>
 
 
-
-            <div class="service-action">
-
-
-                <strong>
-                    TT${{ service.price }}
-                </strong>
-
-
+            <div class="date-panel">
+              <div class="date-toolbar">
                 <button
-                    type="button"
-                    class="quick-book"
-                    data-service="{{ service.id }}"
+                  id="prevDates"
+                  class="date-nav"
+                  type="button"
+                  aria-label="Previous 7 dates"
                 >
-                    Book
+                  ←
                 </button>
 
+                <strong id="dateRangeLabel">Available Dates</strong>
+
+                <button
+                  id="nextDates"
+                  class="date-nav"
+                  type="button"
+                  aria-label="Next 7 dates"
+                >
+                  →
+                </button>
+              </div>
+
+              <div id="dateGrid" class="date-grid"></div>
+
+              <button id="nextSeven" class="next-seven" type="button">
+                NEXT 7 DATES →
+              </button>
+            </div>
+
+
+            <div class="time-block">
+              <div class="subhead">
+                <h3>Available Times</h3>
+                <span>30-minute increments • 10 AM–6 PM</span>
+              </div>
+
+              <div id="timeGrid" class="time-grid"></div>
+
+              <p id="timeHint" class="time-hint">
+                Select your services and date to activate available appointment times.
+              </p>
+            </div>
+
+
+            <button id="specialToggle" class="special-toggle" type="button">
+              Need Monday or special hours?
+              <span>+</span>
+            </button>
+
+
+            <div id="specialPanel" class="special-panel hidden">
+
+              <div class="special-item">
+                <div>
+                  <span class="gold-label">PRIORITY SCHEDULING</span>
+
+                  <h3>Monday Priority Appointment</h3>
+
+                  <p>
+                    Limited Monday appointments may be available for guests who need additional scheduling flexibility. An additional priority service charge applies.
+                  </p>
+                </div>
+
+                <a
+                  href="https://wa.me/18683745517?text=Hello%20Lady%20J%2C%20I%20would%20like%20to%20request%20a%20Monday%20priority%20appointment."
+                  target="_blank"
+                  rel="noopener"
+                  class="outline-btn"
+                >
+                  REQUEST MONDAY
+                </a>
+              </div>
+
+
+              <div class="special-item">
+                <div>
+                  <span class="gold-label">BY REQUEST</span>
+
+                  <h3>Earlier / Later Appointment</h3>
+
+                  <p>
+                    Select appointments may be available outside regular hours. Submit a request and our team will confirm availability.
+                  </p>
+                </div>
+
+                <a
+                  href="https://wa.me/18683745517?text=Hello%20Lady%20J%2C%20I%20would%20like%20to%20request%20special%20appointment%20hours."
+                  target="_blank"
+                  rel="noopener"
+                  class="outline-btn"
+                >
+                  REQUEST SPECIAL HOURS
+                </a>
+              </div>
+
+            </div>
+          </section>
+
+
+          <!-- PAYMENT -->
+
+          <section class="booking-section">
+            <div class="section-head">
+              <span class="step">03</span>
+
+              <div>
+                <span class="section-label">PAYMENT</span>
+                <h2>Choose How You'll Pay</h2>
+                <p>Prepay by bank wire and save 15%.</p>
+              </div>
+            </div>
+
+
+            <div class="payment-stack">
+
+              <button id="wireOption" class="wire-card selected" type="button">
+                <span class="best-value">BEST VALUE • SAVE 15%</span>
+
+                <div class="wire-title">
+                  <strong>PAY VIA BANK WIRE</strong>
+                  <span class="wire-check">✓</span>
+                </div>
+
+                <div class="wire-prices">
+                  <div>
+                    <small>REGULAR PRICE</small>
+                    <span id="wireRegular">$0</span>
+                  </div>
+
+                  <div class="wire-price">
+                    <small>BANK WIRE PRICE</small>
+                    <strong id="wireTotal">$0</strong>
+                  </div>
+                </div>
+
+                <div class="save-pill">
+                  YOU SAVE <strong id="wireSavings">$0</strong>
+                </div>
+
+                <span id="wireButtonText" class="wire-action shimmer">
+                  SELECT SERVICES TO SEE SAVINGS
+                </span>
+              </button>
+
+
+              <button id="cashOption" class="cash-card" type="button">
+                <div>
+                  <strong>PAY AT SALON</strong>
+                  <small id="cashSaveText">Bank wire saves 15%</small>
+                </div>
+
+                <span id="cashTotal">$0</span>
+              </button>
 
             </div>
 
 
-        </article>
-
-
-        {% endfor %}
-
-
-    </div>
-
-
-    <p class="price-note">
-
-        Prices are shown in Trinidad & Tobago dollars.
-        Final pricing may vary for selected hair and customised services.
-
-    </p>
-
-
-</section>
-
-
-
-<!-- PROMOTION -->
-
-<section class="promo">
-
-
-    <img
-        src="{{ url_for('static', filename='images/fifty-plus.jpg') }}"
-        alt="Lady J 50 plus beauty offer"
-    >
-
-
-    <div>
-
-
-        <span>
-            SPECIAL OFFERS
-        </span>
-
-
-        <h2>
-            Confidence looks good at every age.
-        </h2>
-
-
-        <p>
-
-            Ask about special 50+ offers across hair,
-            skin, nails, waxing, brows and lashes.
-
-        </p>
-
-
-        <a
-            href="https://wa.me/18683745517"
-            class="gold-button"
-        >
-            See current offers
-        </a>
-
-
-    </div>
-
-
-</section>
-
-
-
-<!-- ABOUT -->
-
-<section id="about" class="about">
-
-
-    <div>
-
-
-        <span class="eyebrow">
-            PROFESSIONAL CARE
-        </span>
-
-
-        <h2>
-
-            International expertise.
-            Personal attention.
-
-        </h2>
-
-
-        <p>
-
-            Lady J Salon & Day Spa is led by a
-
-            <strong>
-                Master Cosmetologist and International Educator
-            </strong>
-
-            with professional licensing experience across the
-
-            <strong>
-                United Kingdom, United States,
-                Barbados and Trinidad & Tobago.
-            </strong>
-
-        </p>
-
-
-        <p>
-
-            Our approach combines professional knowledge
-            with thoughtful service for diverse hair textures,
-            skin tones, ages and individual beauty goals.
-
-        </p>
-
-
-        <div class="badges">
-
-            <span>
-                All hair textures
-            </span>
-
-            <span>
-                All skin tones
-            </span>
-
-            <span>
-                All ages
-            </span>
-
-        </div>
-
-
-    </div>
-
-
-
-    <img
-        src="{{ url_for('static', filename='images/lashes-brows.jpg') }}"
-        alt="Lady J lashes and brows"
-    >
-
-
-</section>
-
-
-
-<!-- BOOKING -->
-
-<section id="booking" class="booking">
-
-
-    <div class="booking-heading">
-
-        <span>
-            BOOK YOUR VISIT
-        </span>
-
-        <h2>
-            Choose. Tap. Book.
-        </h2>
-
-        <p>
-            No complicated forms. Pick your service,
-            day and preferred time.
-        </p>
-
-    </div>
-
-
-
-    <form
-        id="bookingForm"
-        action="/book"
-        method="POST"
-        class="booking-card"
-    >
-
-
-        <!-- SERVICE -->
-
-        <div class="form-section">
-
-
-            <label>
-                Service
-            </label>
-
-
-            <select
-                id="serviceSelect"
-                name="service_id"
-                required
-            >
-
-                <option value="">
-                    Choose your service
-                </option>
-
-                {% for category in categories %}
-
-                <optgroup label="{{ category }}">
-
-                    {% for service in services if service.category == category %}
-
-                    <option value="{{ service.id }}">
-
-                        {{ service.name }}
-                        — TT${{ service.price }}
-
-                    </option>
-
-                    {% endfor %}
-
-                </optgroup>
-
-                {% endfor %}
-
-            </select>
-
-
-        </div>
-
-
-
-        <!-- DATE -->
-
-        <div class="form-section">
-
-
-            <label>
-                Choose a day
-            </label>
-
-
-            <input
-                id="appointmentDate"
-                name="appointment_date"
-                type="hidden"
-                required
-            >
-
-
-            <div class="calendar">
-
-
-                <div class="calendar-header">
-
-
-                    <button
-                        type="button"
-                        id="prevMonth"
-                    >
-                        ‹
+            <div id="bankPanel" class="bank-panel">
+              <div class="bank-head">
+                <div>
+                  <span class="gold-label">SECURE YOUR SAVINGS</span>
+                  <h3>Complete Your Prepayment</h3>
+                </div>
+
+                <div class="pay-today">
+                  <small>PAY TODAY</small>
+                  <strong id="bankPayToday">$0</strong>
+                </div>
+              </div>
+
+
+              <div class="bank-breakdown">
+                <div>
+                  <span>Regular Price</span>
+                  <strong id="bankRegular">$0</strong>
+                </div>
+
+                <div>
+                  <span>15% Savings</span>
+                  <strong id="bankSavings">-$0</strong>
+                </div>
+
+                <div class="highlight">
+                  <span>Bank Wire Total</span>
+                  <strong id="bankTotal">$0</strong>
+                </div>
+              </div>
+
+
+              <div class="bank-details">
+                <span class="gold-label">BANK TRANSFER DETAILS</span>
+
+                <div class="bank-value">
+                  <span>Bank</span>
+                  <strong>FIRST CITIZENS BANK</strong>
+                </div>
+
+                <div class="bank-value">
+                  <span>Account Name</span>
+                  <strong>LADY J SALON AND DAY SPA</strong>
+                </div>
+
+                <div class="bank-value">
+                  <span>Account Type</span>
+                  <strong>SAVINGS</strong>
+                </div>
+
+                <div class="account-number-card">
+                  <span>ACCOUNT NUMBER</span>
+
+                  <div>
+                    <strong>3201297</strong>
+
+                    <button id="copyAccount" type="button">
+                      COPY ACCOUNT NUMBER
                     </button>
-
-
-                    <strong id="calendarTitle">
-                    </strong>
-
-
-                    <button
-                        type="button"
-                        id="nextMonth"
-                    >
-                        ›
-                    </button>
-
-
+                  </div>
                 </div>
 
 
-                <div class="weekday-row">
+                <div class="bank-important">
+                  <strong>IMPORTANT</strong>
 
-                    <span>Sun</span>
-                    <span>Mon</span>
-                    <span>Tue</span>
-                    <span>Wed</span>
-                    <span>Thu</span>
-                    <span>Fri</span>
-                    <span>Sat</span>
-
+                  <p>
+                    Please include your full name in the transfer description/reference when possible.
+                  </p>
                 </div>
+              </div>
 
 
-                <div
-                    id="calendarGrid"
-                    class="calendar-grid"
-                >
-                </div>
+              <div class="bank-fields">
+                <label>
+                  Transaction / Reference Number
+                  <input
+                    id="referenceNumber"
+                    type="text"
+                    placeholder="Enter reference number"
+                  >
+                </label>
+
+                <label>
+                  Payment Date
+                  <input id="paymentDate" type="date">
+                </label>
+
+                <label class="full">
+                  Proof of Payment
+                  <input
+                    id="paymentProof"
+                    type="file"
+                    accept="image/*,.pdf"
+                  >
+                </label>
+              </div>
+            </div>
+          </section>
 
 
-                <div
-                    id="selectedDate"
-                    class="selected-date"
-                >
-                    Select your preferred day
-                </div>
+          <!-- DETAILS -->
 
+          <section class="booking-section">
+            <div class="section-head">
+              <span class="step">04</span>
 
+              <div>
+                <span class="section-label">ALMOST DONE</span>
+                <h2>Your Details</h2>
+                <p>We'll use these details for your appointment.</p>
+              </div>
             </div>
 
+
+            <form id="bookingForm" novalidate>
+
+              <div class="form-grid">
+
+                <label>
+                  First Name
+                  <input
+                    id="firstName"
+                    type="text"
+                    autocomplete="given-name"
+                    required
+                  >
+                </label>
+
+                <label>
+                  Last Name
+                  <input
+                    id="lastName"
+                    type="text"
+                    autocomplete="family-name"
+                    required
+                  >
+                </label>
+
+                <label>
+                  Mobile / WhatsApp
+                  <input
+                    id="mobile"
+                    type="tel"
+                    autocomplete="tel"
+                    required
+                  >
+                </label>
+
+                <label>
+                  Email
+                  <input
+                    id="email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                  >
+                </label>
+
+                <label class="full">
+                  Appointment Notes
+                  <span class="optional">(optional)</span>
+
+                  <textarea
+                    id="notes"
+                    rows="3"
+                    placeholder="Anything we should know before your visit?"
+                  ></textarea>
+                </label>
+
+              </div>
+
+
+              <button
+                id="submitBooking"
+                class="submit-btn shimmer"
+                type="submit"
+              >
+                SUBMIT PAYMENT & BOOK
+              </button>
+
+
+              <div class="policy-panel">
+
+                <div>
+                  <span>APPOINTMENT TIME ESTIMATE</span>
+
+                  <p>
+                    Appointment times are estimates based on the services selected. Actual service time may vary depending on individual needs, hair length or density, service complexity, and other factors.
+                  </p>
+                </div>
+
+
+                <div>
+                  <span>BANK WIRE PREPAYMENT</span>
+
+                  <p>
+                    Advance payments made by bank wire receive a 15% savings and are non-refundable. Please review your selected services, appointment details, and payment amount carefully before completing your transfer.
+                  </p>
+                </div>
+
+              </div>
+
+
+              <p id="formMessage" class="form-message"></p>
+
+            </form>
+          </section>
 
         </div>
 
 
+        <!-- SUMMARY -->
 
-        <!-- TIME -->
+        <aside class="summary-card">
+          <span class="summary-label">YOUR APPOINTMENT</span>
 
-        <div class="form-section">
+          <div id="summaryServices" class="summary-services">
+            <p>No services selected yet.</p>
+          </div>
 
+          <div class="summary-divider"></div>
 
-            <label>
-                Choose a time
-            </label>
+          <div class="summary-row">
+            <span>Date</span>
+            <strong id="summaryDate">—</strong>
+          </div>
 
+          <div class="summary-row">
+            <span>Time</span>
+            <strong id="summaryTime">—</strong>
+          </div>
 
-            <input
-                id="appointmentTime"
-                name="appointment_time"
-                type="hidden"
-                required
-            >
+          <div class="summary-row">
+            <span>Estimated Appointment Time</span>
+            <strong id="summaryDuration">—</strong>
+          </div>
 
+          <div class="summary-divider"></div>
 
-            <div class="time-label">
+          <div class="summary-row">
+            <span>Regular Total</span>
+            <strong id="summaryRegular">$0</strong>
+          </div>
 
-                <strong>
-                    Standard hours
-                </strong>
+          <div class="summary-row savings-row">
+            <span>Bank Wire Savings</span>
+            <strong id="summarySavings">-$0</strong>
+          </div>
 
-                <span>
-                    10 AM–6 PM
-                </span>
+          <div class="summary-total">
+            <span id="summaryPayLabel">BANK WIRE TOTAL</span>
+            <strong id="summaryPayTotal">$0</strong>
+          </div>
 
-            </div>
+          <small id="summaryCash">Pay at salon: $0</small>
+        </aside>
 
+      </section>
 
-            <div class="time-grid">
 
-
-                {% for value, label in [
-                    ("10:00","10 AM"),
-                    ("11:00","11 AM"),
-                    ("12:00","12 PM"),
-                    ("13:00","1 PM"),
-                    ("14:00","2 PM"),
-                    ("15:00","3 PM"),
-                    ("16:00","4 PM"),
-                    ("17:00","5 PM")
-                ] %}
-
-
-                <button
-                    type="button"
-                    class="time"
-                    data-time="{{ value }}"
-                >
-                    {{ label }}
-                </button>
-
-
-                {% endfor %}
-
-
-            </div>
-
-
-
-            <div class="time-label extended-title">
-
-                <strong>
-                    Extended hours
-                </strong>
-
-                <span>
-                    Convenience fee applies
-                </span>
-
-            </div>
-
-
-            <div class="time-grid">
-
-
-                {% for value, label in [
-                    ("08:00","8 AM"),
-                    ("09:00","9 AM"),
-                    ("18:00","6 PM"),
-                    ("19:00","7 PM"),
-                    ("20:00","8 PM")
-                ] %}
-
-
-                <button
-                    type="button"
-                    class="time extended"
-                    data-time="{{ value }}"
-                >
-                    {{ label }}
-                </button>
-
-
-                {% endfor %}
-
-
-            </div>
-
-
-        </div>
-
-
-
-        <!-- CUSTOMER -->
-
-        <div class="form-section">
-
-
-            <label>
-                Your details
-            </label>
-
-
-            <input
-                name="customer_name"
-                type="text"
-                placeholder="Your name"
-                required
-            >
-
-
-            <input
-                name="phone"
-                type="tel"
-                placeholder="WhatsApp or phone"
-                required
-            >
-
-
-            <input
-                name="email"
-                type="email"
-                placeholder="Email (optional)"
-            >
-
-
-        </div>
-
-
-
-        <!-- EXACT TIME -->
-
-        <label class="exact-time">
-
-
-            <input
-                type="checkbox"
-                name="exact_time"
-                value="yes"
-            >
-
-
-            <span>
-
-                <strong>
-                    Secure my exact appointment time
-                </strong>
-
-                <small>
-
-                    Hold this specific time exclusively
-                    with a non-refundable reservation deposit.
-                    Your deposit is applied to your service total.
-
-                </small>
-
-            </span>
-
-
-        </label>
-
-
-
-        <button
-            class="submit-booking"
-            type="submit"
-        >
-
-            Request appointment
-
-            <span>
-                →
-            </span>
-
-        </button>
-
-
-        <p class="booking-note">
-
-            Standard appointment requests are confirmed
-            based on availability.
-
-        </p>
-
-
-    </form>
-
-
-</section>
-
-
-
-<!-- LOCATION -->
-
-<section id="visit" class="visit">
-
-
-    <div class="visit-card">
-
-
-        <span>
-            VISIT LADY J
-        </span>
-
-
-        <h2>
-            Easy to find.
-            Even easier to visit.
-        </h2>
-
-
-        <address>
-
-            <strong>
-                On My Way Plaza
-            </strong>
-
-            <p>
-                In front of West Hills Condos
-            </p>
-
-            <p>
-                Petit Valley, Trinidad & Tobago
-            </p>
-
-        </address>
-
-
-
-        <div class="parking">
-
-            <strong>
-                Free parking
-            </strong>
-
-            <p>
-                Park directly in front of the salon doors.
-            </p>
-
-        </div>
-
-
-        <a
-            href="https://wa.me/18683745517"
-            class="primary"
-        >
-            WhatsApp 868-374-5517
-        </a>
-
-
-    </div>
-
-
-
-    <div class="hours">
-
-
-        <span class="open-pill">
-            OPEN 7 DAYS
-        </span>
-
-
-        <h3>
-            Salon hours
-        </h3>
-
-
-        {% for day in [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday"
-        ] %}
-
-
+      <footer>
         <div>
+          <strong>Lady J Salon & Day Spa</strong>
 
-            <span>
-                {{ day }}
-            </span>
-
-            <strong>
-                10 AM–6 PM
-            </strong>
-
+          <p>
+            On My Way Plaza<br>
+            In front of West Hills Condos<br>
+            Petit Valley, Trinidad & Tobago
+          </p>
         </div>
 
+        <div class="footer-right">
+          <span>Tuesday–Saturday • 10 AM–6 PM</span>
+          <span>Follow Us <strong>@LadyJSalon</strong></span>
+          <span>Instagram • TikTok</span>
 
-        {% endfor %}
+          <a
+            href="https://wa.me/18683745517"
+            target="_blank"
+            rel="noopener"
+          >
+            CONTACT US ON WHATSAPP
+          </a>
+        </div>
+      </footer>
+
+    </main>
+  </div>
 
 
-        <p>
-
-            Early and later appointments may be
-            available with a convenience fee.
-
-        </p>
-
-
+  <div class="mobile-summary">
+    <div>
+      <small id="mobileCount">0 services</small>
+      <strong id="mobileTotal">$0</strong>
     </div>
 
-
-</section>
-
-
-</main>
-
+    <button id="mobileContinue" type="button">
+      CONTINUE
+    </button>
+  </div>
 
 
-<div class="mobile-book-bar">
+  <div id="confirmationModal" class="modal hidden">
+    <div class="modal-card">
 
-    <a href="#booking">
-        Book appointment
-    </a>
+      <button
+        id="closeModal"
+        class="modal-close"
+        type="button"
+      >
+        ×
+      </button>
 
-</div>
+      <div class="success-icon">✓</div>
+
+      <span class="gold-label">
+        LADY J SALON & DAY SPA
+      </span>
+
+      <h2 id="confirmationTitle">
+        Payment Submitted
+      </h2>
+
+      <p id="confirmationText"></p>
+
+      <div
+        id="confirmationSummary"
+        class="confirmation-summary"
+      ></div>
+
+      <button
+        id="doneButton"
+        class="done-btn"
+        type="button"
+      >
+        DONE
+      </button>
+
+    </div>
+  </div>
 
 
-
-<footer>
-
-    <strong>
-        LADY J
-    </strong>
-
-    <span>
-        Salon & Day Spa • Petit Valley
-    </span>
-
-    <span>
-        @LadyJSalon • 868-374-5517
-    </span>
-
-</footer>
-
-
-
-<script
-    src="{{ url_for('static', filename='app.js') }}"
-></script>
-
-
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
-
 </html>
