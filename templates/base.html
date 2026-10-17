@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_user.theme if current_user.is_authenticated else 'light' }}" data-text="{{ current_user.text_size if current_user.is_authenticated else 'default' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#E75480">
+  <title>{% block title %}{{ business_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@560;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="{{ url_for('public.home') }}">
+        <span class="brand-mark">LJ</span>
+        <span>
+          <strong>LADY J</strong>
+          <small>Salon &amp; Day Spa</small>
+        </span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="{{ url_for('public.services') }}">Services</a>
+        <a href="{{ url_for('public.workshops') }}">Workshops</a>
+        <a href="{{ url_for('public.boutique') }}">Boutique</a>
+        <a href="{{ url_for('public.about') }}">About</a>
+        <a href="{{ url_for('public.contact') }}">Contact</a>
+        {% if current_user.is_authenticated %}
+          {% if current_user.is_staff %}
+            <a href="{{ url_for('owner.today') }}">Dashboard</a>
+          {% else %}
+            <a href="{{ url_for('account.dashboard') }}">My Account</a>
+          {% endif %}
+          <a href="{{ url_for('auth.logout') }}">Sign out</a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}">Sign in</a>
+        {% endif %}
+        <a class="nav-cta" href="{{ url_for('booking.step1') }}">Book Appointment</a>
+      </nav>
+      <button class="nav-toggle" type="button" id="navToggle" aria-expanded="false" aria-controls="mobileNav">Menu</button>
+    </div>
+    <nav class="mobile-nav" id="mobileNav" hidden>
+      <a href="{{ url_for('public.services') }}">Services</a>
+      <a href="{{ url_for('public.workshops') }}">Workshops</a>
+      <a href="{{ url_for('public.boutique') }}">Boutique</a>
+      <a href="{{ url_for('public.about') }}">About</a>
+      <a href="{{ url_for('public.contact') }}">Contact</a>
+      {% if current_user.is_authenticated %}
+        {% if current_user.is_staff %}
+          <a href="{{ url_for('owner.today') }}">Dashboard</a>
+        {% else %}
+          <a href="{{ url_for('account.dashboard') }}">My Account</a>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}">Sign out</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}">Sign in</a>
+      {% endif %}
+      <a class="nav-cta" href="{{ url_for('booking.step1') }}">Book Appointment</a>
+    </nav>
+  </header>
+
+  {% include "partials/flash.html" %}
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div>
+        <strong>Lady J Salon &amp; Day Spa</strong>
+        <p class="muted">Petit Valley · Tue–Sat · 10 AM–6 PM · America/Port_of_Spain</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="{{ url_for('booking.step1') }}">Book</a>
+        <a href="{{ url_for('public.workshops') }}">Workshops</a>
+        <a href="{{ url_for('public.boutique') }}">Boutique</a>
+        <a href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/site.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

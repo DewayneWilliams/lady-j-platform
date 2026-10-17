@@ -1,41 +1,51 @@
 # Lady J Platform
 
-Lady J Platform is a modern full-stack salon booking and beauty services platform designed for simple, convenient, and intelligent customer experiences.
+Premium private salon, workshop, and boutique platform for **Lady J Salon & Day Spa** (ladyjglobal.com).
 
-## Current Technology
+## Stack
 
 - Python & Flask
-- HTML5, CSS3 & JavaScript
-- Git & GitHub
-- Responsive web design
+- SQLite (local / Lightsail-compatible)
+- HTML, CSS, vanilla JS
+- Flask-Login authentication
 
-## Engineering Vision
+## Local preview
 
-Lady J Platform is being developed toward a scalable, cloud-native architecture incorporating:
+```bash
+python -m venv .venv
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+python wsgi.py
+```
 
-- Artificial Intelligence & Machine Learning
-- AI-powered recommendations and automation
-- Secure APIs and backend services
-- Cloud infrastructure
-- Database engineering
-- Authentication and cybersecurity
-- Automated testing and CI/CD
-- Containers and Kubernetes
-- Monitoring and observability
-- Scalable application architecture
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000).
 
-## Roadmap
+Default owner (override in `.env`):
 
-Future capabilities include customer accounts, real-time scheduling, payments, automated notifications, business analytics, AI-assisted customer experiences, and intelligent service recommendations.
+- Email: `owner@ladyjglobal.com`
+- Password: `ChangeMeImmediately!`
 
-## Status
+## Tests
 
-🚧 **Active Development**
+```bash
+pytest -q
+```
 
-The repository documents the platform's progression from an initial full-stack application toward a secure, scalable, AI-enabled production system.
+## Features (upgrade branch)
 
-## Developer
+- Public site: Home, Services, Workshops, Boutique, About, Contact, Book
+- Exactly **3 booking steps** with deposit, bank/card adapters, cancellation policy
+- Private client accounts (no social feeds)
+- Owner dashboard: Today | Calendar | Clients | Business | Maria
+- Workshops, boutique cart with inventory lock
+- Maria bilingual assistant (local commands + AWS stubs)
+- Design tokens: pink `#E75480`, gold `#C9A227`, warm white, blush, charcoal
 
-**Dewayne Williams**
+See `docs/UPGRADE_PROGRESS.md` for status.
 
-Software Engineering | AI & Machine Learning | Cloud | Cybersecurity
+## Production notes
+
+Do **not** push, deploy, or change Lightsail / Route 53 without explicit authorization.  
+Never commit `.env` or secrets. Back up the production database before applying migrations.

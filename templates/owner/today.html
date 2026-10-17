@@ -1,0 +1,43 @@
+{% extends "owner/base_owner.html" %}
+{% block title %}Today | Owner{% endblock %}
+{% block owner_content %}
+<div class="desktop-split">
+  <section>
+    <div class="owner-card">
+      <h2>Today — {{ day }}</h2>
+      <p class="detail muted">{{ appointments|length }} appointments</p>
+      {% for a in appointments %}
+      <div class="appt-row">
+        <div>
+          <span class="time-badge">{{ minutes_to_label(a.start_minutes) }}</span>
+        </div>
+        <strong>{{ a.client_name or a.guest_name or 'Guest' }}</strong>
+        <div class="detail">{{ a.status }} · {{ a.payment_status }} · ${{ '%.0f'|format(a.total_ttd) }}</div>
+        <div class="owner-actions">
+          <form method="post" action="{{ url_for('owner.no_show', appt_id=a.id) }}">
+            <button class="btn btn-outline" type="submit">Mark no-show</button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <p class="detail muted">No appointments scheduled for today.</p>
+      {% endfor %}
+    </div>
+  </section>
+  <aside>
+    <div class="owner-card">
+      <h3>Quick status</h3>
+      <div class="stat-row" style="grid-template-columns:1fr">
+        <div class="stat">
+          <span class="muted">Bank payments to verify</span>
+          <strong>{{ pending_payments }}</strong>
+        </div>
+      </div>
+      <div class="owner-actions">
+        <a class="btn" href="{{ url_for('owner.business') }}">Open Business</a>
+        <a class="btn btn-gold" href="{{ url_for('owner.maria') }}">Ask Maria</a>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

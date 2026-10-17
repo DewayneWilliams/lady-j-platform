@@ -1,0 +1,22 @@
+{% extends "owner/base_owner.html" %}
+{% block title %}Clients | Owner{% endblock %}
+{% block owner_content %}
+<div class="owner-card">
+  <h2>Clients</h2>
+  <form method="get" class="prefs-bar">
+    <label style="flex:1">Search
+      <input type="search" name="q" value="{{ q }}" placeholder="Name, email, or phone" style="min-height:48px;font-size:1.1rem">
+    </label>
+    <button class="btn" type="submit">Search</button>
+  </form>
+  {% for c in clients %}
+  <div class="appt-row">
+    <a href="{{ url_for('owner.client_detail', client_id=c.id) }}"><strong class="detail">{{ c.full_name }}</strong></a>
+    <div>{{ c.email }}{% if c.phone %} · {{ c.phone }}{% endif %}</div>
+    <div class="muted">Credits ${{ '%.2f'|format(c.credits_balance) }}</div>
+  </div>
+  {% else %}
+  <p class="detail muted">No clients found.</p>
+  {% endfor %}
+</div>
+{% endblock %}

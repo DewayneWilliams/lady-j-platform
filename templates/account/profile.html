@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Profile | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:560px">
+    <h1>Personal information</h1>
+    <form method="post" class="form-grid" style="margin-top:1.25rem">
+      <label>Full name<input name="full_name" value="{{ user.full_name }}" required></label>
+      <label>Phone<input name="phone" value="{{ user.phone or '' }}"></label>
+      <label>Birthday<input type="date" name="birthday" value="{{ user.birthday or '' }}"></label>
+      <label>Allergies / sensitivities<textarea name="allergies">{{ user.allergies or '' }}</textarea></label>
+      <label>Preferences<textarea name="preferences">{{ user.preferences or '' }}</textarea></label>
+      <label>Text size
+        <select name="text_size">
+          <option value="default" {% if user.text_size=='default' %}selected{% endif %}>Default</option>
+          <option value="large" {% if user.text_size=='large' %}selected{% endif %}>Large</option>
+          <option value="xlarge" {% if user.text_size=='xlarge' %}selected{% endif %}>Extra large</option>
+        </select>
+      </label>
+      <label>Theme
+        <select name="theme">
+          <option value="light" {% if user.theme=='light' %}selected{% endif %}>Light</option>
+          <option value="dark" {% if user.theme=='dark' %}selected{% endif %}>Dark</option>
+          <option value="system" {% if user.theme=='system' %}selected{% endif %}>System</option>
+        </select>
+      </label>
+      <p class="muted">Credits balance: ${{ '%.2f'|format(user.credits_balance) }} TTD</p>
+      <button class="btn" type="submit">Save</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

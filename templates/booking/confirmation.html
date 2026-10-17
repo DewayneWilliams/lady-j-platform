@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Appointment Confirmed | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:720px">
+    <span class="eyebrow">Thank you</span>
+    <h1>You're on the book</h1>
+    {% set a = result.appointment %}
+    <p class="detail">
+      {{ a.appointment_date }} · {{ result.start_label }}–{{ result.end_label }}
+    </p>
+    <p>Status: <strong>{{ a.status }}</strong> · Payment: <strong>{{ a.payment_status }}</strong></p>
+    <ul>
+      {% for s in result.services %}
+      <li>{{ s.name }} × {{ s.qty }}</li>
+      {% endfor %}
+    </ul>
+    <p>Total ${{ '%.0f'|format(a.total_ttd) }} · Deposit ${{ '%.0f'|format(a.deposit_ttd) }}</p>
+    <p style="margin-top:1.5rem">
+      {% if current_user.is_authenticated %}
+      <a class="btn" href="{{ url_for('account.dashboard') }}">View my appointments</a>
+      {% else %}
+      <a class="btn" href="{{ url_for('auth.register') }}">Create account</a>
+      {% endif %}
+      <a class="btn btn-ghost" href="{{ url_for('public.home') }}">Home</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Boutique | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Shop</span>
+      <h1>Boutique</h1>
+      <p class="muted">Private shopping with secure checkout. Inventory is reserved when you place an order.</p>
+    </div>
+    <form method="get" class="form-grid" style="margin-bottom:1.5rem;grid-template-columns:1fr auto auto;gap:.75rem">
+      <input type="search" name="q" value="{{ q }}" placeholder="Search products" aria-label="Search products">
+      <select name="category" aria-label="Category">
+        <option value="">All categories</option>
+        {% for c in categories %}
+        <option value="{{ c }}" {% if c == active_category %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">Filter</button>
+    </form>
+    {% if current_user.is_authenticated %}
+    <p style="margin-bottom:1rem"><a href="{{ url_for('account.cart') }}">View cart</a></p>
+    {% endif %}
+    <div class="product-grid">
+      {% for p in products %}
+      <article class="media-card">
+        <div class="body">
+          <span class="eyebrow">{{ p.category }}</span>
+          <h3>{{ p.name }}</h3>
+          <p class="muted">{{ p.description }}</p>
+          <div class="meta">
+            <span>{{ p.stock }} available</span>
+            <span class="price">${{ '%.0f'|format(p.price_ttd) }}</span>
+          </div>
+          {% if current_user.is_authenticated and not current_user.is_staff %}
+          <form method="post" action="{{ url_for('account.cart_add', product_id=p.id) }}" style="margin-top:1rem">
+            <button class="btn btn-outline" type="submit" {% if p.stock < 1 %}disabled{% endif %}>Add to cart</button>
+          </form>
+          {% elif not current_user.is_authenticated %}
+          <p style="margin-top:1rem"><a href="{{ url_for('auth.login') }}">Sign in to purchase</a></p>
+          {% endif %}
+        </div>
+      </article>
+      {% else %}
+      <p class="muted">No products match your filters.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

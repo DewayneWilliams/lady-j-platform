@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Choose Your Date & Time | Book{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container">
+    <div class="steps">
+      <span class="step-pill">1. Service</span>
+      <span class="step-pill active">2. Choose Your Date &amp; Time</span>
+      <span class="step-pill">3. Secure</span>
+    </div>
+    <div class="section-head">
+      <span class="eyebrow">Step 2 of 3</span>
+      <h1>Choose Your Date &amp; Time</h1>
+      <p class="muted">
+        Open Tuesday–Saturday, 10 AM–6 PM (America/Port_of_Spain).
+        Estimated duration: <strong>{{ duration }} minutes</strong> ·
+        Total: <strong class="price">${{ '%.0f'|format(price) }} TTD</strong>
+      </p>
+    </div>
+
+    <form method="post">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem">
+        <a class="btn btn-ghost" href="{{ url_for('booking.step2', page=page-1 if page>0 else 0) }}">← Earlier</a>
+        <strong class="detail">Available dates</strong>
+        <a class="btn btn-ghost" href="{{ url_for('booking.step2', page=page+1) }}">Later →</a>
+      </div>
+
+      <div class="date-grid" style="margin-bottom:1.5rem">
+        {% for d in dates %}
+        <label>
+          <input class="choice" type="radio" name="date" value="{{ d.isoformat() }}"
+            {% if selected_date == d.isoformat() %}checked{% endif %}
+            onchange="this.form.submit()">
+          <span class="date-chip {% if selected_date == d.isoformat() %}selected{% endif %}">
+            {{ d.strftime('%a') }}<br>{{ d.strftime('%b %d') }}
+          </span>
+        </label>
+        {% else %}
+        <p class="muted">No dates in this window.</p>
+        {% endfor %}
+      </div>
+
+      <h2>Available times</h2>
+      {% if selected_date %}
+      <div class="slot-grid" style="margin-top:1rem">
+        {% for s in slots %}
+        <label>
+          <input class="choice" type="radio" name="time" value="{{ s.start_minutes }}"
+            {% if selected_time == s.start_minutes %}checked{% endif %}>
+          <span class="slot {% if selected_time == s.start_minutes %}selected{% endif %}">
+            {{ s.label }}
+          </span>
+        </label>
+        {% else %}
+        <p class="muted">No open slots for this date and duration.</p>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">Select a date to see large time slots.</p>
+      {% endif %}
+
+      <div style="margin-top:1.75rem;display:flex;flex-wrap:wrap;gap:.75rem">
+        <a class="btn btn-ghost" href="{{ url_for('booking.step1') }}">Back</a>
+        <button class="btn" type="submit" name="continue" value="1">Continue to Secure Appointment</button>
+      </div>
+    </form>
+
+    <p style="margin-top:2rem" class="muted">
+      Need Monday or special hours?
+      <a href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener">Request via WhatsApp</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

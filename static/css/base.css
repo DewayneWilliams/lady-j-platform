@@ -1,0 +1,343 @@
+@import url("tokens.css");
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header .inner {
+  width: min(1120px, calc(100% - 2rem));
+  margin: auto;
+  min-height: var(--nav-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--pink);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.brand strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.brand small {
+  color: var(--gold);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.nav-links {
+  display: none;
+  gap: 1.25rem;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.nav-links a:hover,
+.nav-links a[aria-current="page"] {
+  color: var(--pink);
+}
+
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.15rem;
+  min-height: var(--touch);
+  border-radius: 999px;
+  background: var(--pink);
+  color: #fff !important;
+  font-weight: 600;
+  font-size: var(--btn-size);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.nav-cta:hover {
+  background: var(--pink-hover);
+  transform: translateY(-1px);
+}
+
+.nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  width: var(--touch);
+  height: var(--touch);
+}
+
+.mobile-nav {
+  display: none;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.mobile-nav.open {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mobile-nav a {
+  min-height: var(--touch);
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.25rem;
+  font-size: 1.05rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--pink);
+  color: #fff;
+  font-weight: 600;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.btn:hover { background: var(--pink-hover); transform: translateY(-1px); }
+.btn-gold { background: var(--gold); color: #1a1a1a; }
+.btn-gold:hover { filter: brightness(1.05); }
+.btn-outline {
+  background: transparent;
+  border-color: var(--charcoal);
+  color: var(--text);
+}
+[data-theme="dark"] .btn-outline { border-color: var(--line); }
+.btn-ghost {
+  background: var(--blush);
+  color: var(--text);
+}
+
+.section {
+  padding: 4rem 0;
+}
+
+.section-head {
+  max-width: 36rem;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  display: inline-block;
+  color: var(--gold);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+.service-grid,
+.product-grid,
+.workshop-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+
+.media-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.25s ease;
+}
+
+.media-card:hover {
+  transform: translateY(-3px);
+}
+
+.media-card .body {
+  padding: 1.15rem 1.25rem 1.35rem;
+}
+
+.media-card .meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-top: 0.65rem;
+}
+
+.price {
+  color: var(--pink);
+  font-weight: 650;
+}
+
+.site-footer {
+  border-top: 1px solid var(--line);
+  padding: 2.5rem 0 3rem;
+  margin-top: 2rem;
+  background: var(--blush);
+}
+
+.site-footer .inner {
+  width: min(1120px, calc(100% - 2rem));
+  margin: auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.site-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Forms */
+.form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+
+input,
+select,
+textarea {
+  min-height: var(--touch);
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.checkbox {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  font-weight: 400;
+}
+
+.checkbox input {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  margin-top: 0.2rem;
+}
+
+/* Booking steps */
+.steps {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.step-pill {
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.92rem;
+  min-height: var(--touch);
+  display: inline-flex;
+  align-items: center;
+}
+
+.step-pill.active {
+  background: var(--pink);
+  border-color: var(--pink);
+  color: #fff;
+}
+
+.slot-grid,
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+
+.slot,
+.date-chip {
+  min-height: var(--touch);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  font-size: var(--detail-size);
+}
+
+.slot.selected,
+.date-chip.selected,
+.slot:checked + label,
+input[type="radio"]:checked + .slot,
+input[type="radio"]:checked + .date-chip {
+  border-color: var(--pink);
+  background: var(--blush);
+  color: var(--pink);
+  font-weight: 650;
+}
+
+.choice {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .nav-links { display: flex; }
+  .nav-toggle { display: none; }
+  .service-grid,
+  .product-grid,
+  .workshop-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .slot-grid,
+  .date-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .service-grid,
+  .product-grid,
+  .workshop-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

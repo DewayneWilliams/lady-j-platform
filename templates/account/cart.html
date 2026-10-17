@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Cart | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:720px">
+    <h1>Your cart</h1>
+    {% if lines %}
+    <ul class="detail">
+      {% for line in lines %}
+      <li>{{ line.product.name }} × {{ line.qty }} — ${{ '%.0f'|format(line.line) }}</li>
+      {% endfor %}
+    </ul>
+    <p class="detail"><strong>Total ${{ '%.0f'|format(total) }} TTD</strong></p>
+    <form method="post" action="{{ url_for('account.cart_checkout') }}" class="form-grid" style="margin-top:1.25rem">
+      <label>Fulfillment
+        <select name="fulfillment">
+          <option value="pickup">Pickup at salon</option>
+          <option value="delivery">Delivery (if enabled by owner)</option>
+        </select>
+      </label>
+      <label>Payment
+        <select name="payment_method">
+          <option value="bank_transfer">Bank transfer</option>
+          <option value="card">Card (simulated)</option>
+        </select>
+      </label>
+      <label>Bank reference (if transferring)
+        <input name="bank_reference" placeholder="Reference number">
+      </label>
+      <label>Payment date
+        <input type="date" name="bank_payment_date">
+      </label>
+      <button class="btn" type="submit">Place order</button>
+    </form>
+    {% else %}
+    <p class="muted">Your cart is empty. <a href="{{ url_for('public.boutique') }}">Browse boutique</a></p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

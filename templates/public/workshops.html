@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Workshops | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Education</span>
+      <h1>Workshops</h1>
+      <p class="muted">Professional workshops for beauty artists. Sign in to enroll and access protected content.</p>
+    </div>
+    <div class="workshop-grid">
+      {% for w in workshops %}
+      <article class="media-card">
+        <div class="body">
+          <span class="eyebrow">{{ w.mode|capitalize }}</span>
+          <h2>{{ w.title }}</h2>
+          <p class="muted">{{ w.description }}</p>
+          <div class="meta">
+            <span>
+              {% if w.capacity %}{{ w.seats_taken }}/{{ w.capacity }} enrolled{% else %}Open enrollment{% endif %}
+            </span>
+            <span class="price">${{ '%.0f'|format(w.price_ttd) }} TTD</span>
+          </div>
+          <p style="margin-top:1rem">
+            <a class="btn" href="{{ url_for('public.workshop_detail', slug=w.slug) }}">Details</a>
+          </p>
+        </div>
+      </article>
+      {% else %}
+      <p class="muted">No workshops published yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

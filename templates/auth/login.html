@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Sign in | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:480px">
+    <h1>Sign in</h1>
+    <p class="muted">Your private Lady J account — bookings, workshops, and boutique orders.</p>
+    <form method="post" class="form-grid" style="margin-top:1.5rem">
+      <input type="hidden" name="next" value="{{ request.args.get('next','') }}">
+      <label>Email
+        <input type="email" name="email" required autocomplete="email">
+      </label>
+      <label>Password
+        <input type="password" name="password" required autocomplete="current-password">
+      </label>
+      <label class="checkbox"><input type="checkbox" name="remember" value="1"> Keep me signed in</label>
+      <button class="btn" type="submit">Sign in</button>
+    </form>
+    <p style="margin-top:1rem">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+    <div style="margin-top:1.5rem">
+      <p class="muted" style="font-size:.95rem">Optional social login (prepared, inactive until credentials are set):</p>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem">
+        <a class="btn btn-ghost" href="{{ url_for('auth.oauth_start', provider='google') }}">Google</a>
+        <a class="btn btn-ghost" href="{{ url_for('auth.oauth_start', provider='apple') }}">Apple</a>
+        <a class="btn btn-ghost" href="{{ url_for('auth.oauth_start', provider='facebook') }}">Facebook</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

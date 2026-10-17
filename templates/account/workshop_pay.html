@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Workshop payment | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:560px">
+    <h1>Pay for {{ reg.title }}</h1>
+    <p class="detail price">${{ '%.0f'|format(reg.price_ttd) }} TTD</p>
+    <form method="post" class="form-grid">
+      <label>Payment method
+        <select name="payment_method">
+          <option value="card">Card (simulated)</option>
+          <option value="bank_transfer">Bank transfer</option>
+        </select>
+      </label>
+      <label>Bank reference<input name="bank_reference"></label>
+      <label>Payment date<input type="date" name="bank_payment_date"></label>
+      <button class="btn" type="submit">Submit payment</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

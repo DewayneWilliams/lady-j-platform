@@ -1,0 +1,181 @@
+/* Lady J — design tokens (official palette) */
+:root {
+  --pink: #E75480;
+  --pink-hover: #d44570;
+  --gold: #C9A227;
+  --gold-soft: #e8d48a;
+  --warm-white: #FFFCFA;
+  --blush: #FFF2F6;
+  --charcoal: #222222;
+  --muted: #5c5356;
+  --line: #eadde3;
+  --success: #2f6b4f;
+  --danger: #a33b4a;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 12px 40px rgba(34, 34, 34, 0.08);
+  --font-display: "Cormorant Garamond", "Times New Roman", serif;
+  --font-body: "Outfit", "Segoe UI", sans-serif;
+  --bg: var(--warm-white);
+  --surface: #ffffff;
+  --text: var(--charcoal);
+  --text-muted: var(--muted);
+  --nav-h: 72px;
+  --touch: 48px;
+  --body-size: 18px;
+  --detail-size: 20px;
+  --heading-size: 28px;
+  --btn-size: 18px;
+}
+
+[data-theme="dark"] {
+  --bg: #161416;
+  --surface: #221e21;
+  --text: #f7f2f4;
+  --text-muted: #b9aeb3;
+  --line: #3a3236;
+  --blush: #2a1f24;
+  --warm-white: #1a1618;
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* Owner adjustable text sizes */
+[data-text="large"] {
+  --body-size: 20px;
+  --detail-size: 22px;
+  --heading-size: 30px;
+  --btn-size: 19px;
+}
+
+[data-text="xlarge"] {
+  --body-size: 22px;
+  --detail-size: 24px;
+  --heading-size: 32px;
+  --btn-size: 19px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button,
+.btn {
+  min-height: var(--touch);
+  min-width: var(--touch);
+  font-size: var(--btn-size);
+  cursor: pointer;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0 0 0.4em;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: clamp(2.4rem, 5vw, 3.6rem); }
+h2 { font-size: clamp(1.7rem, 3vw, 2.2rem); }
+h3 { font-size: var(--heading-size); }
+
+.detail {
+  font-size: var(--detail-size);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.container {
+  width: min(1120px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.flash-wrap {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 1rem auto 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.flash {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.flash.success { border-color: var(--success); }
+.flash.error { border-color: var(--danger); }
+.flash.info { border-color: var(--gold); }
+
+/* Motion — subtle, intentional */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes softIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-in {
+  animation: fadeUp 0.55s ease both;
+}
+
+.animate-delay-1 { animation-delay: 0.08s; }
+.animate-delay-2 { animation-delay: 0.16s; }
+.animate-delay-3 { animation-delay: 0.24s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in { animation: none; }
+  html { scroll-behavior: auto; }
+}

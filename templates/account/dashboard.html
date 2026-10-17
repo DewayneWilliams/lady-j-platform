@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}My Account | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container">
+    <h1>Hello, {{ current_user.full_name.split()[0] }}</h1>
+    <p class="muted">Your private appointments, workshops, and orders.</p>
+    <p style="margin:1rem 0">
+      <a class="btn" href="{{ url_for('booking.step1') }}">Book appointment</a>
+      <a class="btn btn-ghost" href="{{ url_for('account.profile') }}">Profile</a>
+      <a class="btn btn-ghost" href="{{ url_for('account.cart') }}">Cart</a>
+    </p>
+
+    <h2>Appointments</h2>
+    {% for a in appointments %}
+    <div class="media-card" style="margin:.75rem 0">
+      <div class="body detail">
+        <strong>{{ a.appointment_date }} · {{ minutes_to_label(a.start_minutes) }}</strong>
+        <p>{{ a.status }} · {{ a.payment_status }} · ${{ '%.0f'|format(a.total_ttd) }}</p>
+      </div>
+    </div>
+    {% else %}
+    <p class="muted">No appointments yet.</p>
+    {% endfor %}
+
+    <h2 style="margin-top:2rem">Workshops</h2>
+    {% for r in registrations %}
+    <div class="media-card" style="margin:.75rem 0">
+      <div class="body detail">
+        <strong>{{ r.title }}</strong>
+        <p>{{ r.status }} · {{ r.payment_status }} · {{ r.mode }}</p>
+        {% if r.payment_status == 'paid' %}
+        <a href="{{ url_for('account.workshop_content', workshop_id=r.workshop_id) }}">Open content</a>
+        {% elif r.status == 'pending' %}
+        <a href="{{ url_for('account.workshop_pay', reg_id=r.id) }}">Complete payment</a>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <p class="muted">No workshop registrations.</p>
+    {% endfor %}
+
+    <h2 style="margin-top:2rem">Orders</h2>
+    {% for o in orders %}
+    <div class="media-card" style="margin:.75rem 0">
+      <div class="body detail">
+        <strong>Order #{{ o.id }}</strong>
+        <p>{{ o.status }} · {{ o.payment_status }} · ${{ '%.0f'|format(o.total_ttd) }} · {{ o.fulfillment }}</p>
+      </div>
+    </div>
+    {% else %}
+    <p class="muted">No boutique orders yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

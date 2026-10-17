@@ -1,0 +1,48 @@
+{% extends "owner/base_owner.html" %}
+{% block title %}Maria | Owner{% endblock %}
+{% block owner_content %}
+<div class="owner-card" style="text-align:center">
+  <h2>Maria</h2>
+  <p class="detail muted">Bilingual English / Spanish assistant</p>
+  <button class="maria-mic" type="button" id="mariaMic" aria-label="Hold to speak">
+    MIC
+  </button>
+  <p class="muted" id="mariaVoiceHint">Voice uses AWS Transcribe/Polly when configured. Type commands anytime.</p>
+</div>
+
+<div class="maria-panel">
+  <form method="post" class="form-grid" id="mariaForm">
+    <label>Command
+      <textarea name="command" id="mariaCommand" rows="3" placeholder="Try: help · today · availability · revenue · verify payment #1 · cancel appointment #1">{{ request.form.command if request.form else '' }}</textarea>
+    </label>
+    {% if result and result.needs_confirmation %}
+    <input type="hidden" name="confirm_token" value="{{ result.needs_confirmation.token }}">
+    <input type="hidden" name="confirm_payload" value='{{ result.needs_confirmation.payload | tojson }}'>
+    <p class="detail" style="color:var(--pink)">Confirmation required before this action runs.</p>
+    <button class="btn btn-gold" type="submit">Confirm action</button>
+    {% else %}
+    <button class="btn" type="submit">Send to Maria</button>
+    {% endif %}
+  </form>
+
+  {% if result %}
+  <div style="margin-top:1.25rem">
+    <p class="eyebrow">Maria · {{ result.language }} · {{ result.mode }}</p>
+    <p class="detail">{{ result.message }}</p>
+    {% if result.data %}
+    <pre>{{ result.data | tojson(indent=2) }}</pre>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  document.getElementById("mariaMic")?.addEventListener("click", () => {
+    const hint = document.getElementById("mariaVoiceHint");
+    if (hint) {
+      hint.textContent = "Microphone ready for AWS Transcribe when credentials are set. For now, type your command below.";
+    }
+    document.getElementById("mariaCommand")?.focus();
+  });
+</script>
+{% endblock %}

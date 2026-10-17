@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ workshop.title }} | Workshops{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:720px">
+    <span class="eyebrow">{{ workshop.mode|capitalize }} workshop</span>
+    <h1>{{ workshop.title }}</h1>
+    <p class="detail muted">Instructor: {{ workshop.instructor_name }}</p>
+    <p>{{ workshop.description }}</p>
+    <p class="detail"><strong class="price">${{ '%.0f'|format(workshop.price_ttd) }} TTD</strong>
+      · {% if workshop.duration_minutes %}{{ workshop.duration_minutes }} min{% endif %}
+      · {% if workshop.capacity %}{{ workshop.seats_taken }}/{{ workshop.capacity }} seats{% else %}Open{% endif %}
+    </p>
+    {% if current_user.is_authenticated and not current_user.is_staff %}
+    <form method="post" action="{{ url_for('account.enroll_workshop', workshop_id=workshop.id) }}" style="margin-top:1.5rem">
+      <button class="btn" type="submit">Enroll securely</button>
+    </form>
+    {% else %}
+    <p style="margin-top:1.5rem">
+      <a class="btn" href="{{ url_for('auth.login', next=url_for('public.workshop_detail', slug=workshop.slug)) }}">Sign in to enroll</a>
+    </p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "owner/base_owner.html" %}
+{% block title %}{{ client.full_name }} | Clients{% endblock %}
+{% block owner_content %}
+<div class="desktop-split">
+  <section class="owner-card">
+    <h2>{{ client.full_name }}</h2>
+    <p class="detail">{{ client.email }}</p>
+    <p class="detail">{{ client.phone or 'No phone' }}</p>
+    <p class="detail">Credits: ${{ '%.2f'|format(client.credits_balance) }}</p>
+    <h3 style="margin-top:1.5rem">Appointment history</h3>
+    {% for a in appointments %}
+    <div class="appt-row">
+      <strong>{{ a.appointment_date }} · {{ minutes_to_label(a.start_minutes) }}</strong>
+      <span>{{ a.status }} · ${{ '%.0f'|format(a.total_ttd) }}</span>
+    </div>
+    {% else %}
+    <p class="muted">No appointments.</p>
+    {% endfor %}
+  </section>
+  <aside class="owner-card">
+    <h3>Private notes</h3>
+    <form method="post" action="{{ url_for('owner.client_notes', client_id=client.id) }}" class="form-grid">
+      <label>Notes<textarea name="notes_private" rows="6">{{ client.notes_private or '' }}</textarea></label>
+      <label>Allergies / sensitivities<textarea name="allergies" rows="3">{{ client.allergies or '' }}</textarea></label>
+      <button class="btn" type="submit">Save notes</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}

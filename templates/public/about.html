@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}About | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:720px">
+    <span class="eyebrow">Our story</span>
+    <h1>About Lady J</h1>
+    <p class="detail">
+      Lady J Salon &amp; Day Spa is a private beauty destination in Petit Valley.
+      We focus on calm appointments, skilled artistry, and care you can trust —
+      never a social feed, never public client profiles.
+    </p>
+    <p>
+      Whether you are booking a silk press, spa treatment, professional workshop,
+      or boutique essentials, your experience stays personal and secure.
+    </p>
+    <p style="margin-top:1.5rem">
+      <a class="btn" href="{{ url_for('booking.step1') }}">Book Appointment</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

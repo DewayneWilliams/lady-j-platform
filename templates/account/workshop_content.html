@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ workshop.title }} content{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:720px">
+    <span class="eyebrow">Protected content</span>
+    <h1>{{ workshop.title }}</h1>
+    <p>{{ workshop.description }}</p>
+    <p class="muted">Instructor: {{ workshop.instructor_name }}</p>
+    <div class="media-card" style="margin-top:1.25rem">
+      <div class="body">
+        <p>This is your enrolled workshop space. Live schedules and recorded materials appear here once published by the salon.</p>
+        {% if workshop.certificate_enabled %}
+        <p class="muted">Completion certificates are available after attendance is marked.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

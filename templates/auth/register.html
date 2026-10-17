@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Create account | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:480px">
+    <h1>Create your private account</h1>
+    <p class="muted">No feeds, followers, or public profiles — just your salon experience.</p>
+    <form method="post" class="form-grid" style="margin-top:1.5rem">
+      <label>Full name
+        <input name="full_name" required autocomplete="name">
+      </label>
+      <label>Email
+        <input type="email" name="email" required autocomplete="email">
+      </label>
+      <label>Mobile
+        <input name="phone" autocomplete="tel">
+      </label>
+      <label>Password (min 8 characters)
+        <input type="password" name="password" required minlength="8" autocomplete="new-password">
+      </label>
+      <button class="btn" type="submit">Create account</button>
+    </form>
+    <p style="margin-top:1rem">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+  </div>
+</section>
+{% endblock %}

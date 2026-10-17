@@ -1,0 +1,39 @@
+{% extends "owner/base_owner.html" %}
+{% block title %}Calendar | Owner{% endblock %}
+{% block owner_content %}
+<div class="desktop-split">
+  <section class="owner-card">
+    <h2>Calendar</h2>
+    <form method="get" class="prefs-bar">
+      <label>Date
+        <input type="date" name="date" value="{{ day }}" style="font-size:1.1rem;min-height:48px">
+      </label>
+      <button class="btn" type="submit">Show day</button>
+    </form>
+    {% for a in appointments %}
+    <div class="appt-row">
+      <span class="time-badge">{{ minutes_to_label(a.start_minutes) }} – {{ minutes_to_label(a.end_minutes) }}</span>
+      <strong class="detail">{{ a.client_name or a.guest_name }}</strong>
+      <span>{{ a.status }} · {{ a.payment_status }}</span>
+    </div>
+    {% else %}
+    <p class="detail muted">No appointments on this day.</p>
+    {% endfor %}
+    {% if blocks %}
+    <h3 style="margin-top:1.5rem">Blocked time</h3>
+    {% for b in blocks %}
+    <p class="detail">{{ b.start_at }} → {{ b.end_at }}{% if b.reason %} · {{ b.reason }}{% endif %}</p>
+    {% endfor %}
+    {% endif %}
+  </section>
+  <aside class="owner-card">
+    <h3>Block time</h3>
+    <form method="post" action="{{ url_for('owner.block_time') }}" class="form-grid">
+      <label>Start <input type="datetime-local" name="start_at" required></label>
+      <label>End <input type="datetime-local" name="end_at" required></label>
+      <label>Reason <input name="reason" placeholder="Lunch, inventory, etc."></label>
+      <button class="btn" type="submit">Block period</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}

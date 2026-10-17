@@ -1,0 +1,266 @@
+/* Owner dashboard — large readable controls, mobile-first */
+.owner-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--bg);
+}
+
+.owner-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.owner-top h1 {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.owner-main {
+  width: min(1200px, calc(100% - 1.5rem));
+  margin: 1rem auto 5.5rem;
+}
+
+.owner-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding: 0.35rem 0.25rem calc(0.35rem + env(safe-area-inset-bottom));
+}
+
+.owner-nav a {
+  display: grid;
+  place-items: center;
+  gap: 0.15rem;
+  min-height: 56px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.35rem;
+  text-align: center;
+}
+
+.owner-nav a.active,
+.owner-nav a[aria-current="page"] {
+  color: var(--pink);
+}
+
+.owner-nav .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.owner-nav a.active .dot {
+  opacity: 1;
+  background: var(--pink);
+}
+
+.owner-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.15rem 1.2rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.owner-card h2,
+.owner-card h3 {
+  font-size: var(--heading-size);
+}
+
+.owner-card .detail {
+  font-size: var(--detail-size);
+}
+
+.owner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.owner-actions .btn {
+  flex: 1 1 auto;
+  min-width: 140px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.stat {
+  background: var(--blush);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+}
+
+.stat strong {
+  display: block;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-family: var(--font-display);
+  color: var(--pink);
+}
+
+.appt-row {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--detail-size);
+}
+
+.appt-row:last-child {
+  border-bottom: 0;
+}
+
+.time-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: var(--blush);
+  color: var(--pink);
+  font-weight: 650;
+}
+
+.prefs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.prefs-bar label {
+  font-size: 0.95rem;
+}
+
+.prefs-bar select {
+  min-width: 140px;
+}
+
+.desktop-split {
+  display: grid;
+  gap: 1rem;
+}
+
+.maria-mic {
+  width: min(220px, 70vw);
+  aspect-ratio: 1;
+  margin: 1.5rem auto;
+  border-radius: 50%;
+  border: 4px solid var(--gold);
+  background: var(--pink);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 16px 40px rgba(231, 84, 128, 0.35);
+  transition: transform 0.2s ease;
+}
+
+.maria-mic:active {
+  transform: scale(0.97);
+}
+
+.maria-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.maria-panel pre {
+  white-space: pre-wrap;
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.owner-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--detail-size);
+}
+
+.owner-table th,
+.owner-table td {
+  text-align: left;
+  padding: 0.85rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.owner-table th {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+@media (min-width: 1024px) {
+  .owner-nav {
+    position: static;
+    grid-template-columns: repeat(5, auto);
+    justify-content: start;
+    gap: 0.5rem;
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+
+  .owner-nav a {
+    flex-direction: row;
+    min-height: var(--touch);
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    font-size: 1rem;
+  }
+
+  .owner-nav a.active {
+    background: var(--blush);
+  }
+
+  .owner-shell {
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .owner-main {
+    margin-bottom: 2rem;
+  }
+
+  .desktop-split {
+    grid-template-columns: 1.3fr 1fr;
+    align-items: start;
+  }
+
+  .stat-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

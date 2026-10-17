@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_user.theme }}" data-text="{{ current_user.text_size }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#E75480">
+  <title>{% block title %}Owner | Lady J{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/owner.css') }}">
+</head>
+<body>
+  <div class="owner-shell">
+    <header class="owner-top">
+      <div>
+        <h1>Lady J</h1>
+        <p class="muted" style="margin:0;font-size:0.95rem">Owner dashboard</p>
+      </div>
+      <a class="btn btn-ghost" href="{{ url_for('public.home') }}">Site</a>
+    </header>
+
+    <nav class="owner-nav container" aria-label="Owner" style="width:min(1200px,calc(100% - 1.5rem));margin:.75rem auto 0">
+      <a href="{{ url_for('owner.today') }}" class="{% if nav=='today' %}active{% endif %}" {% if nav=='today' %}aria-current="page"{% endif %}>
+        <span class="dot"></span>Today
+      </a>
+      <a href="{{ url_for('owner.calendar') }}" class="{% if nav=='calendar' %}active{% endif %}" {% if nav=='calendar' %}aria-current="page"{% endif %}>
+        <span class="dot"></span>Calendar
+      </a>
+      <a href="{{ url_for('owner.clients') }}" class="{% if nav=='clients' %}active{% endif %}" {% if nav=='clients' %}aria-current="page"{% endif %}>
+        <span class="dot"></span>Clients
+      </a>
+      <a href="{{ url_for('owner.business') }}" class="{% if nav=='business' %}active{% endif %}" {% if nav=='business' %}aria-current="page"{% endif %}>
+        <span class="dot"></span>Business
+      </a>
+      <a href="{{ url_for('owner.maria') }}" class="{% if nav=='maria' %}active{% endif %}" {% if nav=='maria' %}aria-current="page"{% endif %}>
+        <span class="dot"></span>Maria
+      </a>
+    </nav>
+
+    {% include "partials/flash.html" %}
+
+    <main class="owner-main">
+      <form method="post" action="{{ url_for('owner.prefs') }}" class="prefs-bar owner-card">
+        <label>Text size
+          <select name="text_size">
+            <option value="default" {% if current_user.text_size=='default' %}selected{% endif %}>Default (18px)</option>
+            <option value="large" {% if current_user.text_size=='large' %}selected{% endif %}>Large</option>
+            <option value="xlarge" {% if current_user.text_size=='xlarge' %}selected{% endif %}>Extra large</option>
+          </select>
+        </label>
+        <label>Theme
+          <select name="theme">
+            <option value="light" {% if current_user.theme=='light' %}selected{% endif %}>Light</option>
+            <option value="dark" {% if current_user.theme=='dark' %}selected{% endif %}>Dark</option>
+            <option value="system" {% if current_user.theme=='system' %}selected{% endif %}>System</option>
+          </select>
+        </label>
+        <button class="btn btn-ghost" type="submit">Apply</button>
+      </form>
+      {% block owner_content %}{% endblock %}
+    </main>
+  </div>
+  <script src="{{ url_for('static', filename='js/site.js') }}"></script>
+</body>
+</html>

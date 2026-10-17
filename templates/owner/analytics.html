@@ -1,0 +1,19 @@
+{% extends "owner/base_owner.html" %}
+{% block title %}Analytics | Owner{% endblock %}
+{% block owner_content %}
+<div class="owner-card">
+  <h2>Revenue &amp; analytics</h2>
+  <p class="muted">Figures are calculated from live database records — not demo fabrications.</p>
+  <div class="stat-row" style="margin-top:1rem">
+    <div class="stat"><span class="muted">Completed payments</span><strong>${{ '%.0f'|format(completed) }}</strong></div>
+    <div class="stat"><span class="muted">Appointments</span><strong>{{ appt_count }}</strong></div>
+    <div class="stat"><span class="muted">Paid product orders</span><strong>{{ product_sales }}</strong></div>
+    <div class="stat"><span class="muted">Workshop regs</span><strong>{{ workshop_regs }}</strong></div>
+  </div>
+  <div class="stat" style="margin-top:1rem">
+    <span class="muted">Outstanding deposit balances</span>
+    <strong>${{ '%.0f'|format(outstanding) }}</strong>
+  </div>
+  <p style="margin-top:1.25rem"><a class="btn btn-ghost" href="{{ url_for('owner.business') }}">Back to Business</a></p>
+</div>
+{% endblock %}

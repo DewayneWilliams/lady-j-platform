@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Contact | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:720px">
+    <span class="eyebrow">Visit &amp; reach us</span>
+    <h1>Contact</h1>
+    <p class="detail">Petit Valley · Trinidad &amp; Tobago</p>
+    <p>Hours: Tuesday–Saturday, 10 AM–6 PM (America/Port_of_Spain)</p>
+    <p>Closed Sunday and Monday.</p>
+    <p style="margin-top:1.25rem">
+      <a class="btn" href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener">Message on WhatsApp</a>
+      <a class="btn btn-ghost" href="{{ url_for('booking.step1') }}">Book online</a>
+    </p>
+  </div>
+</section>
+{% endblock %}
