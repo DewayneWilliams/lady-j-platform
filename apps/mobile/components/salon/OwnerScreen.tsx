@@ -1,0 +1,2280 @@
+import { createOwnerCalendarDemo } from "@/lib/salon/ownerCalendarDemo";
+import { activitiesOnDate } from "@/lib/salon/calendarActivity";
+import BlockActivityCard from "./owner/BlockActivityCard";
+import { useCalendarRealtime } from "@/lib/salon/useCalendarRealtime";
+import { localCalendarTime } from "@/lib/salon/calendarActivity";
+import CalendarDashboard from "./owner/CalendarDashboard";
+import BlockTimeEditor from "./owner/BlockTimeEditor";
+import { formatDuration } from "@/lib/salon/duration";
+import ServiceCategoryField from "./owner/ServiceCategoryField";
+import OwnerEditorPortal from "./owner/OwnerEditorPortal";
+import { useBottomNavigationSpacing } from "./BottomNavigation";
+import { AgreementList } from "./ServiceAgreement";
+import { DateField, DateTimeField, DurationField } from "./DateFields";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  View,
+  ScrollView,
+  RefreshControl,
+  Pressable,
+  Modal,
+  TextInput,
+  useWindowDimensions,
+  ActivityIndicator,
+  Linking,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Icon from "@/lib/icons/LucideIcon";
+import { useSalon } from "@/lib/salon/SalonProvider";
+import { db, check } from "@/lib/salon/client";
+import {
+  Appointment,
+  Client,
+  Transaction,
+  Purchase,
+  Service,
+  Product,
+  Workshop,
+  money,
+  dateLabel,
+} from "@/lib/salon/types";
+import { demoClients, demoAppointments, demoTransactions } from "@/lib/salon/demo";
+import { createOwnerDemoCommerce } from "@/lib/salon/ownerDemo";
+import { fonts } from "@/lib/salon/design";
+import { useNav } from "./Shell";
+import { Txt, Card, Chip, useColors, shared, ErrorBox, Photo } from "./ui";
+import { whatsappSupportUrl, whatsappContactUrl } from "@/lib/salon/whatsapp";
+import CatalogPhotoEditor from "./owner/CatalogPhotoEditor";
+import SpecialsPanel from "./owner/SpecialsPanel";
+import { todayKey } from "./BookingScreen";
+import OwnerWorkspace from "./owner/OwnerWorkspace";
+import { appointmentsForToday, salonDayKey } from "@/lib/salon/ownerToday";
+import TodayDashboard, { OwnerAction } from "./owner/TodayDashboard";
+import ClientsPanel from "./owner/ClientsPanel";
+import BusinessOverview from "./owner/BusinessOverview";
+import RevenuePanel from "./owner/RevenuePanel";
+import DiscountsPanel from "./owner/DiscountsPanel";
+import OrderDiscountDialog, { DiscountTarget } from "./owner/OrderDiscountDialog";
+import { Discount } from "@/lib/salon/discounts";
+import PaymentCompletion from "./owner/PaymentCompletion";
+import { appointmentPayment } from "@/lib/salon/appointmentPayment";
+import AppointmentCard from "./owner/AppointmentCard";
+import { useForegroundRefresh } from "@/lib/salon/useForegroundRefresh";
+import { WaitlistEntry, ownerAttention, isLowStock } from "@/lib/salon/ownerAssistant";
+import DailyBriefing from "./owner/DailyBriefing";
+import TodayPreparation from "./owner/TodayPreparation";
+import GuardianFields from "./owner/GuardianFields";
+import { contactIsMinor } from "@/lib/salon/ownerPrep";
+import WaitlistPanel from "./owner/WaitlistPanel";
+import ExpensesPanel from "./owner/ExpensesPanel";
+import CommunicationPanel from "./owner/CommunicationPanel";
+import MariaPanel from "./owner/MariaPanel";
+import { OwnerText as OT, OwnerButton as OA } from "./owner/OwnerUI";
+
+type Row = Record<string, unknown>;
+type Editor = {
+  title: string;
+  table: string;
+  fields: { key: string; label: string; type?: "number" | "multiline" | "boolean" }[];
+  values: Row;
+};
+function OF({
+  label,
+  value,
+  onChange,
+  multiline = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (s: string) => void;
+  multiline?: boolean;
+}) {
+  const c = useColors();
+  return (
+    <View style={{ gap: 9, marginBottom: 18 }}>
+      <OT>{label}</OT>
+      <TextInput
+        accessibilityLabel={label}
+        value={value}
+        onChangeText={onChange}
+        multiline={multiline}
+        style={{
+          backgroundColor: c.background,
+          borderWidth: 1,
+          borderColor: c.border,
+          color: c.foreground,
+          padding: 15,
+          borderRadius: 10,
+          fontFamily: fonts.body,
+          fontSize: 20,
+          minHeight: multiline ? 130 : 58,
+          textAlignVertical: multiline ? "top" : "center",
+        }}
+      />
+    </View>
+  );
+}
+export default function OwnerScreen() {
+  const s = useSalon(),
+    c = useColors(),
+    go = useNav(),
+    { width } = useWindowDimensions();
+  const navigationSpacing = useBottomNavigationSpacing(true);
+  const [todayDate, setTodayDate] = useState(() => salonDayKey());
+  useEffect(() => {
+    const timer = setInterval(() => setTodayDate(salonDayKey()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+  const loadGeneration = useRef(0);
+  const demoLoaded = useRef(false);
+  const hasLoaded = useRef(false);
+  const [waiting, setWaiting] = useState<WaitlistEntry[]>([]);
+  const [failedMessages, setFailedMessages] = useState(0);
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [navigationRevision, setNavigationRevision] = useState(0);
+  const [tab, setTab] = useState("Today"),
+    [section, setSection] = useState("Overview"),
+    [appointments, setAppointments] = useState<Appointment[]>([]),
+    [clients, setClients] = useState<Client[]>([]),
+    [transactions, setTransactions] = useState<Transaction[]>([]),
+    [purchases, setPurchases] = useState<Purchase[]>([]),
+    [services, setServices] = useState<Service[]>([]),
+    [products, setProducts] = useState<Product[]>([]),
+    [workshops, setWorkshops] = useState<Workshop[]>([]),
+    [profiles, setProfiles] = useState<Row[]>([]),
+    [attendance, setAttendance] = useState<Row[]>([]),
+    [demoSettings, setDemoSettings] = useState<Row | null>(null),
+    [demoPromotions, setDemoPromotions] = useState<Row[]>(s.promotions as unknown as Row[]),
+    [demoResources, setDemoResources] = useState<Record<string, Row>>({}),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [editor, setEditor] = useState<Editor | null>(null),
+    [busy, setBusy] = useState(false),
+    [confirm, setConfirm] = useState<{
+      text: string;
+      detail?: string;
+      actionLabel?: string;
+      cancelLabel?: string;
+      run: () => Promise<void>;
+    } | null>(null),
+    [demoDiscounts, setDemoDiscounts] = useState<Discount[]>([]),
+    [discountTarget, setDiscountTarget] = useState<DiscountTarget | null>(null),
+    [paymentAppointment, setPaymentAppointment] = useState<Appointment | null>(null),
+    [selectedClient, setSelectedClient] = useState<Client | null>(null),
+    [expandedAppointment, setExpandedAppointment] = useState(""),
+    [enrollmentWorkshopId, setEnrollmentWorkshopId] = useState(""),
+    [calendarDate, setCalendarDate] = useState(todayKey()),
+    [calendarSelected, setCalendarSelected] = useState(false),
+    [editingBlock, setEditingBlock] = useState<Appointment | null>(null),
+    [initialBlockReason, setInitialBlockReason] = useState("personal"),
+    [calendarView, setCalendarView] = useState("Month"),
+    [calendarForm, setCalendarForm] = useState<"appointment" | "block" | null>(null),
+    [start, setStart] = useState(`${todayKey()}T10:00`),
+    [note, setNote] = useState(""),
+    [serviceId, setServiceId] = useState(""),
+    [customerId, setCustomerId] = useState("");
+  const demo = s.demoOwner && !s.owner,
+    allowed = s.owner || demo;
+  const load = useCallback(
+    async (quiet = false) => {
+      const generation = ++loadGeneration.current;
+      if (!demo) demoLoaded.current = false;
+      if (!allowed) {
+        hasLoaded.current = false;
+        return;
+      }
+      setError("");
+      if (demo) {
+        if (demoLoaded.current || s.loading) return;
+        demoLoaded.current = true;
+        setAppointments([...demoAppointments, ...createOwnerCalendarDemo(salonDayKey())]);
+        setClients(demoClients);
+        const demoProducts = s.session ? s.products : s.products.map((v) => ({ ...v, price: 180 }));
+        const demoWorkshops = s.session
+          ? s.workshops
+          : s.workshops.map((v) => ({ ...v, price: 650 }));
+        const commerce = createOwnerDemoCommerce(demoProducts, demoWorkshops);
+        setTransactions([...demoTransactions, ...commerce.transactions]);
+        setPurchases(commerce.purchases);
+        setServices(s.session ? s.services : s.services.map((v) => ({ ...v, price: 350 })));
+        setProducts(demoProducts.map((v, i) => (i === 0 ? { ...v, stock: 2 } : v)));
+        setWorkshops(demoWorkshops);
+        hasLoaded.current = true;
+        setLoading(false);
+        return;
+      }
+      if (!quiet) setLoading(true);
+      try {
+        const tables = [
+          "lj_calendar",
+          "lj_client_records",
+          "lj_transactions",
+          "lj_purchases",
+          "lj_services",
+          "lj_products",
+          "lj_workshops",
+          "lj_profiles",
+          "lj_attendance",
+          "lj_waitlist",
+        ];
+        const fetchRows = async (table: string) => {
+          if (
+            ![
+              "lj_calendar",
+              "lj_transactions",
+              "lj_purchases",
+              "lj_client_records",
+              "lj_profiles",
+              "lj_waitlist",
+            ].includes(table)
+          ) {
+            let query = db().from(table).select("*");
+            if (["lj_services", "lj_products", "lj_workshops"].includes(table))
+              query = query.is("deleted_at", null);
+            return check(await query);
+          }
+          const rows: Row[] = [];
+          for (let offset = 0; ; offset += 1000) {
+            let query = db()
+              .from(table)
+              .select("*")
+              .order("id")
+              .range(offset, offset + 999);
+            if (table === "lj_client_records") query = query.is("deleted_at", null);
+            if (table === "lj_waitlist")
+              query = query.eq("status", "waiting").gte("requested_date", salonDayKey());
+            const page = check(await query) as Row[];
+            rows.push(...page);
+            if (page.length < 1000) break;
+          }
+          return rows;
+        };
+        const r = await Promise.all(tables.map(fetchRows));
+        if (generation !== loadGeneration.current) return;
+        setAppointments(r[0] as Appointment[]);
+        setClients(r[1] as Client[]);
+        setTransactions(r[2] as Transaction[]);
+        setPurchases(r[3] as Purchase[]);
+        setServices(r[4] as Service[]);
+        setProducts(r[5] as Product[]);
+        setWorkshops(r[6] as Workshop[]);
+        setProfiles(r[7] as Row[]);
+        setAttendance(r[8] as Row[]);
+        setWaiting(r[9] as WaitlistEntry[]);
+        hasLoaded.current = true;
+        const failed = await db()
+          .from("lj_message_jobs")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "failed");
+        if (generation === loadGeneration.current && !failed.error)
+          setFailedMessages(failed.count || 0);
+      } catch (e) {
+        if (generation === loadGeneration.current)
+          setError(e instanceof Error ? e.message : "Unable to load the workspace.");
+      } finally {
+        if (generation === loadGeneration.current) setLoading(false);
+      }
+    },
+    [allowed, demo, s.services, s.products, s.workshops, s.session?.user.id, s.loading],
+  );
+  useEffect(() => {
+    void load(hasLoaded.current);
+  }, [load]);
+  useForegroundRefresh(() => load(true), allowed && !demo);
+  const calendarSync = useCalendarRealtime(() => load(true), allowed && !demo);
+  const refreshWorkspace = async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  const attention = ownerAttention(
+    appointments,
+    transactions,
+    purchases,
+    products,
+    waiting,
+    failedMessages,
+  );
+  const nameFor = (id: string | null) =>
+    clients.find((v) => v.id === id || v.customer_id === id)?.full_name ||
+    String(profiles.find((v) => v.id === id)?.full_name || "Client");
+  const pending = transactions.filter((v) => v.status === "pending");
+  const today = appointmentsForToday(appointments, todayDate);
+  function openEditor(table: string, row?: Row) {
+    const config: Record<string, { title: string; fields: Editor["fields"]; defaults: Row }> = {
+      lj_services: {
+        title: row ? "Edit service" : "Add service",
+        fields: [
+          { key: "name", label: "Service name" },
+          { key: "category", label: "Category" },
+          { key: "description", label: "Description", type: "multiline" },
+          { key: "duration", label: "Duration", type: "number" },
+          { key: "price", label: "Price in TTD", type: "number" },
+          { key: "active", label: "Available for booking", type: "boolean" },
+        ],
+        defaults: {
+          name: "",
+          category: "Hair",
+          description: "",
+          duration: 60,
+          price: 0,
+          image: "hair",
+          active: true,
+          is_demo: demo,
+        },
+      },
+      lj_products: {
+        title: row ? "Edit product" : "Add product",
+        fields: [
+          { key: "name", label: "Product name" },
+          { key: "brand", label: "Brand" },
+          { key: "category", label: "Category" },
+          { key: "description", label: "Description & ingredients", type: "multiline" },
+          { key: "price", label: "Price in TTD", type: "number" },
+          { key: "stock", label: "Stock quantity", type: "number" },
+          { key: "reorder_level", label: "Low-stock alert level (0 = off)", type: "number" },
+          { key: "active", label: "Available in boutique", type: "boolean" },
+        ],
+        defaults: {
+          name: "",
+          category: "Hair care",
+          description: "",
+          price: 0,
+          stock: 0,
+          reorder_level: 3,
+          image: "oil",
+          active: true,
+          is_demo: demo,
+        },
+      },
+      lj_workshops: {
+        title: row ? "Edit workshop" : "Create workshop",
+        fields: [
+          { key: "name", label: "Workshop name" },
+          { key: "description", label: "Description", type: "multiline" },
+          { key: "instructor", label: "Instructor" },
+          { key: "starts_at", label: "Workshop start" },
+          { key: "duration", label: "Duration", type: "number" },
+          { key: "format", label: "Workshop format" },
+          { key: "price", label: "Price in TTD", type: "number" },
+          { key: "capacity", label: "Capacity", type: "number" },
+          { key: "active", label: "Accepting registrations", type: "boolean" },
+        ],
+        defaults: {
+          name: "",
+          description: "",
+          instructor: "Lady J",
+          starts_at: "",
+          duration: 120,
+          format: "In person",
+          price: 0,
+          capacity: 12,
+          image: "workshop",
+          active: true,
+          is_demo: demo,
+        },
+      },
+      lj_client_records: {
+        title: row ? "Client details" : "Add client",
+        fields: [
+          { key: "first_name", label: "First name" },
+          { key: "last_name", label: "Last name" },
+          { key: "email", label: "Email" },
+          { key: "phone", label: "Phone" },
+          { key: "whatsapp_phone", label: "WhatsApp number (include country code, optional)" },
+          { key: "birthday", label: "Date of birth (optional)" },
+          { key: "preferences", label: "Preferences", type: "multiline" },
+          { key: "sensitivities", label: "Relevant sensitivities", type: "multiline" },
+          { key: "private_notes", label: "Notes", type: "multiline" },
+          { key: "photo_consent", label: "Photo consent received", type: "boolean" },
+        ],
+        defaults: {
+          first_name: "",
+          last_name: "",
+          full_name: "",
+          birthday: "",
+          email: "",
+          phone: "",
+          preferences: "",
+          sensitivities: "",
+          private_notes: "",
+          photo_consent: false,
+          is_minor: false,
+          guardian_name: "",
+          guardian_relationship: "",
+          guardian_phone: "",
+          guardian_email: "",
+        },
+      },
+      lj_settings: {
+        title: "Business settings",
+        fields: [
+          { key: "business_name", label: "Business name" },
+          { key: "address", label: "Salon address" },
+          { key: "contact_phone", label: "Contact phone" },
+          { key: "whatsapp_phone", label: "WhatsApp support number (include country code)" },
+          { key: "contact_email", label: "Contact email" },
+          { key: "bank_instructions", label: "Bank transfer instructions", type: "multiline" },
+          { key: "delivery_fee", label: "Delivery fee in TTD", type: "number" },
+          {
+            key: "max_daily_bookings_per_client",
+            label: "Appointments per client per day (0 = unlimited)",
+            type: "number",
+          },
+        ],
+        defaults: { max_daily_bookings_per_client: 1 },
+      },
+      lj_promotions: {
+        title: "Create promotion",
+        fields: [
+          { key: "name", label: "Offer name" },
+          { key: "description", label: "Offer details", type: "multiline" },
+          { key: "active", label: "Visible to customers", type: "boolean" },
+        ],
+        defaults: { name: "", description: "", active: true },
+      },
+      lj_attendance: {
+        title: "Attendance & completion",
+        fields: [
+          { key: "attended", label: "Attended / completed", type: "boolean" },
+          { key: "certificate_url", label: "Individual certificate HTTPS link" },
+        ],
+        defaults: { attended: false, certificate_url: "" },
+      },
+      lj_workshop_resources: {
+        title: "Workshop resources",
+        fields: [
+          { key: "live_url", label: "Live session HTTPS link" },
+          { key: "materials_url", label: "Materials HTTPS link" },
+        ],
+        defaults: {},
+      },
+    };
+    const v = config[table];
+    if (v)
+      setEditor({ title: v.title, table, fields: v.fields, values: { ...v.defaults, ...row } });
+  }
+  function requestCatalogRemoval() {
+    if (!editor?.values.id || busy) return;
+    const item = editor;
+    const kind =
+      item.table === "lj_services"
+        ? "service"
+        : item.table === "lj_products"
+          ? "product"
+          : "workshop";
+    const id = String(item.values.id);
+    setError("");
+    setConfirm({
+      text: "Are you sure you want to delete this " + kind + "?",
+      detail:
+        String(item.values.name || "This item") +
+        " will be removed from the catalog. Existing appointments, purchases and workshop access will be kept.",
+      actionLabel: "Delete " + kind,
+      cancelLabel: "Keep " + kind,
+      run: async () => {
+        if (demo) {
+          if (
+            kind === "service" &&
+            services.some(
+              (service) =>
+                service.active && service.is_special && service.included_service_ids?.includes(id),
+            )
+          )
+            throw new Error(
+              "This service is used by an active Special. Remove it from that Special before deleting.",
+            );
+          if (kind === "service") setServices((old) => old.filter((value) => value.id !== id));
+          if (kind === "product") setProducts((old) => old.filter((value) => value.id !== id));
+          if (kind === "workshop") setWorkshops((old) => old.filter((value) => value.id !== id));
+          s.notify("Demo " + kind + " deleted. No real records were changed.");
+        } else {
+          check(await db().rpc("lj_delete_catalog_item", { p_kind: kind, p_id: id }));
+          await load();
+          await s.refresh();
+          s.notify(kind.charAt(0).toUpperCase() + kind.slice(1) + " removed from the catalog.");
+        }
+        setEditor(null);
+      },
+    });
+  }
+  async function save() {
+    if (!editor) return;
+    setError("");
+    setBusy(true);
+    try {
+      const values = { ...editor.values };
+      if ("first_name" in values) {
+        if (!String(values.first_name).trim() || !String(values.last_name).trim())
+          throw new Error("Enter a first and last name.");
+        values.full_name = `${String(values.first_name).trim()} ${String(values.last_name).trim()}`;
+      }
+      for (const f of editor.fields) {
+        if (f.type === "number") {
+          const n = Number(values[f.key]);
+          if (!Number.isFinite(n) || n < 0)
+            throw new Error(`${f.label} must be a valid positive number.`);
+          values[f.key] = n;
+        }
+        if (
+          f.key.endsWith("_url") &&
+          values[f.key] &&
+          !String(values[f.key]).startsWith("https://")
+        )
+          throw new Error("Resource links must start with https://.");
+      }
+      if ("name" in values && !String(values.name).trim()) throw new Error("Enter a name.");
+      if ("full_name" in values && !String(values.full_name).trim())
+        throw new Error("Enter a client name.");
+      if ("starts_at" in values) {
+        if (values.starts_at && Number.isNaN(Date.parse(String(values.starts_at))))
+          throw new Error("Enter a valid workshop date/time with a timezone.");
+        values.starts_at = values.starts_at
+          ? /Z$|[+-]\d{2}:\d{2}$/.test(String(values.starts_at))
+            ? values.starts_at
+            : `${values.starts_at}-04:00`
+          : null;
+      }
+      if (
+        "whatsapp_phone" in values &&
+        values.whatsapp_phone &&
+        !whatsappSupportUrl(String(values.whatsapp_phone))
+      )
+        throw new Error(
+          "Enter the complete WhatsApp number with its country code, or leave it empty.",
+        );
+      if (
+        "max_daily_bookings_per_client" in values &&
+        (!Number.isInteger(values.max_daily_bookings_per_client) ||
+          Number(values.max_daily_bookings_per_client) > 10)
+      )
+        throw new Error("Choose a whole number from 0 to 10 for the daily booking limit.");
+      if (
+        "reorder_level" in values &&
+        (!Number.isInteger(values.reorder_level) || Number(values.reorder_level) > 10000)
+      )
+        throw new Error("Choose a whole number from 0 to 10,000 for the stock alert.");
+      if ("birthday" in values) values.birthday = values.birthday || null;
+      if (editor.table === "lj_client_records") {
+        values.is_minor = contactIsMinor(
+          values.birthday ? String(values.birthday) : null,
+          Boolean(values.is_minor),
+        );
+        if (
+          values.is_minor &&
+          (!String(values.guardian_name || "").trim() ||
+            !String(values.guardian_relationship || "").trim() ||
+            !/^[0-9]{7,15}$/.test(String(values.guardian_phone || "").replace(/[^0-9]/g, "")))
+        )
+          throw new Error(
+            "Enter the parent or guardian name, relationship and phone for this minor.",
+          );
+        if (
+          values.guardian_email &&
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(values.guardian_email))
+        )
+          throw new Error("Enter a valid parent or guardian email, or leave it empty.");
+      }
+      if ("format" in values && !["In person", "Online"].includes(String(values.format)))
+        throw new Error("Choose In person or Online.");
+      if (demo) {
+        const id = String(values.id || `demo-${Date.now()}`),
+          row = { ...values, id };
+        const up = <T extends { id: string }>(arr: T[]) => [
+          ...arr.filter((v) => v.id !== id),
+          row as unknown as T,
+        ];
+        if (editor.table === "lj_services") setServices(up);
+        if (editor.table === "lj_products") setProducts(up);
+        if (editor.table === "lj_workshops") setWorkshops(up);
+        if (editor.table === "lj_client_records") setClients(up);
+        if (editor.table === "lj_settings") setDemoSettings(values);
+        if (editor.table === "lj_promotions")
+          setDemoPromotions((old) => [...old.filter((v) => v.id !== id), row]);
+        if (editor.table === "lj_workshop_resources")
+          setDemoResources((old) => ({ ...old, [String(values.workshop_id)]: values }));
+        if (editor.table === "lj_attendance")
+          setAttendance((old) => [
+            ...old.filter((v) => v.purchase_id !== values.purchase_id),
+            values,
+          ]);
+        s.notify("Demo change saved for this visit. No real records were changed.");
+      } else {
+        check(await db().from(editor.table).upsert(values));
+        await load();
+        await s.refresh();
+        s.notify("Changes saved securely.");
+      }
+      setEditor(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function addCalendar() {
+    setBusy(true);
+    setError("");
+    try {
+      if (calendarForm !== "appointment")
+        throw new Error("Use the Block Time editor to reserve unavailable time.");
+      const date = new Date(`${start}:00-04:00`);
+      const service =
+        calendarForm === "appointment" ? services.find((v) => v.id === serviceId) : undefined;
+      const mins = service?.duration;
+      if (Number.isNaN(date.valueOf()) || !mins || mins < 1 || mins > 480)
+        throw new Error("Choose a valid date, time and a duration of up to 8 hours.");
+      if (calendarForm === "appointment" && !service) throw new Error("Choose a service.");
+      const row = {
+        starts_at: date.toISOString(),
+        ends_at: new Date(date.valueOf() + mins * 60000).toISOString(),
+        kind: calendarForm || "appointment",
+        deposit_paid: false,
+        status: "pending",
+        customer_id: calendarForm === "appointment" ? customerId || null : null,
+        note,
+        services: service
+          ? [
+              {
+                id: service.id,
+                name: service.name,
+                price: service.price,
+                duration: service.duration,
+              },
+            ]
+          : [],
+        total: service?.price || 0,
+        deposit: (service?.price || 0) / 2,
+      };
+      if (demo) {
+        const overlap = appointments.some(
+          (a) =>
+            ["pending", "confirmed"].includes(a.status) &&
+            new Date(a.starts_at) < new Date(row.ends_at) &&
+            new Date(a.ends_at) > date,
+        );
+        if (overlap) throw new Error("This time overlaps another appointment or block.");
+        setAppointments((old) => [
+          ...old,
+          { ...row, id: `demo-${Date.now()}` } as unknown as Appointment,
+        ]);
+        s.notify("Demo calendar updated. No real time was reserved.");
+      } else {
+        if (calendarForm === "appointment")
+          check(
+            await db().rpc("lj_manual_book", {
+              p_service: serviceId,
+              p_start: row.starts_at,
+              p_customer: customerId || null,
+              p_note: note,
+            }),
+          );
+
+        await load();
+        s.notify("Manual appointment saved as pending payment.");
+      }
+      setCalendarForm(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to save this time.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function verify(t: Transaction) {
+    if (demo) {
+      setTransactions((old) =>
+        old.map((v) =>
+          v.id === t.id ? { ...v, status: "verified", received_at: new Date().toISOString() } : v,
+        ),
+      );
+      setAppointments((old) =>
+        old.map((v) =>
+          v.id === t.appointment_id
+            ? { ...v, status: v.status === "pending" ? "confirmed" : v.status, deposit_paid: true }
+            : v,
+        ),
+      );
+      s.notify("Demo payment verified. No real funds were processed.");
+    } else {
+      check(await db().rpc("lj_verify_payment", { p_id: t.id }));
+      await load();
+      s.notify("Bank payment verified. The linked booking or purchase is now confirmed.");
+    }
+  }
+  async function recordPayment(
+    a: Appointment,
+    method: "cash" | "bank",
+    reference: string,
+    amount: number,
+  ) {
+    if (demo) {
+      const current = appointments.find((v) => v.id === a.id);
+      if (!current || current.status !== "completed")
+        throw new Error("Mark the service complete first.");
+      if (appointmentPayment(current, transactions).remaining !== amount)
+        throw new Error("The balance changed. Reopen this appointment.");
+      const timestamp = new Date().toISOString();
+      setTransactions((old) => [
+        ...old.map((v) =>
+          v.appointment_id === a.id && v.status === "pending" ? { ...v, status: "voided" } : v,
+        ),
+        {
+          id: "demo-receipt-" + Date.now(),
+          customer_id: a.customer_id || null,
+          appointment_id: a.id,
+          purchase_id: null,
+          amount,
+          method,
+          reference,
+          status: "verified",
+          created_at: timestamp,
+          received_at: timestamp,
+        },
+      ]);
+      setAppointments((old) => old.map((v) => (v.id === a.id ? { ...v, deposit_paid: true } : v)));
+    } else {
+      check(
+        await db().rpc("lj_complete_appointment_payment", {
+          p_id: a.id,
+          p_method: method,
+          p_reference: reference,
+          p_expected_balance: amount,
+        }),
+      );
+      await load();
+    }
+    setPaymentAppointment(null);
+    s.notify(
+      demo
+        ? "Demo payment complete. Revenue report updated; no real funds processed."
+        : "Payment complete. The confirmed receipt is recorded in Revenue.",
+    );
+  }
+  async function complete(a: Appointment, status: string) {
+    if (demo) setAppointments((old) => old.map((v) => (v.id === a.id ? { ...v, status } : v)));
+    else {
+      check(await db().from("lj_calendar").update({ status }).eq("id", a.id).select("id").single());
+      await load();
+    }
+    s.notify(
+      status === "completed"
+        ? `${demo ? "Demo service" : "Service"} complete. Payment status is unchanged.`
+        : `${demo ? "Demo appointment" : "Appointment"} marked ${status.replace("_", " ")}.`,
+    );
+  }
+  if (!s.authReady && !demo)
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.background, justifyContent: "center" }}>
+        <ActivityIndicator color={c.primary} />
+      </SafeAreaView>
+    );
+  if (!allowed)
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: c.background, padding: 30, justifyContent: "center" }}
+      >
+        <Card style={{ gap: 22, maxWidth: 550, alignSelf: "center" }}>
+          <OT size={30}>Private owner workspace</OT>
+          <OT>Only the verified salon owner can open the administrative workspace.</OT>
+          <OA label="Owner sign-in" onPress={() => go("owner-login")} />
+          <OA label="Return to salon" secondary onPress={() => go("home")} />
+        </Card>
+      </SafeAreaView>
+    );
+  const canDiscount = (kind: "appointment" | "purchase", id: string, status: string) => {
+    const linked = transactions.filter(
+      (t) => (kind === "appointment" ? t.appointment_id : t.purchase_id) === id,
+    );
+    if (kind === "purchase")
+      return status === "pending" && !linked.some((t) => t.status !== "pending");
+    const appointment = appointments.find((a) => a.id === id);
+    const received = linked
+      .filter((t) => t.status === "verified")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+    return (
+      !!appointment &&
+      ["pending", "confirmed", "completed"].includes(status) &&
+      !linked.some((t) => ["retained", "refund_due", "refunded"].includes(t.status)) &&
+      (received < appointment.total || appointment.total === 0)
+    );
+  };
+  async function applyPersonalDiscount(percentage: number) {
+    if (!discountTarget) return;
+    const { kind, record } = discountTarget;
+    if (!demo) {
+      check(
+        await db().rpc(
+          kind === "appointment" ? "lj_discount_appointment" : "lj_apply_order_discount",
+          kind === "appointment"
+            ? { p_id: record.id, p_percentage: percentage, p_expected_total: record.total }
+            : { p_kind: kind, p_id: record.id, p_percentage: percentage },
+        ),
+      );
+      await load();
+    } else {
+      const items =
+        discountTarget.kind === "appointment"
+          ? discountTarget.record.services.map((v) => ({ ...v, quantity: 1 }))
+          : discountTarget.record.items;
+      const discounted = items.map((v) => ({
+        ...v,
+        original_price: Number(v.original_price ?? v.price),
+        price: Math.round(Number(v.original_price ?? v.price) * (1 - percentage / 100) * 100) / 100,
+        discount_percentage: percentage,
+      }));
+      const subtotal = discounted.reduce((n, v) => n + v.price * v.quantity, 0);
+      const original = discounted.reduce((n, v) => n + v.original_price * v.quantity, 0);
+      const fee =
+        discountTarget.kind === "purchase"
+          ? Number(
+              discountTarget.record.delivery_fee ??
+                Math.max(
+                  0,
+                  record.total - items.reduce((n, v) => n + Number(v.price) * v.quantity, 0),
+                ),
+            )
+          : 0;
+      const received =
+        kind === "appointment"
+          ? transactions
+              .filter((t) => t.appointment_id === record.id && t.status === "verified")
+              .reduce((sum, t) => sum + Number(t.amount), 0)
+          : 0;
+      const total = subtotal + fee;
+      if (total < received)
+        throw new Error(
+          "This discount would reduce the total below money already received. A separate refund review is required.",
+        );
+      const deposit =
+        received > 0 && discountTarget.kind === "appointment"
+          ? discountTarget.record.deposit
+          : Math.round(subtotal * 50) / 100;
+      if (kind === "appointment")
+        setAppointments((old) =>
+          old.map((v) =>
+            v.id === record.id
+              ? {
+                  ...v,
+                  services: discounted,
+                  total,
+                  deposit,
+                  discount_total: original - subtotal,
+                  promo_code: null,
+                }
+              : v,
+          ),
+        );
+      else
+        setPurchases((old) =>
+          old.map((v) =>
+            v.id === record.id
+              ? {
+                  ...v,
+                  items: discounted as Purchase["items"],
+                  total,
+                  delivery_fee: fee,
+                  discount_total: original - subtotal,
+                  promo_code: null,
+                }
+              : v,
+          ),
+        );
+      setTransactions((old) =>
+        old.map((t) =>
+          (kind === "appointment" ? t.appointment_id : t.purchase_id) === record.id &&
+          t.status === "pending"
+            ? {
+                ...t,
+                amount:
+                  kind === "appointment" ? (received > 0 ? total - received : deposit) : total,
+              }
+            : t,
+        ),
+      );
+    }
+    s.notify(
+      demo
+        ? "Demo discount applied to this fictional record."
+        : "Discount applied. Recorded receipts are unchanged and the balance is updated.",
+    );
+  }
+  const renderAppointment = (a: Appointment) => (
+    <AppointmentCard
+      key={a.id}
+      appointment={a}
+      transactions={transactions}
+      name={a.note || nameFor(a.customer_id)}
+      expanded={expandedAppointment === a.id}
+      onToggle={() => setExpandedAppointment(expandedAppointment === a.id ? "" : a.id)}
+    >
+      {a.kind === "appointment" &&
+        (() => {
+          const contact = clients.find(
+            (v) => v.customer_id === a.customer_id || v.id === a.customer_id,
+          );
+          const url = whatsappContactUrl(
+            contact?.whatsapp_phone || contact?.phone,
+            "Hello " +
+              (contact?.first_name || contact?.full_name || "") +
+              ", about your Lady J appointment on " +
+              dateLabel(a.starts_at) +
+              ": ",
+          );
+          return (
+            <OA
+              label="Message client"
+              icon="MessageCircle"
+              secondary
+              disabled={demo || !url}
+              onPress={() => {
+                if (url)
+                  void Linking.openURL(url).catch(() => s.notify("Unable to open WhatsApp."));
+              }}
+            />
+          );
+        })()}
+      {a.kind === "appointment" && ["pending", "confirmed", "completed"].includes(a.status) && (
+        <OA
+          label="Custom discount"
+          secondary
+          disabled={!canDiscount("appointment", a.id, a.status)}
+          icon="Gift"
+          onPress={() => setDiscountTarget({ kind: "appointment", record: a })}
+        />
+      )}
+      {Number(a.discount_total) > 0 && (
+        <OT>
+          Discount applied: {money(a.discount_total!)}
+          {a.promo_code ? ` · ${a.promo_code}` : ""}
+        </OT>
+      )}
+      {a.kind === "appointment" && ["pending", "confirmed"].includes(a.status) && (
+        <View style={{ gap: 10 }}>
+          <OA
+            label="Service complete"
+            secondary
+            onPress={() =>
+              setConfirm({
+                text: "Mark the service complete? Payment remains separate. Record the received balance with Payment complete.",
+                run: () => complete(a, "completed"),
+              })
+            }
+          />
+          <OA
+            label="Cancel / no-show"
+            secondary
+            onPress={() =>
+              setConfirm({
+                text:
+                  new Date(a.starts_at) > new Date()
+                    ? "Cancel this appointment? Verified deposits follow the cancellation policy."
+                    : "Mark as no-show? The verified deposit is forfeited.",
+                run: async () => {
+                  if (new Date(a.starts_at) <= new Date()) await complete(a, "no_show");
+                  else if (demo) {
+                    setAppointments((old) =>
+                      old.map((v) => (v.id === a.id ? { ...v, status: "cancelled" } : v)),
+                    );
+                    s.notify("Demo appointment cancelled.");
+                  } else {
+                    const message = check(await db().rpc("lj_cancel", { p_id: a.id }));
+                    await load();
+                    s.notify(message);
+                  }
+                },
+              })
+            }
+          />
+        </View>
+      )}
+      {a.kind === "appointment" && ["pending", "confirmed", "completed"].includes(a.status) && (
+        <View style={{ gap: 10 }}>
+          <OA
+            label="Payment complete"
+            icon="Wallet"
+            disabled={
+              a.status !== "completed" || appointmentPayment(a, transactions).remaining <= 0
+            }
+            onPress={() => {
+              setError("");
+              setPaymentAppointment(a);
+            }}
+          />
+          <OT muted>
+            {appointmentPayment(a, transactions).remaining <= 0
+              ? "The full payment is already recorded."
+              : a.status !== "completed"
+                ? "Complete the service, then record the received balance."
+                : "Confirm money received to settle this appointment and update Revenue."}
+          </OT>
+        </View>
+      )}
+      {a.kind === "block" && a.status !== "cancelled" && (
+        <OA label="Edit blocked period" secondary onPress={() => editBlock(a)} />
+      )}
+    </AppointmentCard>
+  );
+  function openBusiness(value: string) {
+    setTab("Business");
+    setSection(value);
+  }
+  function editBlock(block: Appointment) {
+    setError("");
+    setEditingBlock(block);
+    setStart(localCalendarTime(block.starts_at));
+    setCalendarForm("block");
+  }
+  function ownerAction(action: OwnerAction) {
+    setError("");
+    if (action === "appointment" || action === "block") {
+      setEditingBlock(null);
+      setInitialBlockReason("personal");
+      setServiceId("");
+      setCustomerId("");
+      setNote("");
+      setStart((tab === "Calendar" ? calendarDate : todayKey()) + "T10:00");
+      setCalendarForm(action);
+      return;
+    }
+    if (action === "client") {
+      openEditor("lj_client_records");
+      return;
+    }
+    if (action === "workshop") {
+      openEditor("lj_workshops");
+      return;
+    }
+    if (action === "product") {
+      openEditor("lj_products");
+      return;
+    }
+    if (action === "maria") {
+      setTab("Maria");
+      return;
+    }
+    openBusiness(action === "payments" ? "Payments" : "Revenue");
+  }
+  return (
+    <OwnerWorkspace
+      tab={tab}
+      onTab={(value) => {
+        if (value === "Calendar") setCalendarSelected(false);
+        setNavigationRevision((old) => old + 1);
+        if (!demo) void load(true);
+        setTab(value);
+        setSection("Overview");
+      }}
+      demo={demo}
+      onSalon={() => go("home")}
+      onAdd={() => ownerAction("appointment")}
+    >
+      {tab === "Today" ? (
+        loading ? (
+          <ActivityIndicator color={c.tertiary} />
+        ) : (
+          <TodayDashboard
+            key={navigationRevision}
+            activities={activitiesOnDate(appointments, todayDate)}
+            day={todayDate}
+            onAdd={() => ownerAction("appointment")}
+            onRefresh={refreshWorkspace}
+            briefing={<TodayPreparation today={today} services={services} nameFor={nameFor} />}
+            notice={
+              !!error && !editor && !calendarForm ? (
+                <ErrorBox message={error} retry={() => void load()} />
+              ) : undefined
+            }
+            renderAppointment={(activity) =>
+              activity.kind === "block" ? (
+                <BlockActivityCard block={activity} onEdit={() => editBlock(activity)} />
+              ) : (
+                renderAppointment(activity)
+              )
+            }
+          />
+        )
+      ) : tab === "Calendar" ? (
+        <CalendarDashboard
+          key={navigationRevision}
+          date={calendarDate}
+          selected={calendarSelected}
+          onClear={() => setCalendarSelected(false)}
+          view={calendarView}
+          onDate={(date) => {
+            setCalendarDate(date);
+            setCalendarSelected(true);
+            setCalendarView("Day");
+          }}
+          onView={setCalendarView}
+          onAdd={() => ownerAction("appointment")}
+          onBlock={(reason) => {
+            ownerAction("block");
+            setInitialBlockReason(reason);
+          }}
+          onEditBlock={editBlock}
+          appointments={appointments}
+          live={allowed && !demo}
+          status={calendarSync}
+          error={error}
+          onRefresh={refreshWorkspace}
+          renderAppointment={renderAppointment}
+        />
+      ) : tab === "Clients" ? (
+        loading ? (
+          <ActivityIndicator color={c.tertiary} />
+        ) : (
+          <ClientsPanel
+            key={navigationRevision}
+            clients={clients}
+            error={error}
+            onRetry={() => void load()}
+            profiles={profiles}
+            demo={demo}
+            onAdd={() => openEditor("lj_client_records")}
+            onClient={setSelectedClient}
+            onProfile={(profile) =>
+              openEditor("lj_client_records", {
+                customer_id: profile.id,
+                full_name: profile.full_name,
+                phone: profile.phone,
+                email: "",
+                preferences: profile.preferences || "",
+                private_notes: "",
+                sensitivities: "",
+                photo_consent: false,
+              })
+            }
+          />
+        )
+      ) : (
+        <ScrollView
+          key={tab + ":" + section + ":" + navigationRevision}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void refreshWorkspace()}
+              tintColor={c.tertiary}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            padding: width >= 1100 ? 32 : 20,
+            paddingBottom: Math.max(50, navigationSpacing + 20),
+          }}
+        >
+          <View style={[shared.responsive, { maxWidth: 1200 }]}>
+            {tab !== "Today" &&
+              tab !== "Calendar" &&
+              !(tab === "Business" && ["Overview", "Revenue"].includes(section)) && (
+                <View style={{ marginBottom: 26 }}>
+                  <OT size={32} bold>
+                    {tab === "Today"
+                      ? "A beautiful day ahead."
+                      : tab === "Calendar"
+                        ? "Your time, thoughtfully planned."
+                        : tab === "Clients"
+                          ? "Care starts with knowing."
+                          : tab === "Maria"
+                            ? "Meet Maria."
+                            : section === "Overview"
+                              ? "Your business, beautifully organised."
+                              : section}
+                  </OT>
+                  <OT muted>
+                    {tab === "Today"
+                      ? `${dateLabel(new Date().toISOString())} · America/Port_of_Spain`
+                      : tab === "Maria"
+                        ? "Your private English–Spanish assistant."
+                        : "Private owner workspace"}
+                  </OT>
+                </View>
+              )}
+            {!!error && !editor && !calendarForm && (
+              <ErrorBox message={error} retry={() => void load()} />
+            )}
+            {loading ? (
+              <ActivityIndicator color={c.primary} />
+            ) : (
+              <>
+                {tab === "Business" && (
+                  <>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ gap: 10, paddingBottom: 22 }}
+                    >
+                      {[
+                        "Overview",
+                        "Services",
+                        "Products",
+                        "Workshops",
+                        "Orders",
+                        "Payments",
+                        "Revenue",
+                        "Expenses",
+                        "Balances",
+                        "Waitlist",
+                        "Agreements",
+                        "Discounts",
+                        "Specials",
+                        "Promotions",
+                        "Automation",
+                        "Settings",
+                      ].map((v) => (
+                        <OA
+                          key={v}
+                          label={v}
+                          secondary={v !== section}
+                          onPress={() => setSection(v)}
+                        />
+                      ))}
+                    </ScrollView>
+                    {section === "Expenses" && (
+                      <ExpensesPanel
+                        demo={demo}
+                        transactions={transactions}
+                        appointments={appointments}
+                        purchases={purchases}
+                      />
+                    )}
+                    {section === "Waitlist" && (
+                      <WaitlistPanel
+                        entries={waiting}
+                        clients={clients}
+                        demo={demo}
+                        onRefresh={refreshWorkspace}
+                      />
+                    )}
+                    {section === "Balances" && (
+                      <View style={{ gap: 18 }}>
+                        <OT size={28} bold>
+                          Balances after completed visits
+                        </OT>
+                        <OT muted>
+                          Record money only after you receive it. Completing a service never settles
+                          its balance automatically.
+                        </OT>
+                        {appointments
+                          .filter(
+                            (a) =>
+                              a.kind === "appointment" &&
+                              a.status === "completed" &&
+                              appointmentPayment(a, transactions).remaining > 0,
+                          )
+                          .map((a) => (
+                            <Card key={a.id} style={{ gap: 12 }}>
+                              <OT bold>{nameFor(a.customer_id)}</OT>
+                              <OT>
+                                {dateLabel(a.starts_at)} ·{" "}
+                                {money(appointmentPayment(a, transactions).remaining)} remaining
+                              </OT>
+                              <OA
+                                label="Record money received"
+                                icon="Wallet"
+                                onPress={() => setPaymentAppointment(a)}
+                              />
+                            </Card>
+                          ))}
+                        {!appointments.some(
+                          (a) =>
+                            a.kind === "appointment" &&
+                            a.status === "completed" &&
+                            appointmentPayment(a, transactions).remaining > 0,
+                        ) && (
+                          <Card>
+                            <OT muted>All completed visits in the loaded records are settled.</OT>
+                          </Card>
+                        )}
+                      </View>
+                    )}
+                    {section === "Specials" && (
+                      <SpecialsPanel
+                        services={services}
+                        demo={demo}
+                        onSaved={load}
+                        onDemoSave={(service) =>
+                          setServices((old) => [...old.filter((v) => v.id !== service.id), service])
+                        }
+                      />
+                    )}
+                    {section === "Overview" && (
+                      <View style={{ gap: 28 }}>
+                        <DailyBriefing
+                          items={attention}
+                          onOpen={(item) => {
+                            setLowStockOnly(item.key === "stock");
+                            openBusiness(item.section);
+                          }}
+                        />
+                        <BusinessOverview
+                          services={services.length}
+                          workshops={workshops.length}
+                          products={products.length}
+                          pending={pending.length}
+                          orders={purchases.filter((v) => v.kind === "product").length}
+                          onOpen={setSection}
+                          bankReady={!!s.settings?.bank_instructions}
+                        />
+                      </View>
+                    )}
+                    {["Services", "Products", "Workshops"].includes(section) && (
+                      <>
+                        <OA
+                          label={
+                            section === "Services"
+                              ? "Add service"
+                              : section === "Products"
+                                ? "Add product"
+                                : "Create workshop"
+                          }
+                          icon="Plus"
+                          onPress={() =>
+                            openEditor(
+                              section === "Services"
+                                ? "lj_services"
+                                : section === "Products"
+                                  ? "lj_products"
+                                  : "lj_workshops",
+                            )
+                          }
+                        />
+                        {section === "Products" && (
+                          <View style={{ marginTop: 18, gap: 10 }}>
+                            <OA
+                              label={lowStockOnly ? "Show all products" : "Show low-stock products"}
+                              secondary
+                              onPress={() => setLowStockOnly(!lowStockOnly)}
+                            />
+                            {lowStockOnly && !products.some(isLowStock) && (
+                              <OT muted>No active products are below their stock alert level.</OT>
+                            )}
+                          </View>
+                        )}
+                        <View style={{ height: 20 }} />
+                        {(section === "Services"
+                          ? services.filter((v) => !v.is_special)
+                          : section === "Products"
+                            ? products.filter((v) => !lowStockOnly || isLowStock(v))
+                            : workshops
+                        ).map((v) => (
+                          <Card key={v.id} style={{ marginBottom: 16, gap: 14 }}>
+                            <View style={{ flexDirection: "row", gap: 18, alignItems: "center" }}>
+                              <Photo
+                                name={v.image}
+                                style={{ width: 80, height: 90, borderRadius: 10 }}
+                              />
+                              <View style={{ flex: 1 }}>
+                                <OT size={23} bold>
+                                  {String(v.name)}
+                                </OT>
+                                <OT muted>
+                                  {money(v.price)} ·
+                                  {"stock" in v
+                                    ? `${v.stock} in stock`
+                                    : "duration" in v
+                                      ? formatDuration(v.duration)
+                                      : ""}
+                                  {!v.active ? " · Archived" : ""}
+                                </OT>
+                              </View>
+                            </View>
+                            <View style={[shared.row, { flexWrap: "wrap" }]}>
+                              <OA
+                                label="Edit details"
+                                secondary
+                                onPress={() =>
+                                  openEditor(
+                                    section === "Services"
+                                      ? "lj_services"
+                                      : section === "Products"
+                                        ? "lj_products"
+                                        : "lj_workshops",
+                                    v as unknown as Row,
+                                  )
+                                }
+                              />
+                              {section === "Workshops" && (
+                                <>
+                                  <OA
+                                    label="Resources"
+                                    secondary
+                                    onPress={() => {
+                                      if (demo)
+                                        openEditor(
+                                          "lj_workshop_resources",
+                                          demoResources[v.id] || { workshop_id: v.id },
+                                        );
+                                      else
+                                        void db()
+                                          .from("lj_workshop_resources")
+                                          .select("*")
+                                          .eq("workshop_id", v.id)
+                                          .maybeSingle()
+                                          .then((r) => {
+                                            if (r.error) setError(r.error.message);
+                                            else
+                                              openEditor(
+                                                "lj_workshop_resources",
+                                                r.data || { workshop_id: v.id },
+                                              );
+                                          });
+                                    }}
+                                  />
+                                  <OA
+                                    label="Enrollment"
+                                    secondary
+                                    onPress={() => {
+                                      setSection("Enrollment");
+                                      setEnrollmentWorkshopId(v.id);
+                                    }}
+                                  />
+                                </>
+                              )}
+                            </View>
+                          </Card>
+                        ))}
+                      </>
+                    )}
+                    {section === "Enrollment" && (
+                      <>
+                        <OA
+                          label="Back to workshops"
+                          secondary
+                          onPress={() => setSection("Workshops")}
+                        />
+                        <View style={{ height: 20 }} />
+                        {purchases.filter(
+                          (p) =>
+                            p.kind === "workshop" &&
+                            p.items.some((v) => v.id === enrollmentWorkshopId),
+                        ).length ? (
+                          purchases
+                            .filter(
+                              (p) =>
+                                p.kind === "workshop" &&
+                                p.items.some((v) => v.id === enrollmentWorkshopId),
+                            )
+                            .map((p) => (
+                              <Card key={p.id} style={{ marginBottom: 15, gap: 10 }}>
+                                <OT bold>{nameFor(p.customer_id)}</OT>
+                                <OT>
+                                  {p.status} · {money(p.total)}
+                                </OT>
+                                {canDiscount("purchase", p.id, p.status) && (
+                                  <OA
+                                    label="Apply discount"
+                                    secondary
+                                    icon="Gift"
+                                    onPress={() =>
+                                      setDiscountTarget({ kind: "purchase", record: p })
+                                    }
+                                  />
+                                )}
+                                {Number(p.discount_total) > 0 && (
+                                  <OT>Discount applied: {money(p.discount_total!)}</OT>
+                                )}
+                                <OT muted>
+                                  {attendance.find((v) => v.purchase_id === p.id)?.attended
+                                    ? "Attendance recorded"
+                                    : "Attendance not recorded"}
+                                </OT>
+                                {["paid", "fulfilled"].includes(p.status) && (
+                                  <OA
+                                    label="Attendance & certificate"
+                                    secondary
+                                    onPress={() =>
+                                      openEditor(
+                                        "lj_attendance",
+                                        attendance.find((v) => v.purchase_id === p.id) || {
+                                          purchase_id: p.id,
+                                          customer_id: p.customer_id,
+                                        },
+                                      )
+                                    }
+                                  />
+                                )}
+                              </Card>
+                            ))
+                        ) : (
+                          <Card>
+                            <OT>No enrollments yet.</OT>
+                          </Card>
+                        )}
+                      </>
+                    )}
+                    {section === "Orders" &&
+                      (purchases.filter((v) => v.kind === "product").length ? (
+                        purchases
+                          .filter((v) => v.kind === "product")
+                          .map((p) => (
+                            <Card key={p.id} style={{ marginBottom: 16, gap: 14 }}>
+                              <OT bold size={22}>
+                                {p.items.map((v) => `${String(v.name)} × ${v.quantity}`).join(", ")}
+                              </OT>
+                              <OT>
+                                {nameFor(p.customer_id)} · {money(p.total)} · {p.fulfillment}
+                              </OT>
+                              <OT muted>{p.status}</OT>
+                              {canDiscount("purchase", p.id, p.status) && (
+                                <OA
+                                  label="Apply discount"
+                                  secondary
+                                  icon="Gift"
+                                  onPress={() => setDiscountTarget({ kind: "purchase", record: p })}
+                                />
+                              )}
+                              {Number(p.discount_total) > 0 && (
+                                <OT>Discount applied: {money(p.discount_total!)}</OT>
+                              )}
+                              {!!p.delivery_address && <OT>Delivery: {p.delivery_address}</OT>}
+                              {["paid", "processing", "ready"].includes(p.status) && (
+                                <OA
+                                  label={
+                                    p.status === "paid"
+                                      ? "Start processing"
+                                      : p.status === "processing"
+                                        ? "Mark ready"
+                                        : "Mark fulfilled"
+                                  }
+                                  onPress={() =>
+                                    setConfirm({
+                                      text: "Update this order’s fulfillment status?",
+                                      run: async () => {
+                                        const status =
+                                          p.status === "paid"
+                                            ? "processing"
+                                            : p.status === "processing"
+                                              ? "ready"
+                                              : "fulfilled";
+                                        if (demo)
+                                          setPurchases((old) =>
+                                            old.map((v) => (v.id === p.id ? { ...v, status } : v)),
+                                          );
+                                        else {
+                                          check(
+                                            await db()
+                                              .from("lj_purchases")
+                                              .update({ status })
+                                              .eq("id", p.id),
+                                          );
+                                          await load();
+                                        }
+                                        s.notify("Order status updated.");
+                                      },
+                                    })
+                                  }
+                                />
+                              )}
+                            </Card>
+                          ))
+                      ) : (
+                        <Card>
+                          <OT>
+                            No boutique orders yet. Paid orders can be processed, marked ready and
+                            fulfilled here.
+                          </OT>
+                        </Card>
+                      ))}
+                    {section === "Payments" &&
+                      (transactions.length ? (
+                        transactions.map((t) => (
+                          <Card key={t.id} style={{ marginBottom: 17, gap: 13 }}>
+                            <OT size={24} bold>
+                              {money(t.amount)} · {t.status}
+                            </OT>
+                            <OT>{nameFor(t.customer_id)}</OT>
+                            <OT muted>
+                              {t.method === "bank" ? "Bank transfer" : t.method} · Reference:{" "}
+                              {t.reference || "Not supplied"}
+                            </OT>
+                            <OT muted>{dateLabel(t.created_at)}</OT>
+                            {t.status === "pending" && (
+                              <OA
+                                label="Verify bank payment"
+                                icon="ShieldCheck"
+                                onPress={() =>
+                                  setConfirm({
+                                    text: `Confirm you have received ${money(t.amount)} in your bank account. A reference alone does not prove payment.`,
+                                    run: () => verify(t),
+                                  })
+                                }
+                              />
+                            )}
+
+                            {t.status === "refund_due" && (
+                              <>
+                                <OT>
+                                  Process this refund with your bank first, then record it here.
+                                </OT>
+                                <OA
+                                  label="Record completed refund"
+                                  secondary
+                                  onPress={() =>
+                                    setConfirm({
+                                      text: "Confirm the bank refund has actually been completed.",
+                                      run: async () => {
+                                        if (demo)
+                                          setTransactions((old) =>
+                                            old.map((v) =>
+                                              v.id === t.id
+                                                ? {
+                                                    ...v,
+                                                    status: "refunded",
+                                                    refunded_at: new Date().toISOString(),
+                                                  }
+                                                : v,
+                                            ),
+                                          );
+                                        else {
+                                          check(await db().rpc("lj_record_refund", { p_id: t.id }));
+                                          await load();
+                                        }
+                                        s.notify("Completed refund recorded.");
+                                      },
+                                    })
+                                  }
+                                />
+                              </>
+                            )}
+                          </Card>
+                        ))
+                      ) : (
+                        <Card>
+                          <OT>No transactions yet.</OT>
+                        </Card>
+                      ))}
+                    {section === "Revenue" && (
+                      <RevenuePanel
+                        transactions={transactions}
+                        appointments={appointments}
+                        products={products}
+                        purchases={purchases}
+                        demo={demo}
+                      />
+                    )}
+                    {section === "Agreements" && <AgreementList demo={demo} />}
+                    {section === "Discounts" && (
+                      <DiscountsPanel
+                        demo={demo}
+                        demoRows={demoDiscounts}
+                        onDemoRows={setDemoDiscounts}
+                        catalogs={{ service: services, product: products, workshop: workshops }}
+                      />
+                    )}
+                    {section === "Promotions" && (
+                      <View style={{ gap: 18 }}>
+                        <OA
+                          label="Create promotion"
+                          icon="Gift"
+                          onPress={() => openEditor("lj_promotions")}
+                        />
+                        {(demo ? demoPromotions : s.promotions).map((v) => (
+                          <Card key={String(v.id)} style={{ gap: 12 }}>
+                            <OT size={23} bold>
+                              {String(v.name)}
+                            </OT>
+                            <OT>{String(v.description)}</OT>
+                            <OA
+                              label="Edit promotion"
+                              secondary
+                              onPress={() => openEditor("lj_promotions", v as unknown as Row)}
+                            />
+                          </Card>
+                        ))}
+                        <Card>
+                          <OT>
+                            Loyalty redemptions and automated birthday offers are planned
+                            integrations. No offers are sent automatically.
+                          </OT>
+                        </Card>
+                      </View>
+                    )}
+                    {section === "Automation" && <CommunicationPanel demo={demo} />}
+                    {section === "Settings" && (
+                      <View style={{ gap: 18 }}>
+                        <Card style={{ gap: 18 }}>
+                          <OT size={24} bold>
+                            {String(
+                              (demo ? demoSettings?.business_name : undefined) ||
+                                s.settings?.business_name ||
+                                "Lady J Salon & Day Spa",
+                            )}
+                          </OT>
+                          <OT>Tuesday–Saturday · 10 AM–6 PM</OT>
+                          <OT>
+                            Daily bookings per client:{" "}
+                            {Number(
+                              (demo
+                                ? demoSettings?.max_daily_bookings_per_client
+                                : s.settings?.max_daily_bookings_per_client) ?? 1,
+                            ) || "Unlimited"}
+                          </OT>
+                          <OT muted>America/Port_of_Spain · GMT−4</OT>
+                          <OA
+                            label="Edit business details"
+                            onPress={() =>
+                              openEditor(
+                                "lj_settings",
+                                (demo ? demoSettings || s.settings : s.settings) as unknown as Row,
+                              )
+                            }
+                          />
+                        </Card>
+                        <Card style={{ gap: 14 }}>
+                          <OT bold size={23}>
+                            Payment connections
+                          </OT>
+                          <OT>Card processor: not configured</OT>
+                          <OT>Bank transfers: manual verification only</OT>
+                          <OT muted>
+                            The merchant’s processor must support Trinidad & Tobago and verify
+                            payments server-side. No card details are collected by this app.
+                          </OT>
+                        </Card>
+                        <OA
+                          label={demo ? "Exit demo workspace" : "Sign out securely"}
+                          secondary
+                          onPress={() => {
+                            s.setDemoOwner(false);
+                            if (demo) go("home");
+                            else
+                              void db()
+                                .auth.signOut()
+                                .then(({ error }) => {
+                                  if (error) s.notify(error.message);
+                                  else go("home");
+                                })
+                                .catch(() => s.notify("Unable to sign out. Please try again."));
+                          }}
+                        />
+                      </View>
+                    )}
+                  </>
+                )}
+                {tab === "Maria" && <MariaPanel demo={demo} />}
+              </>
+            )}
+          </View>
+        </ScrollView>
+      )}
+      {!!s.notice && (
+        <Pressable
+          onPress={() => s.notify("")}
+          style={{
+            position: "absolute",
+            bottom: navigationSpacing + 20,
+            left: 20,
+            right: 20,
+            backgroundColor: c.foreground,
+            borderRadius: 12,
+            padding: 18,
+          }}
+        >
+          <Txt size={18} color={c.background}>
+            {s.notice}
+          </Txt>
+        </Pressable>
+      )}
+      {discountTarget && (
+        <OrderDiscountDialog
+          target={discountTarget}
+          receivedAmount={
+            discountTarget.kind === "appointment"
+              ? appointmentPayment(discountTarget.record, transactions).received
+              : 0
+          }
+          demo={demo}
+          onClose={() => setDiscountTarget(null)}
+          onSave={applyPersonalDiscount}
+        />
+      )}
+      {(!!editor || !!calendarForm || !!selectedClient || !!confirm || !!paymentAppointment) && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => {
+            if (busy) return;
+            setEditor(null);
+            setCalendarForm(null);
+            setSelectedClient(null);
+            setPaymentAppointment(null);
+            setConfirm(null);
+            setError("");
+          }}
+        >
+          <OwnerEditorPortal>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(0,0,0,0.4)",
+                justifyContent: "center",
+                padding: 20,
+              }}
+            >
+              <SafeAreaView
+                style={{
+                  maxHeight: "92%",
+                  maxWidth: calendarForm === "block" ? 520 : 650,
+                  width: "100%",
+                  alignSelf: "center",
+                  backgroundColor: c.card,
+                  borderRadius: 20,
+                }}
+              >
+                <ScrollView contentContainerStyle={{ padding: 26 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      gap: 15,
+                      alignItems: "center",
+                      marginBottom: 25,
+                    }}
+                  >
+                    <OT size={27} bold>
+                      {confirm
+                        ? "Please confirm"
+                        : editor?.title ||
+                          (calendarForm === "block"
+                            ? editingBlock
+                              ? "Edit blocked period"
+                              : "Block time"
+                            : calendarForm
+                              ? "Add appointment"
+                              : paymentAppointment
+                                ? "Payment complete"
+                                : selectedClient?.full_name || "Details")}
+                    </OT>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Close dialog"
+                      disabled={busy}
+                      onPress={() => {
+                        setEditor(null);
+                        setCalendarForm(null);
+                        setSelectedClient(null);
+                        setPaymentAppointment(null);
+                        setConfirm(null);
+                        setError("");
+                      }}
+                      style={{
+                        minWidth: 54,
+                        minHeight: 54,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon name="X" size={24} color={c.foreground} />
+                    </Pressable>
+                  </View>
+                  {!!error && <ErrorBox message={error} />}
+                  {editor && !confirm && (
+                    <>
+                      {editor.fields.map((f) =>
+                        f.type === "boolean" ? (
+                          <Pressable
+                            key={f.key}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: !!editor.values[f.key] }}
+                            onPress={() =>
+                              setEditor({
+                                ...editor,
+                                values: { ...editor.values, [f.key]: !editor.values[f.key] },
+                              })
+                            }
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 13,
+                              minHeight: 56,
+                              marginBottom: 15,
+                            }}
+                          >
+                            <Icon
+                              name={editor.values[f.key] ? "SquareCheck" : "Square"}
+                              size={26}
+                              color={c.primary}
+                            />
+                            <OT>{f.label}</OT>
+                          </Pressable>
+                        ) : f.key === "category" && editor.table === "lj_services" ? (
+                          <ServiceCategoryField
+                            key={f.key}
+                            value={String(editor.values.category || "Hair")}
+                            onChange={(category) =>
+                              setEditor({ ...editor, values: { ...editor.values, category } })
+                            }
+                          />
+                        ) : f.key === "birthday" ? (
+                          <DateField
+                            key={f.key}
+                            label={f.label}
+                            value={String(editor.values[f.key] || "")}
+                            birthday
+                            optional
+                            onChange={(value) =>
+                              setEditor({ ...editor, values: { ...editor.values, [f.key]: value } })
+                            }
+                          />
+                        ) : f.key === "starts_at" ? (
+                          <DateTimeField
+                            key={f.key}
+                            label={f.label}
+                            value={String(editor.values[f.key] || "")}
+                            onChange={(value) =>
+                              setEditor({ ...editor, values: { ...editor.values, [f.key]: value } })
+                            }
+                          />
+                        ) : f.key === "duration" ? (
+                          <DurationField
+                            key={f.key}
+                            label={f.label}
+                            value={String(editor.values[f.key] || "60")}
+                            onChange={(value) =>
+                              setEditor({ ...editor, values: { ...editor.values, [f.key]: value } })
+                            }
+                          />
+                        ) : f.key === "format" ? (
+                          <View key={f.key} style={{ gap: 10, marginBottom: 20 }}>
+                            <OT bold>{f.label}</OT>
+                            {["In person", "Online"].map((value) => (
+                              <OA
+                                key={value}
+                                label={value}
+                                secondary={editor.values[f.key] !== value}
+                                onPress={() =>
+                                  setEditor({
+                                    ...editor,
+                                    values: { ...editor.values, [f.key]: value },
+                                  })
+                                }
+                              />
+                            ))}
+                          </View>
+                        ) : (
+                          <OF
+                            key={f.key}
+                            label={f.label}
+                            value={String(editor.values[f.key] ?? "")}
+                            multiline={f.type === "multiline"}
+                            onChange={(value) =>
+                              setEditor({ ...editor, values: { ...editor.values, [f.key]: value } })
+                            }
+                          />
+                        ),
+                      )}
+                      {editor.table === "lj_client_records" && (
+                        <GuardianFields
+                          values={editor.values}
+                          onChange={(values) => setEditor({ ...editor, values })}
+                        />
+                      )}
+                      {["lj_services", "lj_products", "lj_workshops", "lj_promotions"].includes(
+                        editor.table,
+                      ) && (
+                        <CatalogPhotoEditor
+                          demo={demo}
+                          disabled={busy}
+                          onBusyChange={setBusy}
+                          value={
+                            Array.isArray(editor.values.photos)
+                              ? editor.values.photos.map(String)
+                              : []
+                          }
+                          onChange={(photos) =>
+                            setEditor((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    values: {
+                                      ...current.values,
+                                      photos,
+                                      ...(current.table === "lj_promotions"
+                                        ? {}
+                                        : { image: photos[0] || current.values.image }),
+                                    },
+                                  }
+                                : null,
+                            )
+                          }
+                        />
+                      )}
+                      <OA
+                        label={busy ? "Saving…" : demo ? "Save demo changes" : "Save changes"}
+                        disabled={busy}
+                        onPress={() => void save()}
+                      />
+                      {!!editor.values.id &&
+                        ["lj_services", "lj_products", "lj_workshops"].includes(editor.table) && (
+                          <View
+                            style={{
+                              marginTop: 28,
+                              paddingTop: 24,
+                              borderTopWidth: 1,
+                              borderColor: c.border,
+                            }}
+                          >
+                            <OA
+                              label={
+                                "Delete " +
+                                (editor.table === "lj_services"
+                                  ? "service"
+                                  : editor.table === "lj_products"
+                                    ? "product"
+                                    : "workshop")
+                              }
+                              icon="Trash2"
+                              destructive
+                              disabled={busy}
+                              onPress={requestCatalogRemoval}
+                            />
+                          </View>
+                        )}
+                    </>
+                  )}
+                  {calendarForm === "block" && (
+                    <BlockTimeEditor
+                      key={editingBlock?.id || start.slice(0, 10)}
+                      date={start.slice(0, 10)}
+                      block={editingBlock}
+                      initialReason={initialBlockReason}
+                      live={allowed && !demo}
+                      onBusyChange={setBusy}
+                      onSaved={async () => {
+                        await load(true);
+                        setCalendarForm(null);
+                        setEditingBlock(null);
+                      }}
+                    />
+                  )}
+                  {calendarForm === "appointment" && (
+                    <>
+                      <DateTimeField label="Start" value={start} onChange={setStart} />
+                      <OT muted>Local Trinidad & Tobago time (GMT−4)</OT>
+                      <View style={{ height: 20 }} />
+                      {calendarForm === "appointment" && (
+                        <>
+                          <OT bold>Choose one service</OT>
+                          <View style={{ gap: 10, marginVertical: 18 }}>
+                            {services
+                              .filter((v) => v.active)
+                              .map((v) => (
+                                <OA
+                                  key={v.id}
+                                  label={`${String(v.name)} · ${money(v.price)}`}
+                                  secondary={serviceId !== v.id}
+                                  onPress={() => setServiceId(v.id)}
+                                />
+                              ))}
+                          </View>
+                          <OT bold>Registered client (optional)</OT>
+                          <View style={{ gap: 10, marginVertical: 18 }}>
+                            <OA
+                              label="Walk-in / private note"
+                              secondary={!customerId}
+                              onPress={() => setCustomerId("")}
+                            />
+                            {profiles.map((v) => (
+                              <OA
+                                key={String(v.id)}
+                                label={String(v.full_name || v.id)}
+                                secondary={customerId !== v.id}
+                                onPress={() => setCustomerId(String(v.id))}
+                              />
+                            ))}
+                          </View>
+                          <OT muted>
+                            Manual appointments remain pending until payment arrangements are
+                            confirmed by the owner.
+                          </OT>
+                        </>
+                      )}
+                      <OF label={"Client name / private note"} value={note} onChange={setNote} />
+                      <OA
+                        label={busy ? "Saving…" : "Save appointment"}
+                        disabled={busy}
+                        onPress={() => void addCalendar()}
+                      />
+                    </>
+                  )}
+                  {selectedClient && (
+                    <View style={{ gap: 16 }}>
+                      <OT>Name: {selectedClient.full_name}</OT>
+                      <OT>
+                        First: {selectedClient.first_name || selectedClient.full_name.split(" ")[0]}
+                      </OT>
+                      <OT>
+                        Last:{" "}
+                        {selectedClient.last_name ||
+                          selectedClient.full_name.split(" ").slice(1).join(" ")}
+                      </OT>
+                      <OT>
+                        DOB:{" "}
+                        {selectedClient.birthday
+                          ? dateLabel(selectedClient.birthday + "T12:00:00Z", { year: "numeric" })
+                          : "Not provided"}
+                      </OT>
+                      {contactIsMinor(selectedClient.birthday, selectedClient.is_minor) && (
+                        <View style={{ gap: 8 }}>
+                          <OT bold>Parent / guardian · Client under 18</OT>
+                          <OT>{selectedClient.guardian_name || "Guardian details needed"}</OT>
+                          {!!selectedClient.guardian_relationship && (
+                            <OT muted>{selectedClient.guardian_relationship}</OT>
+                          )}
+                          {!!selectedClient.guardian_phone && (
+                            <OT>{selectedClient.guardian_phone}</OT>
+                          )}
+                          {!!selectedClient.guardian_email && (
+                            <OT>{selectedClient.guardian_email}</OT>
+                          )}
+                        </View>
+                      )}
+                      <OT>{selectedClient.phone}</OT>
+                      <OA
+                        label="Open WhatsApp"
+                        icon="MessageCircle"
+                        secondary
+                        disabled={
+                          demo ||
+                          !whatsappContactUrl(selectedClient.whatsapp_phone || selectedClient.phone)
+                        }
+                        onPress={() => {
+                          const url = whatsappContactUrl(
+                            selectedClient.whatsapp_phone || selectedClient.phone,
+                          );
+                          if (url && !demo)
+                            void Linking.openURL(url).catch(() =>
+                              s.notify("Unable to open WhatsApp."),
+                            );
+                        }}
+                      />
+                      <OT>{selectedClient.email}</OT>
+                      <OT bold>Preferences</OT>
+                      <OT muted>{selectedClient.preferences || "None recorded"}</OT>
+                      <OT bold>Relevant sensitivities</OT>
+                      <OT muted>{selectedClient.sensitivities || "None recorded"}</OT>
+                      <AgreementList
+                        demo={demo}
+                        customerId={selectedClient.customer_id || selectedClient.id}
+                      />
+                      <OT bold>Notes</OT>
+                      <OT muted>{selectedClient.private_notes || "None recorded"}</OT>
+                      <OT>
+                        Photo consent: {selectedClient.photo_consent ? "Received" : "Not received"}
+                      </OT>
+                      <OT bold>Service history</OT>
+                      {appointments
+                        .filter(
+                          (v) =>
+                            v.customer_id === (selectedClient.customer_id || selectedClient.id),
+                        )
+                        .map((v) => (
+                          <OT key={v.id}>
+                            {dateLabel(v.starts_at)} · {v.services.map((x) => x.name).join(", ")} ·
+                            {v.status}
+                          </OT>
+                        ))}
+                      <OT bold>Purchase & workshop history</OT>
+                      {purchases
+                        .filter(
+                          (v) =>
+                            v.customer_id === (selectedClient.customer_id || selectedClient.id),
+                        )
+                        .map((v) => (
+                          <OT key={v.id}>
+                            {v.items.map((x) => x.name).join(", ")} · {money(v.total)} · {v.status}
+                          </OT>
+                        ))}
+                      <OA
+                        label="Edit client"
+                        onPress={() => {
+                          openEditor("lj_client_records", selectedClient as unknown as Row);
+                          setSelectedClient(null);
+                        }}
+                      />
+                      <OA
+                        label="Delete contact"
+                        icon="Trash2"
+                        secondary
+                        onPress={() => {
+                          const contact = selectedClient;
+                          setSelectedClient(null);
+                          setError("");
+                          setConfirm({
+                            text: "Are you sure you want to delete contact?",
+                            detail:
+                              contact.full_name +
+                              " will be removed from the salon contact list. Their account, appointments and payment history stay available.",
+                            actionLabel: "Delete contact",
+                            run: async () => {
+                              if (demo) {
+                                setClients((old) => old.filter((item) => item.id !== contact.id));
+                                s.notify("Demo contact deleted. No real records were changed.");
+                              } else {
+                                check(await db().rpc("lj_delete_contact", { p_id: contact.id }));
+                                await load(true);
+                                s.notify("Contact removed from the salon directory.");
+                              }
+                            },
+                          });
+                        }}
+                      />
+                    </View>
+                  )}
+                  {paymentAppointment && (
+                    <PaymentCompletion
+                      appointment={paymentAppointment}
+                      transactions={transactions}
+                      demo={demo}
+                      onConfirm={(method, reference, amount) =>
+                        recordPayment(paymentAppointment, method, reference, amount)
+                      }
+                    />
+                  )}
+                  {confirm && (
+                    <View style={{ gap: 22 }}>
+                      <OT>{confirm.text}</OT>
+                      {!!confirm.detail && <OT muted>{confirm.detail}</OT>}
+                      <OA
+                        label={busy ? "Confirming…" : confirm.actionLabel || "Confirm"}
+                        destructive={confirm.actionLabel?.startsWith("Delete")}
+                        disabled={busy}
+                        onPress={() => {
+                          setBusy(true);
+                          void confirm
+                            .run()
+                            .then(() => setConfirm(null))
+                            .catch((e) =>
+                              setError(
+                                e instanceof Error ? e.message : "Unable to complete the action.",
+                              ),
+                            )
+                            .finally(() => setBusy(false));
+                        }}
+                      />
+                      <OA
+                        label={
+                          confirm.cancelLabel ||
+                          (confirm.actionLabel === "Delete contact" ? "Keep contact" : "Go back")
+                        }
+                        secondary
+                        disabled={busy}
+                        onPress={() => setConfirm(null)}
+                      />
+                    </View>
+                  )}
+                </ScrollView>
+              </SafeAreaView>
+            </View>
+          </OwnerEditorPortal>
+        </Modal>
+      )}
+    </OwnerWorkspace>
+  );
+}

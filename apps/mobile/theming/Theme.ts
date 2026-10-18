@@ -1,0 +1,77 @@
+interface Typography {
+  fontSize?: string;
+  fontFamily?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+}
+
+export interface Theme {
+  name: string;
+  colors: {
+    background?: string;
+    foreground?: string;
+    card?: string;
+    cardForeground?: string;
+    popover?: string;
+    popoverForeground?: string;
+    primary?: string;
+    primaryForeground?: string;
+    secondary?: string;
+    secondaryForeground?: string;
+    navigationGlass?: string;
+    navigationGlassBorder?: string;
+    navigationGlassSelected?: string;
+    navigationGlassForeground?: string;
+    navigationGlassActive?: string;
+    navigationGlassShadow?: string;
+    headerGold?: string;
+    headerInk?: string;
+    paymentPaid?: string;
+    paymentPaidBadge?: string;
+    paymentPaidBadgeForeground?: string;
+    paymentDeposit?: string;
+    paymentDepositForeground?: string;
+    paymentPending?: string;
+    attentionBorder?: string;
+    calendarConfirmed?: string;
+    calendarBlocked?: string;
+    calendarVip?: string;
+    calendarConsultation?: string;
+    calendarEvent?: string;
+    calendarDotBorder?: string;
+    goldSurface?: string;
+    goldBorder?: string;
+    tertiary?: string;
+    tertiaryForeground?: string;
+    muted?: string;
+    mutedForeground?: string;
+    accent?: string;
+    accentForeground?: string;
+    destructive?: string;
+    destructiveForeground?: string;
+    success?: string;
+    successForeground?: string;
+    warning?: string;
+    warningForeground?: string;
+    border?: string;
+    input?: string;
+    ring?: string;
+    overlay?: string;
+    notification?: string;
+  };
+  typography: {
+    navigationLabel?: Typography;
+    headerBrand?: Typography;
+    headerCaption?: Typography;
+    headerButton?: Typography;
+    h1?: Typography;
+    h2?: Typography;
+    h3?: Typography;
+    h4?: Typography;
+    h5?: Typography;
+    h6?: Typography;
+    body?: Typography;
+    caption?: Typography;
+    button?: Typography;
+  };
+}
