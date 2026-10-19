@@ -17,22 +17,23 @@
     <div class="hero-scrim"></div>
   </div>
   <div class="hero-content animate-in">
-    <p class="hero-sub">Salon &amp; Day Spa</p>
+    <p class="hero-sub">Petit Valley</p>
     <h1 class="hero-brand">Lady J</h1>
-    <p>Thoughtful beauty care, private bookings, and a calm space designed around you.</p>
+    <div class="hero-rule" aria-hidden="true"></div>
+    <p>Beauty, privately reserved.</p>
     <div class="hero-actions">
       <a class="btn" href="{{ url_for('booking.step1') }}">Book Appointment</a>
-      <a class="btn btn-outline" href="{{ url_for('public.services') }}" style="border-color:#fff;color:#fff">View Services</a>
+      <a class="btn btn-outline" href="{{ url_for('public.services') }}">Explore Services</a>
     </div>
   </div>
 </section>
 
-<section class="section">
+<section class="section feature-row">
   <div class="container">
     <div class="section-head animate-in">
-      <span class="eyebrow">Featured Services</span>
-      <h2>Care, crafted for you</h2>
-      <p class="muted">From hair and skin to nails and spa — book privately in three simple steps.</p>
+      <span class="eyebrow">Services</span>
+      <h2>Selected for you</h2>
+      <p>Hair, skin, nails, and spa — reserved in three quiet steps.</p>
     </div>
     <div class="service-grid">
       {% for s in featured %}
@@ -40,19 +41,15 @@
         <div class="body">
           <span class="eyebrow">{{ s.category }}</span>
           <h3>{{ s.name }}</h3>
-          <p class="muted">{{ s.description }}</p>
           <div class="meta">
             <span>{{ s.duration_minutes }} min</span>
-            <span class="price">${{ '%.0f'|format(s.price_ttd) }} TTD</span>
+            <span class="price">${{ '%.0f'|format(s.price_ttd) }}</span>
           </div>
-          {% if s.is_demo %}<p class="muted" style="margin-top:.5rem;font-size:.9rem">Demo service — editable</p>{% endif %}
         </div>
       </article>
       {% endfor %}
     </div>
-    <p style="margin-top:1.5rem">
-      <a class="btn btn-ghost" href="{{ url_for('public.services') }}">Explore all services</a>
-    </p>
+    <a class="section-link" href="{{ url_for('public.services') }}">View all services</a>
   </div>
 </section>
 
@@ -60,8 +57,8 @@
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Workshops</span>
-      <h2>Grow your craft</h2>
-      <p class="muted">Professional workshops — live and recorded — for beauty artists ready to level up.</p>
+      <h2>Master your craft</h2>
+      <p>Live and recorded workshops for professionals.</p>
     </div>
     <div class="workshop-grid">
       {% for w in workshops %}
@@ -69,29 +66,24 @@
         <div class="body">
           <span class="eyebrow">{{ w.mode|capitalize }}</span>
           <h3>{{ w.title }}</h3>
-          <p class="muted">{{ w.description }}</p>
           <div class="meta">
             <span>{{ w.instructor_name }}</span>
-            <span class="price">${{ '%.0f'|format(w.price_ttd) }} TTD</span>
+            <span class="price">${{ '%.0f'|format(w.price_ttd) }}</span>
           </div>
-          <p style="margin-top:1rem">
-            <a class="btn btn-outline" href="{{ url_for('public.workshop_detail', slug=w.slug) }}">View workshop</a>
-          </p>
         </div>
       </article>
-      {% else %}
-      <p class="muted">Workshops coming soon.</p>
       {% endfor %}
     </div>
+    <a class="section-link" href="{{ url_for('public.workshops') }}">Browse workshops</a>
   </div>
 </section>
 
 <section class="section">
   <div class="container">
     <div class="section-head">
-      <span class="eyebrow">Boutique</span>
-      <h2>Take the glow home</h2>
-      <p class="muted">Curated products selected by our team. Private checkout with your account.</p>
+      <span class="eyebrow">Products</span>
+      <h2>Essentials</h2>
+      <p>Curated products for home care.</p>
     </div>
     <div class="product-grid">
       {% for p in products %}
@@ -99,30 +91,27 @@
         <div class="body">
           <span class="eyebrow">{{ p.category }}</span>
           <h3>{{ p.name }}</h3>
-          <p class="muted">{{ p.description }}</p>
           <div class="meta">
-            <span>{{ p.stock }} in stock</span>
-            <span class="price">${{ '%.0f'|format(p.price_ttd) }} TTD</span>
+            <span>&nbsp;</span>
+            <span class="price">${{ '%.0f'|format(p.price_ttd) }}</span>
           </div>
         </div>
       </article>
       {% endfor %}
     </div>
-    <p style="margin-top:1.5rem">
-      <a class="btn" href="{{ url_for('public.boutique') }}">Shop boutique</a>
-    </p>
+    <a class="section-link" href="{{ url_for('public.products') }}">Shop products</a>
   </div>
 </section>
 
 <section class="section band">
   <div class="container split-cta">
     <div>
-      <span class="eyebrow">Ready when you are</span>
-      <h2>Book your appointment</h2>
-      <p class="muted">Tuesday–Saturday, 10 AM–6 PM. Secure your visit with a deposit and clear cancellation terms.</p>
+      <span class="eyebrow">Reserve</span>
+      <h2>Your time, secured</h2>
+      <p class="muted">Tuesday–Saturday · 10 AM–6 PM</p>
     </div>
     <div>
-      <a class="btn" href="{{ url_for('booking.step1') }}">Start booking</a>
+      <a class="btn" href="{{ url_for('booking.step1') }}">Book Appointment</a>
     </div>
   </div>
 </section>

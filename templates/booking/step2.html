@@ -1,74 +1,133 @@
 {% extends "base.html" %}
 {% block title %}Choose Your Date & Time | Book{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/booking.css') }}">
+{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="container">
-    <div class="steps">
-      <span class="step-pill">1. Service</span>
-      <span class="step-pill active">2. Choose Your Date &amp; Time</span>
-      <span class="step-pill">3. Secure</span>
-    </div>
-    <div class="section-head">
-      <span class="eyebrow">Step 2 of 3</span>
-      <h1>Choose Your Date &amp; Time</h1>
-      <p class="muted">
-        Open Tuesday–Saturday, 10 AM–6 PM (America/Port_of_Spain).
-        Estimated duration: <strong>{{ duration }} minutes</strong> ·
-        Total: <strong class="price">${{ '%.0f'|format(price) }} TTD</strong>
-      </p>
+<section class="book-shell">
+  <div class="book-wrap">
+    <div class="fresha-steps" aria-label="Booking progress">
+      <span class="fresha-step done"><span class="n">1</span> Service</span>
+      <span class="fresha-step active"><span class="n">2</span> Date &amp; Time</span>
+      <span class="fresha-step"><span class="n">3</span> Confirm</span>
     </div>
 
-    <form method="post">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem">
-        <a class="btn btn-ghost" href="{{ url_for('booking.step2', page=page-1 if page>0 else 0) }}">← Earlier</a>
-        <strong class="detail">Available dates</strong>
-        <a class="btn btn-ghost" href="{{ url_for('booking.step2', page=page+1) }}">Later →</a>
+    <form method="post" id="datetimeForm">
+      <input type="hidden" name="date" id="selectedDate" value="{{ selected_date or '' }}">
+      <input type="hidden" name="time" id="selectedTime" value="{{ selected_time if selected_time is not none else '' }}">
+
+      <div class="fresha-layout">
+        <div class="fresha-main">
+          <div class="book-head">
+            <h1>Choose date &amp; time</h1>
+            <p>
+              {{ open_label }}–{{ close_label }} · {{ duration }} min
+              {% if same_day_notice == 0 %}
+              · Same-day booking available
+              {% else %}
+              · Same-day from {{ same_day_notice }}+ min notice
+              {% endif %}
+            </p>
+          </div>
+
+          <div class="month-cal" id="monthCal"
+               data-duration="{{ duration }}"
+               data-year="{{ calendar.year }}"
+               data-month="{{ calendar.month }}">
+            <div class="cal-toolbar">
+              {% if can_show_previous_month %}
+              <a class="btn btn-ghost" href="{{ url_for('booking.step2', year=prev_year, month=prev_month) }}" aria-label="Previous month">←</a>
+              {% else %}
+              <span class="cal-nav-placeholder" aria-hidden="true"></span>
+              {% endif %}
+              <strong id="monthLabel">{{ calendar.month_label }}</strong>
+              <a class="btn btn-ghost" href="{{ url_for('booking.step2', year=next_year, month=next_month) }}" aria-label="Next month">→</a>
+            </div>
+
+            <div class="cal-weekdays">
+              {% for h in calendar.weekday_headers %}
+              <span>{{ h }}</span>
+              {% endfor %}
+            </div>
+
+            <div class="cal-grid" id="calGrid" role="grid" aria-label="Booking calendar">
+              {% for week in calendar.weeks %}
+                {% for day in week %}
+                {% if day.is_past or not day.in_month %}
+                <span class="cal-day empty" aria-hidden="true"></span>
+                {% else %}
+                <button
+                  type="button"
+                  class="cal-day
+                    {% if day.is_today %} today{% endif %}
+                    {% if day.selectable %} open{% endif %}
+                    {% if selected_date == day.date %} selected{% endif %}"
+                  data-date="{{ day.date }}"
+                  {% if not day.selectable %}disabled{% endif %}
+                  aria-label="{{ day.label }}{% if day.slot_count %} · {{ day.slot_count }} times{% endif %}"
+                >
+                  <span class="d">{{ day.day }}</span>
+                  {% if day.is_today %}<span class="tag">Today</span>{% endif %}
+                </button>
+                {% endif %}
+                {% endfor %}
+              {% endfor %}
+            </div>
+          </div>
+
+          <h2 class="time-heading" id="timeHeading">
+            {% if selected_date %}Times for {{ selected_date }}{% else %}Select a date{% endif %}
+          </h2>
+          <div class="slot-grid" id="slotGrid">
+            {% if selected_date %}
+              {% for s in slots %}
+              <button
+                type="button"
+                class="slot {% if selected_time == s.start_minutes %}selected{% endif %}"
+                data-time="{{ s.start_minutes }}"
+              >{{ s.label }}</button>
+              {% else %}
+              <p class="muted" id="slotEmpty">No open times for this date.</p>
+              {% endfor %}
+            {% else %}
+              <p class="muted" id="slotEmpty">Select a date on the calendar.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <aside class="fresha-basket">
+          <h2 class="basket-title">Your booking</h2>
+          <ul class="basket-list">
+            {% for svc, qty in items %}
+            <li>
+              <span>{{ svc.name }}</span>
+              <span class="price">${{ '%.0f'|format(svc.price_ttd * qty) }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          <div class="basket-totals">
+            <div class="row"><span>Duration</span><span>{{ duration }} min</span></div>
+            <div class="row"><span>Date</span><span id="basketDate">{{ selected_date or '—' }}</span></div>
+            <div class="row"><span>Time</span><span id="basketTime">{% if selected_time is not none %}{{ minutes_to_label(selected_time) }}{% else %}—{% endif %}</span></div>
+            <div class="row total"><span>Total</span><span class="price">${{ '%.0f'|format(price) }}</span></div>
+          </div>
+          <a class="btn btn-outline" href="{{ url_for('booking.step1') }}" style="margin-bottom:.65rem;width:100%">Edit services</a>
+          <button class="btn" type="submit" name="continue" value="1" id="continueTime">Continue</button>
+        </aside>
       </div>
 
-      <div class="date-grid" style="margin-bottom:1.5rem">
-        {% for d in dates %}
-        <label>
-          <input class="choice" type="radio" name="date" value="{{ d.isoformat() }}"
-            {% if selected_date == d.isoformat() %}checked{% endif %}
-            onchange="this.form.submit()">
-          <span class="date-chip {% if selected_date == d.isoformat() %}selected{% endif %}">
-            {{ d.strftime('%a') }}<br>{{ d.strftime('%b %d') }}
-          </span>
-        </label>
-        {% else %}
-        <p class="muted">No dates in this window.</p>
-        {% endfor %}
-      </div>
-
-      <h2>Available times</h2>
-      {% if selected_date %}
-      <div class="slot-grid" style="margin-top:1rem">
-        {% for s in slots %}
-        <label>
-          <input class="choice" type="radio" name="time" value="{{ s.start_minutes }}"
-            {% if selected_time == s.start_minutes %}checked{% endif %}>
-          <span class="slot {% if selected_time == s.start_minutes %}selected{% endif %}">
-            {{ s.label }}
-          </span>
-        </label>
-        {% else %}
-        <p class="muted">No open slots for this date and duration.</p>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p class="muted">Select a date to see large time slots.</p>
-      {% endif %}
-
-      <div style="margin-top:1.75rem;display:flex;flex-wrap:wrap;gap:.75rem">
-        <a class="btn btn-ghost" href="{{ url_for('booking.step1') }}">Back</a>
-        <button class="btn" type="submit" name="continue" value="1">Continue to Secure Appointment</button>
+      <div class="mobile-basket">
+        <div class="meta">
+          <strong>${{ '%.0f'|format(price) }}</strong>
+          <span id="mobileWhen">{{ duration }} min{% if selected_date %} · {{ selected_date }}{% endif %}</span>
+        </div>
+        <button class="btn" type="submit" name="continue" value="1">Continue</button>
       </div>
     </form>
-
-    <p style="margin-top:2rem" class="muted">
-      Need Monday or special hours?
-      <a href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener">Request via WhatsApp</a>
-    </p>
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
 {% endblock %}

@@ -10,7 +10,7 @@ from flask_login import current_user, login_required
 from app.ai.maria import handle_command
 from app.ai.photo_recommend import recommend_from_image
 from app.services.booking import available_slots
-from app.services.hours import valid_dates
+from app.services.hours import month_calendar, now_local, valid_dates
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -26,7 +26,26 @@ def availability():
     except ValueError:
         return jsonify({"error": "invalid date"}), 400
     slots = available_slots(day, duration)
-    return jsonify({"date": day_s, "duration": duration, "slots": slots})
+    return jsonify(
+        {
+            "date": day_s,
+            "duration": duration,
+            "slots": slots,
+            "same_day": day == now_local().date(),
+        }
+    )
+
+
+@bp.get("/calendar")
+def calendar_api():
+    """Month grid for the booking calendar (includes same-day when slots remain)."""
+    today = now_local().date()
+    year = int(request.args.get("year", today.year))
+    month = int(request.args.get("month", today.month))
+    duration = int(request.args.get("duration", 60))
+    if month < 1 or month > 12:
+        return jsonify({"error": "invalid month"}), 400
+    return jsonify(month_calendar(year, month, duration))
 
 
 @bp.get("/dates")

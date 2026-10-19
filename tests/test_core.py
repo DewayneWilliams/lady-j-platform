@@ -47,7 +47,7 @@ def test_public_routes(client):
     for path in (
         "/services",
         "/workshops",
-        "/boutique",
+        "/products",
         "/about",
         "/contact",
         "/book/step-1",
@@ -133,3 +133,54 @@ def test_register_client(client):
     )
     assert res.status_code == 200
     assert b"private" in res.data.lower() or b"Hello" in res.data or b"Account" in res.data
+
+
+def test_mobile_navigation_matches_draftbit_and_products_route(client):
+    res = client.get("/")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert 'class="app-tab-bar"' in html
+    nav_start = html.index('class="app-tab-bar"')
+    nav_html = html[nav_start : html.index("</nav>", nav_start)]
+    labels = ["Home", "Services", "Products", "Workshops", "Contact", "Account"]
+    positions = [nav_html.index(f">{label}</span>") for label in labels]
+    assert positions == sorted(positions)
+    assert client.get("/products").status_code == 200
+    legacy = client.get("/boutique")
+    assert legacy.status_code == 301
+    assert legacy.headers["Location"].endswith("/products")
+
+
+def test_booking_calendar_hides_past_days(client, app):
+    with app.app_context():
+        db = get_db()
+        service_id = db.execute(
+            "SELECT id FROM services WHERE is_addon = 0 LIMIT 1"
+        ).fetchone()["id"]
+    with client.session_transaction() as sess:
+        sess["booking_cart"] = [{"service_id": service_id, "qty": 1}]
+    html = client.get("/book/step-2").get_data(as_text=True)
+    assert "day.is_past" not in html
+    assert 'class="cal-day empty"' in html
+    assert 'aria-label="Previous month"' not in html
+
+
+def test_owner_block_time_calendar_color_sync(client):
+    client.post(
+        "/auth/login",
+        data={"email": "owner@test.local", "password": "testpass123"},
+    )
+    day = now_local().date().isoformat()
+    saved = client.post(
+        "/owner/calendar/block",
+        data={
+            "start_at": day + "T12:00",
+            "end_at": day + "T13:00",
+            "reason": "vip",
+        },
+        follow_redirects=True,
+    )
+    assert saved.status_code == 200
+    assert b"Time blocked" in saved.data
+    assert b"calendar-dot vip" in saved.data
+    assert b"VIP" in saved.data

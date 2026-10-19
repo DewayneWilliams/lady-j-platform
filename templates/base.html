@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#E75480">
+  <meta name="theme-color" content="#1d1d1f">
   <title>{% block title %}{{ business_name }}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,52 +12,56 @@
   {% block head %}{% endblock %}
 </head>
 <body>
+  <div class="lang-bar" role="navigation" aria-label="Language">
+    <div class="lang-bar-inner">
+      <span class="lang-label" data-i18n="lang_label">Language</span>
+      <div class="lang-switch" role="group" aria-label="Language selector">
+        <button type="button" class="lang-btn" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" class="lang-btn" data-lang="es" aria-pressed="false">ES</button>
+      </div>
+    </div>
+  </div>
+
   <header class="site-header">
     <div class="inner">
       <a class="brand" href="{{ url_for('public.home') }}">
         <span class="brand-mark">LJ</span>
         <span>
-          <strong>LADY J</strong>
+          <strong>Lady J</strong>
           <small>Salon &amp; Day Spa</small>
         </span>
       </a>
       <nav class="nav-links" aria-label="Primary">
-        <a href="{{ url_for('public.services') }}">Services</a>
-        <a href="{{ url_for('public.workshops') }}">Workshops</a>
-        <a href="{{ url_for('public.boutique') }}">Boutique</a>
-        <a href="{{ url_for('public.about') }}">About</a>
-        <a href="{{ url_for('public.contact') }}">Contact</a>
+        <a href="{{ url_for('public.about') }}" data-i18n="nav_about">About</a>
+        <a href="{{ url_for('public.products') }}" data-i18n="nav_products">Products</a>
+        <a href="{{ url_for('public.workshops') }}" data-i18n="nav_workshops">Workshops</a>
         {% if current_user.is_authenticated %}
           {% if current_user.is_staff %}
             <a href="{{ url_for('owner.today') }}">Dashboard</a>
           {% else %}
-            <a href="{{ url_for('account.dashboard') }}">My Account</a>
+            <a href="{{ url_for('account.dashboard') }}" data-i18n="nav_account">Account</a>
           {% endif %}
-          <a href="{{ url_for('auth.logout') }}">Sign out</a>
-        {% else %}
-          <a href="{{ url_for('auth.login') }}">Sign in</a>
         {% endif %}
-        <a class="nav-cta" href="{{ url_for('booking.step1') }}">Book Appointment</a>
+        <a class="nav-cta" href="{{ url_for('booking.step1') }}" data-i18n="nav_book">Book Appointment</a>
       </nav>
-      <button class="nav-toggle" type="button" id="navToggle" aria-expanded="false" aria-controls="mobileNav">Menu</button>
+      <a class="mobile-book-cta" href="{{ url_for('booking.step1') }}" data-i18n="nav_book_short">Book</a>
+      <button class="nav-toggle" type="button" id="navToggle" aria-expanded="false" aria-controls="mobileNav" data-i18n="nav_menu">Menu</button>
     </div>
     <nav class="mobile-nav" id="mobileNav" hidden>
-      <a href="{{ url_for('public.services') }}">Services</a>
-      <a href="{{ url_for('public.workshops') }}">Workshops</a>
-      <a href="{{ url_for('public.boutique') }}">Boutique</a>
-      <a href="{{ url_for('public.about') }}">About</a>
-      <a href="{{ url_for('public.contact') }}">Contact</a>
+      <a href="{{ url_for('public.about') }}" data-i18n="nav_about">About</a>
+      <a href="{{ url_for('public.products') }}" data-i18n="nav_products">Products</a>
+      <a href="{{ url_for('public.workshops') }}" data-i18n="nav_workshops">Workshops</a>
       {% if current_user.is_authenticated %}
         {% if current_user.is_staff %}
           <a href="{{ url_for('owner.today') }}">Dashboard</a>
         {% else %}
-          <a href="{{ url_for('account.dashboard') }}">My Account</a>
+          <a href="{{ url_for('account.dashboard') }}" data-i18n="nav_account">Account</a>
         {% endif %}
-        <a href="{{ url_for('auth.logout') }}">Sign out</a>
+        <a href="{{ url_for('auth.logout') }}" data-i18n="nav_signout">Sign out</a>
       {% else %}
-        <a href="{{ url_for('auth.login') }}">Sign in</a>
+        <a href="{{ url_for('auth.login') }}" data-i18n="nav_signin">Sign in</a>
       {% endif %}
-      <a class="nav-cta" href="{{ url_for('booking.step1') }}">Book Appointment</a>
+      <a class="nav-cta" href="{{ url_for('booking.step1') }}" data-i18n="nav_book">Book Appointment</a>
     </nav>
   </header>
 
@@ -67,17 +71,52 @@
     {% block content %}{% endblock %}
   </main>
 
+  {% set endpoint = request.endpoint or '' %}
+  <nav class="app-tab-bar" aria-label="Customer navigation">
+    <a href="{{ url_for('public.home') }}" class="{% if endpoint == 'public.home' %}active{% endif %}" {% if endpoint == 'public.home' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8v9.7a.5.5 0 0 1-.5.5h-5.2v-6.2H8.7V21H3.5a.5.5 0 0 1-.5-.5Z"/><path d="M9 11.2c1.2-1.1 2.3-.5 3 .4.7-.9 1.8-1.5 3-.4 1.5 1.5-.2 3.3-3 5-2.8-1.7-4.5-3.5-3-5Z"/></svg>
+      <span data-i18n="nav_home">Home</span>
+    </a>
+    <a href="{{ url_for('public.services') }}" class="{% if endpoint == 'public.services' or endpoint.startswith('booking.') %}active{% endif %}" {% if endpoint == 'public.services' or endpoint.startswith('booking.') %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="m8.7 8.3 11.1 5.8M8.7 15.7 19.8 9.9"/></svg>
+      <span data-i18n="nav_services">Services</span>
+    </a>
+    <a href="{{ url_for('public.products') }}" class="{% if endpoint == 'public.products' or endpoint.startswith('account.cart') or endpoint == 'account.checkout' %}active{% endif %}" {% if endpoint == 'public.products' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 12H5.2Z"/><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3"/></svg>
+      <span data-i18n="nav_products">Products</span>
+    </a>
+    <a href="{{ url_for('public.workshops') }}" class="{% if endpoint.startswith('public.workshop') %}active{% endif %}" {% if endpoint.startswith('public.workshop') %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22Z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5A2.5 2.5 0 0 1 20 22Z"/><path d="m7 11 1.3 1.3L10 10.5"/></svg>
+      <span data-i18n="nav_workshops">Workshops</span>
+    </a>
+    <a href="{{ url_for('public.contact') }}" class="{% if endpoint == 'public.contact' %}active{% endif %}" {% if endpoint == 'public.contact' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2.2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/></svg>
+      <span data-i18n="nav_contact">Contact</span>
+    </a>
+    {% if current_user.is_authenticated and current_user.is_staff %}
+      {% set account_url = url_for('owner.today') %}
+    {% elif current_user.is_authenticated %}
+      {% set account_url = url_for('account.dashboard') %}
+    {% else %}
+      {% set account_url = url_for('auth.login') %}
+    {% endif %}
+    <a href="{{ account_url }}" class="{% if endpoint.startswith('account.') or endpoint.startswith('auth.') or endpoint.startswith('owner.') %}active{% endif %}" {% if endpoint.startswith('account.') or endpoint.startswith('auth.') or endpoint.startswith('owner.') %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
+      <span data-i18n="nav_account">Account</span>
+    </a>
+  </nav>
+
   <footer class="site-footer">
     <div class="inner">
       <div>
         <strong>Lady J Salon &amp; Day Spa</strong>
-        <p class="muted">Petit Valley · Tue–Sat · 10 AM–6 PM · America/Port_of_Spain</p>
+        <p class="muted">Petit Valley · Tue–Sat · 10 AM–6 PM</p>
       </div>
       <nav aria-label="Footer">
-        <a href="{{ url_for('booking.step1') }}">Book</a>
-        <a href="{{ url_for('public.workshops') }}">Workshops</a>
-        <a href="{{ url_for('public.boutique') }}">Boutique</a>
-        <a href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
+        <a href="{{ url_for('public.about') }}" data-i18n="nav_about">About</a>
+        <a href="{{ url_for('public.products') }}" data-i18n="nav_products">Products</a>
+        <a href="{{ url_for('public.workshops') }}" data-i18n="nav_workshops">Workshops</a>
+        <a href="{{ url_for('booking.step1') }}" data-i18n="nav_book">Book Appointment</a>
       </nav>
     </div>
   </footer>

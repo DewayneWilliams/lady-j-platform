@@ -124,34 +124,5 @@
     "*.{ts,tsx,mjs,js,jsx,css,yml,json,md}": [
       "prettier --write --cache --cache-location .prettier-cache"
     ]
-  },
-  "resolutions": {
-    "metro-file-map@npm:0.82.0": "patch:metro-file-map@npm%3A0.82.0#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.82.1": "patch:metro-file-map@npm%3A0.82.1#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.82.2": "patch:metro-file-map@npm%3A0.82.2#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.82.3": "patch:metro-file-map@npm%3A0.82.3#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.82.4": "patch:metro-file-map@npm%3A0.82.4#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.82.5": "patch:metro-file-map@npm%3A0.82.5#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.83.0": "patch:metro-file-map@npm%3A0.83.0#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.83.1": "patch:metro-file-map@npm%3A0.83.1#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.83.2": "patch:metro-file-map@npm%3A0.83.2#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.83.3": "patch:metro-file-map@npm%3A0.83.3#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.83.4": "patch:metro-file-map@npm%3A0.83.4#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.83.5": "patch:metro-file-map@npm%3A0.83.5#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.83.6": "patch:metro-file-map@npm%3A0.83.6#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.83.7": "patch:metro-file-map@npm%3A0.83.7#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.83.8": "patch:metro-file-map@npm%3A0.83.8#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.84.0": "patch:metro-file-map@npm%3A0.84.0#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.84.1": "patch:metro-file-map@npm%3A0.84.1#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.84.2": "patch:metro-file-map@npm%3A0.84.2#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.84.3": "patch:metro-file-map@npm%3A0.84.3#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.84.4": "patch:metro-file-map@npm%3A0.84.4#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.84.5": "patch:metro-file-map@npm%3A0.84.5#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "metro-file-map@npm:0.84.6": "patch:metro-file-map@npm%3A0.84.6#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch",
-    "@expo/metro-file-map@npm:^56.0.0": "patch:@expo/metro-file-map@npm%3A^56.0.0#optional!~/.yarn/patches/@expo-metro-file-map-npm-56.0.4-5edc5770b0.patch",
-    "@expo/metro-file-map@npm:^56.0.1": "patch:@expo/metro-file-map@npm%3A^56.0.1#optional!~/.yarn/patches/@expo-metro-file-map-npm-56.0.4-5edc5770b0.patch",
-    "@expo/metro-file-map@npm:^56.0.2": "patch:@expo/metro-file-map@npm%3A^56.0.2#optional!~/.yarn/patches/@expo-metro-file-map-npm-56.0.4-5edc5770b0.patch",
-    "@expo/metro-file-map@npm:^56.0.3": "patch:@expo/metro-file-map@npm%3A^56.0.3#optional!~/.yarn/patches/@expo-metro-file-map-npm-56.0.4-5edc5770b0.patch",
-    "@expo/metro-file-map@npm:^56.0.4": "patch:@expo/metro-file-map@npm%3A^56.0.4#optional!~/.yarn/patches/@expo-metro-file-map-npm-56.0.4-5edc5770b0.patch"
   }
 }

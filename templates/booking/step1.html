@@ -1,87 +1,134 @@
 {% extends "base.html" %}
 {% block title %}Select Your Service | Book{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/booking.css') }}">
+{% endblock %}
+
 {% block content %}
-<section class="section">
-  <div class="container">
-    <div class="steps" aria-label="Booking progress">
-      <span class="step-pill active">1. Select Your Service</span>
-      <span class="step-pill">2. Date &amp; Time</span>
-      <span class="step-pill">3. Secure Appointment</span>
-    </div>
-    <div class="section-head">
-      <span class="eyebrow">Step 1 of 3</span>
-      <h1>Select Your Service</h1>
-      <p class="muted">Choose one or more services. Authenticated clients see full pricing from our live menu.</p>
+<section class="book-shell">
+  <div class="book-wrap">
+    <div class="fresha-steps" aria-label="Booking progress">
+      <span class="fresha-step active"><span class="n">1</span> <span data-i18n="step_service">Service</span></span>
+      <span class="fresha-step"><span class="n">2</span> <span data-i18n="step_datetime">Date &amp; Time</span></span>
+      <span class="fresha-step"><span class="n">3</span> <span data-i18n="step_confirm">Confirm</span></span>
     </div>
 
-    <details class="owner-card" style="margin-bottom:1.5rem;padding:1rem 1.2rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)">
-      <summary style="cursor:pointer;font-weight:600;min-height:48px;display:flex;align-items:center">
-        Need Guidance? Upload an Inspiration Photo
-      </summary>
-      <form method="post" enctype="multipart/form-data" style="margin-top:1rem" class="form-grid">
-        <input type="hidden" name="action" value="photo_guide">
-        <label>
-          Inspiration photo
-          <input type="file" name="inspiration" accept="image/*">
-        </label>
-        <button class="btn btn-gold" type="submit">Get AI suggestions</button>
-        <p class="muted" style="font-size:.95rem">
-          Suggestions are estimates and require professional confirmation.
-          Without AWS vision credentials, a local demonstration fallback is used (no real image analysis).
-        </p>
-      </form>
-      {% if recommendations %}
-      <div style="margin-top:1rem">
-        <p><strong>{{ recommendations.message }}</strong></p>
-        <p class="muted">{{ recommendations.disclaimer }}</p>
-        <ul>
-          {% for r in recommendations.recommendations %}
-          <li>{{ r.name }} · {{ r.category }} · ${{ '%.0f'|format(r.price_ttd) }}
-            <span class="muted">(confidence {{ r.confidence }})</span>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-    </details>
-
-    <form method="post">
+    <form method="post" id="serviceForm">
       <input type="hidden" name="action" value="update_cart">
-      {% for category, items in categories.items() %}
-      <fieldset style="border:0;padding:0;margin:0 0 2rem">
-        <legend style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:.75rem">{{ category }}</legend>
-        <div class="service-grid">
-          {% for s in items %}
-          <label class="media-card" style="cursor:pointer">
-            <div class="body">
-              <h3>{{ s.name }}{% if s.is_addon %} <span class="muted">Add-on</span>{% endif %}</h3>
-              <p class="muted">{{ s.description }}</p>
-              <div class="meta">
-                <span>{{ s.duration_minutes }} min</span>
-                <span class="price">${{ '%.0f'|format(s.price_ttd) }}</span>
+
+      <div class="fresha-layout">
+        <div class="fresha-main">
+          <div class="book-head">
+            <h1 data-i18n="select_service">Select Your Service</h1>
+            <p data-i18n="select_service_help">Choose a category, then add services.</p>
+          </div>
+
+          <details class="inspire">
+            <summary data-i18n="inspire_title">Need guidance? Upload an inspiration photo</summary>
+            <div class="inspire-body">
+              <p class="muted" style="font-size:.88rem;margin:0 0 .75rem" data-i18n="inspire_note">
+                Estimates only — a Lady J professional will confirm.
+              </p>
+              <button class="btn btn-outline" type="submit" form="inspireForm" name="action" value="photo_guide" style="min-height:40px" data-i18n="inspire_btn">Get suggestions</button>
+              <label style="margin-top:.75rem;display:grid;gap:.35rem">
+                <span data-i18n="inspire_photo">Inspiration photo</span>
+                <input type="file" name="inspiration" accept="image/*" form="inspireForm">
+              </label>
+              {% if recommendations %}
+              <ul style="padding-left:1.1rem;margin:.85rem 0 0;font-size:.92rem">
+                {% for r in recommendations.recommendations %}
+                <li>{{ r.name }} · <span class="price">${{ '%.0f'|format(r.price_ttd) }}</span></li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+            </div>
+          </details>
+
+          <div class="cat-tabs" role="tablist" aria-label="Service categories">
+            {% for group, items in groups.items() %}
+            <button
+              type="button"
+              class="cat-tab {% if loop.first %}active{% endif %}"
+              role="tab"
+              aria-selected="{{ 'true' if loop.first else 'false' }}"
+              data-tab="{{ group|lower }}"
+              data-i18n="group_{{ group|lower }}"
+            >{{ group }}</button>
+            {% endfor %}
+          </div>
+
+          {% for group, items in groups.items() %}
+          <div
+            class="cat-panel {% if loop.first %}active{% endif %}"
+            id="panel-{{ group|lower }}"
+            role="tabpanel"
+            data-panel="{{ group|lower }}"
+          >
+            <h2 class="panel-title" data-i18n="group_{{ group|lower }}">{{ group }}</h2>
+            {% for s in items %}
+            <div class="svc-row" data-id="{{ s.id }}" data-name="{{ s.name }}" data-price="{{ s.price_ttd }}" data-mins="{{ s.duration_minutes }}">
+              <div>
+                <p class="svc-name">
+                  {{ s.name }}
+                  {% if s.is_addon %}<span class="addon-tag">Add-on</span>{% endif %}
+                </p>
+                <p class="svc-meta">{{ s.duration_minutes }} min</p>
               </div>
-              <div style="margin-top:.85rem">
-                <span class="muted" style="font-size:.9rem">Qty</span>
-                <input
-                  type="number"
-                  name="qty_{{ s.id }}"
-                  min="0"
-                  max="{{ s.max_qty or 1 }}"
-                  value="{{ cart_ids.get(s.id, 0) }}"
-                  style="width:5rem;margin-left:.5rem"
-                >
+              <div class="svc-actions">
+                <span class="svc-price">${{ '%.0f'|format(s.price_ttd) }}</span>
+                <label class="svc-label">
+                  <input
+                    class="svc-check"
+                    type="checkbox"
+                    name="service_{{ s.id }}"
+                    value="1"
+                    {% if s.id in cart_ids %}checked{% endif %}
+                  >
+                  <button type="button" class="add-btn {% if s.id in cart_ids %}added{% endif %}" data-toggle-service>
+                    {% if s.id in cart_ids %}Added{% else %}Add{% endif %}
+                  </button>
+                </label>
               </div>
             </div>
-          </label>
+            {% endfor %}
+          </div>
           {% endfor %}
         </div>
-      </fieldset>
-      {% endfor %}
-      <div style="display:flex;flex-wrap:wrap;gap:.75rem;position:sticky;bottom:1rem">
-        <button class="btn" type="submit" name="continue" value="1">Continue to Date &amp; Time</button>
-        <button class="btn btn-ghost" type="submit">Save selection</button>
+
+        <aside class="fresha-basket" aria-label="Booking summary">
+          <h2 class="basket-title">Your booking</h2>
+          <p class="basket-empty" id="basketEmpty" {% if cart_items %}hidden{% endif %}>No services selected yet.</p>
+          <ul class="basket-list" id="basketList">
+            {% for s in cart_items %}
+            <li data-basket-id="{{ s.id }}">
+              <span>{{ s.name }}</span>
+              <span class="price">${{ '%.0f'|format(s.price_ttd) }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          <div class="basket-totals" id="basketTotals" {% if not cart_items %}hidden{% endif %}>
+            <div class="row"><span>Duration</span><span id="basketMins">{{ cart_mins }} min</span></div>
+            <div class="row total"><span>Total</span><span class="price" id="basketTotal">${{ '%.0f'|format(cart_total) }}</span></div>
+          </div>
+          <button class="btn" type="submit" name="continue" value="1" id="continueBtn" {% if not cart_items %}disabled{% endif %} data-i18n="continue">Continue</button>
+          <p class="basket-note">Tue–Sat · 10 AM–6 PM</p>
+        </aside>
+      </div>
+
+      <div class="mobile-basket">
+        <div class="meta">
+          <strong id="mobileTotal">${{ '%.0f'|format(cart_total) }}</strong>
+          <span id="mobileMeta">{% if cart_items %}{{ cart_items|length }} selected · {{ cart_mins }} min{% else %}Select a service{% endif %}</span>
+        </div>
+        <button class="btn" type="submit" name="continue" value="1" id="mobileContinue" {% if not cart_items %}disabled{% endif %}>Continue</button>
       </div>
     </form>
+
+    <form id="inspireForm" method="post" enctype="multipart/form-data" style="display:none"></form>
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/booking.js') }}"></script>
 {% endblock %}

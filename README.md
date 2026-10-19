@@ -1,6 +1,6 @@
 # Lady J Platform
 
-Premium private salon, workshop, and boutique platform for **Lady J Salon & Day Spa** (ladyjglobal.com).
+Premium private salon, workshop, and product platform for **Lady J Salon & Day Spa** (ladyjglobal.com).
 
 ## Stack
 
@@ -35,11 +35,12 @@ pytest -q
 
 ## Features (upgrade branch)
 
-- Public site: Home, Services, Workshops, Boutique, About, Contact, Book
+- Draftbit-matched mobile tabs: Home, Services, Products, Workshops, Contact, Account
+- Public site: Home, Services, Products, Workshops, About, Contact, Book
 - Exactly **3 booking steps** with deposit, bank/card adapters, cancellation policy
 - Private client accounts (no social feeds)
 - Owner dashboard: Today | Calendar | Clients | Business | Maria
-- Workshops, boutique cart with inventory lock
+- Workshops and product checkout with inventory lock
 - Maria bilingual assistant (local commands + AWS stubs)
 - Design tokens: pink `#E75480`, gold `#C9A227`, warm white, blush, charcoal
 

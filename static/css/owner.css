@@ -166,6 +166,108 @@
   gap: 1rem;
 }
 
+.owner-calendar-head {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.owner-calendar-head h2 {
+  margin: 0;
+  text-align: center;
+}
+
+.owner-calendar-weekdays,
+.owner-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.owner-calendar-weekdays {
+  margin-bottom: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.owner-calendar-day {
+  min-width: 0;
+  aspect-ratio: 1;
+  min-height: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.owner-calendar-day:hover,
+.owner-calendar-day.today {
+  border-color: var(--gold);
+}
+
+.owner-calendar-day.selected {
+  border-color: var(--pink);
+  background: var(--magenta-mist);
+  color: var(--pink);
+}
+
+.owner-calendar-day.empty {
+  visibility: hidden;
+}
+
+.calendar-dots {
+  min-height: 7px;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+}
+
+.calendar-dot {
+  width: 7px;
+  height: 7px;
+  display: inline-block;
+  flex: none;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.calendar-dot.confirmed { background: #2f8f5b; }
+.calendar-dot.blocked { background: #111111; }
+.calendar-dot.vip { background: var(--gold); }
+.calendar-dot.consultation { background: #3478c8; }
+.calendar-dot.event { background: var(--magenta); }
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 1rem;
+  margin: 1rem 0 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.calendar-day-heading {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
 .maria-mic {
   width: min(220px, 70vw);
   aspect-ratio: 1;
@@ -197,6 +299,65 @@
   white-space: pre-wrap;
   font-family: var(--font-body);
   font-size: var(--body-size);
+}
+
+.weekday-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  min-inline-size: 0;
+}
+
+.weekday-fieldset legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.65rem;
+  padding: 0;
+  float: none;
+  width: auto;
+}
+
+.weekday-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+}
+
+.weekday-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.55rem 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.weekday-chip input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--pink);
+}
+
+.weekday-chip:has(input:checked) {
+  border-color: var(--pink);
+  background: var(--blush);
+  color: var(--pink);
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.35;
 }
 
 .table-wrap {

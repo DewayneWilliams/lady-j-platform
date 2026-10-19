@@ -30,7 +30,7 @@ from app.services.booking import (
     total_duration,
     total_price,
 )
-from app.services.hours import minutes_to_label, valid_dates
+from app.services.hours import minutes_to_label
 from app.services.payments import (
     PaymentError,
     process_card_deposit,
@@ -57,6 +57,8 @@ def book_start():
 @bp.route("/step-1", methods=["GET", "POST"])
 def step1():
     db = get_db()
+    from app.services.catalog import group_services
+
     rows = db.execute(
         """
         SELECT * FROM services
@@ -64,21 +66,17 @@ def step1():
         ORDER BY category, is_addon, sort_order, name
         """
     ).fetchall()
-    categories: dict[str, list] = {}
-    for r in rows:
-        categories.setdefault(r["category"], []).append(r)
+    groups = group_services(rows)
 
     recommendations = None
     if request.method == "POST":
         action = request.form.get("action")
         if action == "update_cart":
             cart = []
-            for key, val in request.form.items():
-                if key.startswith("qty_"):
+            for key in request.form:
+                if key.startswith("service_"):
                     sid = int(key.split("_", 1)[1])
-                    qty = int(val or 0)
-                    if qty > 0:
-                        cart.append({"service_id": sid, "qty": qty})
+                    cart.append({"service_id": sid, "qty": 1})
             _set_cart(cart)
             if request.form.get("continue"):
                 if not cart:
@@ -93,11 +91,30 @@ def step1():
                 filename=filename, image_bytes=image_bytes
             )
 
-    cart_ids = {c["service_id"]: c["qty"] for c in _cart()}
+    cart_ids = {c["service_id"] for c in _cart()}
+    # Flatten for Fresha-style summary sidebar
+    catalog = {r["id"]: r for rows in groups.values() for r in rows}
+    # Also include any row not in groups (safety)
+    for rows in groups.values():
+        for r in rows:
+            catalog[r["id"]] = r
+    cart_items = []
+    cart_total = 0.0
+    cart_mins = 0
+    for sid in cart_ids:
+        svc = catalog.get(sid)
+        if not svc:
+            continue
+        cart_items.append(svc)
+        cart_total += float(svc["price_ttd"])
+        cart_mins += int(svc["duration_minutes"])
     return render_template(
         "booking/step1.html",
-        categories=categories,
+        groups=groups,
         cart_ids=cart_ids,
+        cart_items=cart_items,
+        cart_total=cart_total,
+        cart_mins=cart_mins,
         recommendations=recommendations,
         step=1,
     )
@@ -105,6 +122,15 @@ def step1():
 
 @bp.route("/step-2", methods=["GET", "POST"])
 def step2():
+    from datetime import date as date_cls
+
+    from app.services.hours import (
+        month_calendar,
+        now_local,
+        open_close,
+        same_day_notice,
+    )
+
     cart = _cart()
     if not cart:
         flash("Select your services first.", "info")
@@ -117,8 +143,14 @@ def step2():
             items.append((svcs[0], c["qty"]))
     duration = total_duration(items)
     price = total_price(items)
-    page = int(request.args.get("page", 0) or 0)
-    dates = valid_dates(page, 7)
+
+    today = now_local().date()
+    year = int(request.args.get("year", today.year))
+    month = int(request.args.get("month", today.month))
+    if month < 1:
+        month, year = 12, year - 1
+    if month > 12:
+        month, year = 1, year + 1
 
     selected_date = session.get("booking_date")
     selected_time = session.get("booking_time")
@@ -135,19 +167,29 @@ def step2():
         if request.form.get("continue"):
             flash("Please choose a date and time.", "error")
 
+    # Default to today when same-day slots exist
+    if not selected_date:
+        today_slots = available_slots(today, duration)
+        if today_slots:
+            selected_date = today.isoformat()
+            session["booking_date"] = selected_date
+
     slots = []
     if selected_date:
-        from datetime import date as date_cls
-
         try:
             slots = available_slots(date_cls.fromisoformat(selected_date), duration)
         except ValueError:
             slots = []
 
+    cal = month_calendar(year, month, duration)
+    open_m, close_m = open_close()
+    prev_y, prev_m = (year - 1, 12) if month == 1 else (year, month - 1)
+    next_y, next_m = (year + 1, 1) if month == 12 else (year, month + 1)
+    can_show_previous_month = (year, month) > (today.year, today.month)
+
     return render_template(
         "booking/step2.html",
-        dates=dates,
-        page=page,
+        calendar=cal,
         slots=slots,
         selected_date=selected_date,
         selected_time=selected_time,
@@ -155,6 +197,14 @@ def step2():
         price=price,
         items=items,
         minutes_to_label=minutes_to_label,
+        open_label=minutes_to_label(open_m),
+        close_label=minutes_to_label(close_m),
+        same_day_notice=same_day_notice(),
+        prev_year=prev_y,
+        prev_month=prev_m,
+        can_show_previous_month=can_show_previous_month,
+        next_year=next_y,
+        next_month=next_m,
         step=2,
     )
 

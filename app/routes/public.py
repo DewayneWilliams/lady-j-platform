@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, render_template
+from flask import Blueprint, redirect, render_template, url_for
 
 from app.db import get_db
 from app.services.boutique import list_products
@@ -34,6 +34,8 @@ def home():
 
 @bp.get("/services")
 def services():
+    from app.services.catalog import group_services
+
     db = get_db()
     rows = db.execute(
         """
@@ -42,10 +44,7 @@ def services():
         ORDER BY category, is_addon, sort_order, name
         """
     ).fetchall()
-    categories: dict[str, list] = {}
-    for r in rows:
-        categories.setdefault(r["category"], []).append(r)
-    return render_template("public/services.html", categories=categories)
+    return render_template("public/services.html", groups=group_services(rows))
 
 
 @bp.get("/workshops")
@@ -70,8 +69,8 @@ def workshop_detail(slug: str):
     return render_template("public/workshop_detail.html", workshop=d)
 
 
-@bp.get("/boutique")
-def boutique():
+@bp.get("/products")
+def products():
     q = None
     from flask import request
 
@@ -93,6 +92,12 @@ def boutique():
         q=q or "",
         active_category=category or "",
     )
+
+
+@bp.get("/boutique")
+def boutique():
+    """Keep old links working without exposing a separate Boutique section."""
+    return redirect(url_for("public.products"), code=301)
 
 
 @bp.get("/about")

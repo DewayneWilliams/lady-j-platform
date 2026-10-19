@@ -3,13 +3,42 @@
 {% block owner_content %}
 <div class="desktop-split">
   <section class="owner-card">
-    <h2>Calendar</h2>
-    <form method="get" class="prefs-bar">
-      <label>Date
-        <input type="date" name="date" value="{{ day }}" style="font-size:1.1rem;min-height:48px">
-      </label>
-      <button class="btn" type="submit">Show day</button>
-    </form>
+    <div class="owner-calendar-head">
+      <a class="btn btn-ghost" href="{{ url_for('owner.calendar', month=previous_month, date=previous_month ~ '-01') }}" aria-label="Previous month">←</a>
+      <h2>{{ month_label }}</h2>
+      <a class="btn btn-ghost" href="{{ url_for('owner.calendar', month=next_month, date=next_month ~ '-01') }}" aria-label="Next month">→</a>
+    </div>
+    <div class="owner-calendar-weekdays" aria-hidden="true">
+      {% for name in ('Sun','Mon','Tue','Wed','Thu','Fri','Sat') %}<span>{{ name }}</span>{% endfor %}
+    </div>
+    <div class="owner-calendar-grid" aria-label="{{ month_label }} calendar">
+      {% for week in month_weeks %}
+        {% for d in week %}
+          {% if d.in_month %}
+          <a href="{{ url_for('owner.calendar', month=month_value, date=d.date) }}"
+             class="owner-calendar-day{% if d.selected %} selected{% endif %}{% if d.today %} today{% endif %}"
+             {% if d.selected %}aria-current="date"{% endif %}
+             aria-label="{{ d.date }}">
+            <span>{{ d.day }}</span>
+            <span class="calendar-dots" aria-hidden="true">
+              {% for dot in d.dots %}<i class="calendar-dot {{ dot }}"></i>{% endfor %}
+            </span>
+          </a>
+          {% else %}
+          <span class="owner-calendar-day empty" aria-hidden="true"></span>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+    <div class="calendar-legend" aria-label="Calendar color key">
+      <span><i class="calendar-dot confirmed"></i>Confirmed</span>
+      <span><i class="calendar-dot blocked"></i>Blocked</span>
+      <span><i class="calendar-dot vip"></i>VIP</span>
+      <span><i class="calendar-dot consultation"></i>Consultations</span>
+      <span><i class="calendar-dot event"></i>Workshops &amp; events</span>
+    </div>
+
+    <h3 class="calendar-day-heading">{{ day }}</h3>
     {% for a in appointments %}
     <div class="appt-row">
       <span class="time-badge">{{ minutes_to_label(a.start_minutes) }} – {{ minutes_to_label(a.end_minutes) }}</span>
@@ -22,16 +51,30 @@
     {% if blocks %}
     <h3 style="margin-top:1.5rem">Blocked time</h3>
     {% for b in blocks %}
-    <p class="detail">{{ b.start_at }} → {{ b.end_at }}{% if b.reason %} · {{ b.reason }}{% endif %}</p>
+    <p class="detail"><i class="calendar-dot {% if b.reason == 'vip' %}vip{% elif b.reason == 'consultation' %}consultation{% elif b.reason == 'event' %}event{% else %}blocked{% endif %}"></i> {{ b.start_at }} → {{ b.end_at }}{% if b.reason %} · {{ b.reason|replace('other:', '')|replace('_', ' ')|title }}{% endif %}</p>
     {% endfor %}
     {% endif %}
   </section>
   <aside class="owner-card">
     <h3>Block time</h3>
+    <p class="muted">Saved blocks immediately appear on this calendar and remove those times from public booking.</p>
     <form method="post" action="{{ url_for('owner.block_time') }}" class="form-grid">
-      <label>Start <input type="datetime-local" name="start_at" required></label>
-      <label>End <input type="datetime-local" name="end_at" required></label>
-      <label>Reason <input name="reason" placeholder="Lunch, inventory, etc."></label>
+      <label>Start <input type="datetime-local" name="start_at" value="{{ day }}T10:00" required></label>
+      <label>End <input type="datetime-local" name="end_at" value="{{ day }}T11:00" required></label>
+      <label>Reason
+        <select name="reason">
+          <option value="personal">Personal Time</option>
+          <option value="day_off">Day Off / Holiday</option>
+          <option value="closure">Salon Closure</option>
+          <option value="vip">VIP Appointment</option>
+          <option value="consultation">Consultation / Meeting</option>
+          <option value="event">Workshop / Event</option>
+          <option value="other">Other (Specify)</option>
+        </select>
+      </label>
+      <label>Details (required for Other)
+        <input name="custom_reason" placeholder="Optional description">
+      </label>
       <button class="btn" type="submit">Block period</button>
     </form>
   </aside>

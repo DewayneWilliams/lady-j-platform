@@ -217,7 +217,7 @@ def cart_add(product_id: int):
     session["shop_cart"] = cart
     session.modified = True
     flash("Added to cart.", "success")
-    return redirect(request.referrer or url_for("public.boutique"))
+    return redirect(request.referrer or url_for("public.products"))
 
 
 @bp.get("/cart")

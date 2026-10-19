@@ -1,6 +1,6 @@
 # Lady J Platform — Upgrade Progress
 
-**Branch:** `feature/premium-platform-upgrade`  
+**Branch:** `development/native-app-modernization`
 **Started:** 2026-10-17  
 **Directive:** Enhance existing Flask application; preserve repo, Lightsail, Route 53, and production data. Work locally — no push/deploy without authorization.
 
@@ -52,7 +52,8 @@ Owner dashboard: body 18px, details 20–24px, headings 26–32px, buttons 17–
 - [x] Responsive nav (mobile menu + desktop)
 
 ### Phase 2 — Public site
-- [x] Home | Services | Workshops | Boutique | About | Contact | Book
+- [x] Home | Services | Products | Workshops | About | Contact | Book
+- [x] Draftbit-matched fixed mobile navigation with safe-area spacing
 - [x] Premium homepage composition (brand-first hero)
 
 ### Phase 3 — Booking (exactly 3 steps)
@@ -70,7 +71,7 @@ Owner dashboard: body 18px, details 20–24px, headings 26–32px, buttons 17–
 - [x] Large readable controls; text-size preference
 - [x] Appointments, services CSV import, workshops, boutique, payments, settings
 
-### Phase 6 — Workshops & Boutique
+### Phase 6 — Workshops & Products
 - [x] Live/recorded/hybrid workshops, registration, protected content
 - [x] Product catalog, cart, checkout, inventory lock
 
@@ -84,7 +85,7 @@ Owner dashboard: body 18px, details 20–24px, headings 26–32px, buttons 17–
 - [x] Confirmation for destructive / financial actions
 
 ### Phase 9 — Verification
-- [x] Unit/integration tests (`pytest` — 7 passed)
+- [x] Unit/integration tests (`pytest` — 10 passed)
 - [x] Local preview docs in README
 - [x] No secrets committed; no production deploy
 

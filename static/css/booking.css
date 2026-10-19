@@ -1,0 +1,621 @@
+/* Fresha layout × Apple premium */
+
+.book-shell {
+  padding: 1.5rem 0 7rem;
+  background: var(--white);
+  min-height: 70vh;
+}
+
+.book-wrap {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+/* Progress — Fresha-like */
+.fresha-steps {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fresha-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 980px;
+  font-size: 0.78rem;
+  font-weight: 550;
+  color: var(--black-soft);
+  white-space: nowrap;
+  background: var(--off-white);
+}
+
+.fresha-step.active {
+  background: var(--black);
+  color: var(--white);
+}
+
+.fresha-step .n {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.fresha-step.active .n {
+  background: var(--gold);
+  color: var(--black);
+}
+
+.fresha-step.done {
+  color: var(--magenta);
+  background: var(--magenta-mist);
+}
+
+/* Split: list + sticky basket */
+.fresha-layout {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.fresha-main {
+  min-width: 0;
+}
+
+.book-head {
+  margin-bottom: 1.25rem;
+}
+
+.book-head h1 {
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  margin: 0 0 0.35rem;
+  color: var(--black);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.book-head p {
+  margin: 0;
+  color: var(--black-soft);
+  font-size: 0.95rem;
+}
+
+/* Category tabs */
+.cat-tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.15rem 0 1rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--line);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.cat-tabs::-webkit-scrollbar { display: none; }
+
+.cat-tab {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0.5rem 1rem;
+  border-radius: 980px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--black);
+  font-size: 0.85rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.cat-tab:hover {
+  border-color: var(--magenta);
+  color: var(--magenta);
+}
+
+.cat-tab.active {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+}
+
+.cat-panel {
+  display: none;
+}
+
+.cat-panel.active {
+  display: block;
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 1rem 0 0.75rem;
+  color: var(--black);
+}
+
+/* Service rows — Fresha */
+.svc-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.15rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.svc-row:first-child {
+  border-top: 1px solid var(--line);
+}
+
+.svc-name {
+  font-size: 1.05rem;
+  font-weight: 560;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.25rem;
+  color: var(--black);
+  font-family: var(--font-body);
+}
+
+.svc-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--black-soft);
+}
+
+.svc-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+}
+
+.svc-price {
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--gold-deep);
+  letter-spacing: -0.02em;
+}
+
+.add-btn {
+  min-height: 40px;
+  min-width: 76px;
+  padding: 0 1rem;
+  border-radius: 980px;
+  border: 1px solid var(--black);
+  background: var(--white);
+  color: var(--black);
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.add-btn:hover {
+  background: var(--black);
+  color: var(--white);
+}
+
+.add-btn.added {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--black);
+}
+
+.add-btn.added:hover {
+  background: var(--magenta);
+  border-color: var(--magenta);
+  color: var(--white);
+}
+
+.svc-check {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.svc-label {
+  position: relative;
+  display: contents;
+}
+
+.addon-tag {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--magenta);
+  font-weight: 650;
+  vertical-align: middle;
+}
+
+/* Inspiration — compact */
+.inspire {
+  margin: 0 0 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0 1rem;
+  background: var(--off-white);
+}
+
+.inspire summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.92rem;
+  font-weight: 550;
+  color: var(--black);
+}
+
+.inspire summary::-webkit-details-marker { display: none; }
+
+.inspire summary::after {
+  content: "+";
+  color: var(--magenta);
+  font-size: 1.25rem;
+}
+
+.inspire[open] summary::after { content: "–"; }
+
+.inspire-body {
+  padding: 0 0 1rem;
+}
+
+/* Sticky basket — Fresha sidebar */
+.fresha-basket {
+  display: none;
+  position: sticky;
+  top: calc(var(--nav-h) + 48px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 1.25rem 1.35rem 1.35rem;
+  background: var(--white);
+}
+
+.basket-title {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  color: var(--black);
+}
+
+.basket-empty {
+  color: var(--black-soft);
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.basket-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.basket-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.basket-list li:last-child {
+  border-bottom: 0;
+}
+
+.basket-totals {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.85rem 0 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.basket-totals .row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--black-soft);
+}
+
+.basket-totals .row.total {
+  color: var(--black);
+  font-weight: 650;
+  font-size: 1.05rem;
+}
+
+.basket-totals .row.total .price {
+  color: var(--gold-deep);
+}
+
+.fresha-basket .btn {
+  width: 100%;
+}
+
+.basket-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.78rem;
+  color: var(--black-soft);
+  text-align: center;
+}
+
+/* Mobile sticky bar */
+.mobile-basket {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.15rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
+  border-top: 1px solid var(--line);
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .mobile-basket {
+    bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+}
+
+.mobile-basket .meta {
+  font-size: 0.85rem;
+  color: var(--black-soft);
+}
+
+.mobile-basket .meta strong {
+  display: block;
+  color: var(--black);
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.mobile-basket .btn {
+  flex: 0 0 auto;
+}
+
+/* Month booking calendar */
+.month-cal {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 1rem 1rem 1.15rem;
+  margin-bottom: 1.75rem;
+  background: var(--white);
+}
+
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.cal-toolbar strong {
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+
+.cal-nav-placeholder {
+  width: 48px;
+  height: 48px;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  margin-bottom: 0.35rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--black-soft);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.3rem;
+}
+
+.cal-day {
+  aspect-ratio: 1;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--black-soft);
+  font-size: 0.92rem;
+  font-weight: 550;
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  padding: 0.2rem;
+}
+
+.cal-day.empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.cal-day.out {
+  opacity: 0.28;
+}
+
+.cal-day.open {
+  cursor: pointer;
+  color: var(--black);
+  background: var(--off-white);
+  border-color: var(--line);
+}
+
+.cal-day.open:hover {
+  border-color: var(--magenta);
+  color: var(--magenta);
+}
+
+.cal-day.today .d {
+  color: var(--magenta);
+  font-weight: 700;
+}
+
+.cal-day.selected,
+.cal-day.open.selected {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+}
+
+.cal-day.selected .tag,
+.cal-day.selected .d {
+  color: var(--white);
+}
+
+.cal-day .tag {
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--magenta);
+  font-weight: 700;
+}
+
+.cal-day:disabled {
+  cursor: not-allowed;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.slot {
+  min-height: 48px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  border-radius: 12px;
+  padding: 0.65rem 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 550;
+  text-align: center;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.slot:hover {
+  border-color: var(--black);
+}
+
+.slot.selected {
+  border-color: var(--black);
+  background: var(--black);
+  color: var(--white);
+  font-weight: 650;
+}
+
+.choice {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.time-heading {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0 0 0.85rem;
+}
+
+.checkout-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  background: var(--off-white);
+}
+
+.checkout-card h3 {
+  font-size: 1.15rem;
+  margin: 0 0 0.75rem;
+}
+
+.pay-options {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+}
+
+.pay-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  cursor: pointer;
+}
+
+.pay-option:has(input:checked) {
+  border-color: var(--black);
+  box-shadow: inset 0 0 0 1px var(--black);
+}
+
+@media (min-width: 768px) {
+  .slot-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .cal-day {
+    min-height: 52px;
+  }
+}
+
+@media (min-width: 960px) {
+  .fresha-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 2rem;
+  }
+
+  .fresha-basket {
+    display: block;
+  }
+
+  .mobile-basket {
+    display: none;
+  }
+
+  .book-shell {
+    padding-bottom: 4rem;
+  }
+}

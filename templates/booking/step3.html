@@ -1,90 +1,114 @@
 {% extends "base.html" %}
 {% block title %}Secure Your Appointment | Book{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/booking.css') }}">
+{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="container" style="max-width:820px">
-    <div class="steps">
-      <span class="step-pill">1. Service</span>
-      <span class="step-pill">2. Date &amp; Time</span>
-      <span class="step-pill active">3. Secure Your Appointment</span>
-    </div>
-    <div class="section-head">
-      <span class="eyebrow">Step 3 of 3</span>
-      <h1>Secure Your Appointment</h1>
-      <p class="muted">Review your visit, pay a {{ deposit_pct }}% deposit, and accept our cancellation policy.</p>
+<section class="book-shell">
+  <div class="book-wrap">
+    <div class="fresha-steps">
+      <span class="fresha-step done"><span class="n">1</span> Service</span>
+      <span class="fresha-step done"><span class="n">2</span> Date &amp; Time</span>
+      <span class="fresha-step active"><span class="n">3</span> Confirm</span>
     </div>
 
-    <div class="media-card" style="margin-bottom:1.5rem">
-      <div class="body">
-        <h2>Booking summary</h2>
-        <p class="detail">{{ selected_date }} · {{ start_label }} · {{ duration }} min</p>
-        <ul>
-          {% for svc, qty in items %}
-          <li>{{ svc.name }}{% if qty > 1 %} × {{ qty }}{% endif %} — ${{ '%.0f'|format(svc.price_ttd * qty) }}</li>
-          {% endfor %}
-        </ul>
-        <p class="detail">Total <strong class="price">${{ '%.0f'|format(price) }} TTD</strong></p>
-        <p class="detail">Deposit due today ({{ deposit_pct }}%) <strong class="price">${{ '%.0f'|format(deposit) }} TTD</strong></p>
-      </div>
-    </div>
+    <form method="post" enctype="multipart/form-data">
+      <div class="fresha-layout">
+        <div class="fresha-main">
+          <div class="book-head">
+            <h1>Confirm &amp; pay</h1>
+            <p>{{ deposit_pct }}% deposit to secure your appointment</p>
+          </div>
 
-    <form method="post" enctype="multipart/form-data" class="form-grid">
-      <label>Full name
-        <input name="full_name" required value="{{ current_user.full_name if current_user.is_authenticated else '' }}">
-      </label>
-      <label>Email
-        <input type="email" name="email" required value="{{ current_user.email if current_user.is_authenticated else '' }}">
-      </label>
-      <label>Mobile
-        <input name="phone" required value="{{ current_user.phone if current_user.is_authenticated and current_user.phone else '' }}">
-      </label>
-      <label>Notes (optional)
-        <textarea name="notes" placeholder="Preferences, allergies, or requests"></textarea>
-      </label>
+          <div class="form-grid">
+            <label>Full name
+              <input name="full_name" required value="{{ current_user.full_name if current_user.is_authenticated else '' }}">
+            </label>
+            <label>Email
+              <input type="email" name="email" required value="{{ current_user.email if current_user.is_authenticated else '' }}">
+            </label>
+            <label>Mobile
+              <input name="phone" required value="{{ current_user.phone if current_user.is_authenticated and current_user.phone else '' }}">
+            </label>
+            <label>Notes (optional)
+              <textarea name="notes" placeholder="Preferences, allergies, or requests"></textarea>
+            </label>
+          </div>
 
-      <fieldset style="border:1px solid var(--line);border-radius:var(--radius);padding:1rem">
-        <legend>Payment method</legend>
-        <label class="checkbox"><input type="radio" name="payment_method" value="card" checked> Card deposit (simulated until a T&amp;T-verified processor is configured)</label>
-        <label class="checkbox"><input type="radio" name="payment_method" value="bank_transfer"> Bank transfer (requires owner verification)</label>
-        <label class="checkbox"><input type="radio" name="payment_method" value="salon"> Reserve now — pay at salon</label>
-      </fieldset>
+          <div class="checkout-card" style="margin-top:1.5rem">
+            <h3>Payment method</h3>
+            <div class="pay-options">
+              <label class="pay-option">
+                <input type="radio" name="payment_method" value="card" checked>
+                <span><strong>Card deposit</strong><br><span class="muted" style="font-size:.85rem">Simulated until a T&amp;T processor is verified</span></span>
+              </label>
+              <label class="pay-option">
+                <input type="radio" name="payment_method" value="bank_transfer">
+                <span><strong>Bank transfer</strong><br><span class="muted" style="font-size:.85rem">Requires owner verification</span></span>
+              </label>
+              <label class="pay-option">
+                <input type="radio" name="payment_method" value="salon">
+                <span><strong>Pay at salon</strong><br><span class="muted" style="font-size:.85rem">Reserve now, settle in person</span></span>
+              </label>
+            </div>
+          </div>
 
-      <div class="media-card">
-        <div class="body">
-          <span class="eyebrow">Bank transfer details</span>
-          <p><strong>{{ bank.name }}</strong></p>
-          <p>{{ bank.account_name }} · {{ bank.account_type }}</p>
-          <p class="detail">Account <strong>{{ bank.account_number }}</strong></p>
-          <label>Transaction / reference number
-            <input name="bank_reference" placeholder="Required for bank transfer">
-          </label>
-          <label>Payment date
-            <input type="date" name="bank_payment_date">
-          </label>
-          <label>Proof of payment (optional)
-            <input type="file" name="proof" accept="image/*,.pdf">
-          </label>
+          <div class="checkout-card">
+            <h3>Bank transfer details</h3>
+            <p><strong>{{ bank.name }}</strong></p>
+            <p class="muted">{{ bank.account_name }} · {{ bank.account_type }}</p>
+            <p>Account <strong>{{ bank.account_number }}</strong></p>
+            <div class="form-grid" style="margin-top:1rem">
+              <label>Reference number
+                <input name="bank_reference" placeholder="Required for bank transfer">
+              </label>
+              <label>Payment date
+                <input type="date" name="bank_payment_date">
+              </label>
+              <label>Proof (optional)
+                <input type="file" name="proof" accept="image/*,.pdf">
+              </label>
+            </div>
+          </div>
+
+          <div class="checkout-card">
+            <h3>Cancellation policy</h3>
+            <p style="font-size:.95rem;color:var(--black-soft)">{{ policy_text }}</p>
+            <label class="checkbox" style="margin-top:1rem">
+              <input type="checkbox" name="policy_accepted" value="1" required>
+              I accept the cancellation policy
+            </label>
+          </div>
         </div>
+
+        <aside class="fresha-basket">
+          <h2 class="basket-title">Summary</h2>
+          <ul class="basket-list">
+            {% for svc, qty in items %}
+            <li>
+              <span>{{ svc.name }}</span>
+              <span class="price">${{ '%.0f'|format(svc.price_ttd * qty) }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          <div class="basket-totals">
+            <div class="row"><span>When</span><span>{{ selected_date }} · {{ start_label }}</span></div>
+            <div class="row"><span>Duration</span><span>{{ duration }} min</span></div>
+            <div class="row"><span>Total</span><span class="price">${{ '%.0f'|format(price) }}</span></div>
+            <div class="row total"><span>Deposit due</span><span class="price">${{ '%.0f'|format(deposit) }}</span></div>
+          </div>
+          <a class="btn btn-outline" href="{{ url_for('booking.step2') }}" style="width:100%;margin-bottom:.65rem">Edit time</a>
+          <button class="btn" type="submit">Confirm appointment</button>
+        </aside>
       </div>
 
-      <div class="media-card">
-        <div class="body">
-          <h3>Cancellation policy</h3>
-          <p>{{ policy_text }}</p>
-          <label class="checkbox">
-            <input type="checkbox" name="policy_accepted" value="1" required>
-            I have read and accept the cancellation policy.
-          </label>
+      <div class="mobile-basket">
+        <div class="meta">
+          <strong>${{ '%.0f'|format(deposit) }} deposit</strong>
+          <span>{{ selected_date }} · {{ start_label }}</span>
         </div>
+        <button class="btn" type="submit">Confirm</button>
       </div>
-
-      <div style="display:flex;flex-wrap:wrap;gap:.75rem">
-        <a class="btn btn-ghost" href="{{ url_for('booking.step2') }}">Back</a>
-        <button class="btn" type="submit">Confirm appointment</button>
-      </div>
-      {% if not current_user.is_authenticated %}
-      <p class="muted">Tip: <a href="{{ url_for('auth.register') }}">Create a private account</a> to manage appointments, workshops, and orders.</p>
-      {% endif %}
     </form>
   </div>
 </section>

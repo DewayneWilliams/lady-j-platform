@@ -68,26 +68,68 @@
 
   <aside>
     <div class="owner-card">
-      <h2>Business settings</h2>
+      <h2>Booking schedule</h2>
+      <p class="muted" style="margin-bottom:1rem">Controls the public calendar — open days, hours, same-day booking, and how far ahead clients can book.</p>
       <form method="post" action="{{ url_for('owner.save_settings') }}" class="form-grid">
+        <input type="hidden" name="open_weekdays_submitted" value="1">
+        <fieldset class="weekday-fieldset">
+          <legend>Open days</legend>
+          <div class="weekday-grid">
+            {% for value, label in weekday_labels %}
+            <label class="weekday-chip">
+              <input type="checkbox" name="open_weekdays" value="{{ value }}" {% if value in open_days %}checked{% endif %}>
+              <span>{{ label[:3] }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <label>Opens
+          <input name="open_time" type="time" value="{{ open_hhmm }}" required style="font-size:1.15rem">
+        </label>
+        <label>Closes
+          <input name="close_time" type="time" value="{{ close_hhmm }}" required style="font-size:1.15rem">
+        </label>
+        <label>Slot length (minutes)
+          <input name="slot_step_minutes" type="number" min="5" step="5" value="{{ settings.get('slot_step_minutes', 30) }}" style="font-size:1.15rem">
+        </label>
+        <label>Same-day notice (minutes)
+          <input name="same_day_notice_minutes" type="number" min="0" step="5" value="{{ settings.get('same_day_notice_minutes', 30) }}" style="font-size:1.15rem">
+          <span class="field-hint">0 = book immediately if the time is free. 30 = need 30+ minutes lead time.</span>
+        </label>
+        <label>Book up to (days ahead)
+          <input name="max_advance_days" type="number" min="1" max="730" value="{{ settings.get('max_advance_days', 90) }}" style="font-size:1.15rem">
+          <span class="field-hint">How far guests can see on the calendar (e.g. 30, 90, 365).</span>
+        </label>
         <label>Deposit percent
-          <input name="deposit_percent" type="number" min="0" max="100" value="{{ settings.get('deposit_percent', deposit_percent) }}" style="font-size:1.2rem">
-        </label>
-        <label>Open (minutes from midnight)
-          <input name="open_minutes" type="number" value="{{ settings.get('open_minutes', 600) }}">
-        </label>
-        <label>Close (minutes from midnight)
-          <input name="close_minutes" type="number" value="{{ settings.get('close_minutes', 1080) }}">
+          <input name="deposit_percent" type="number" min="0" max="100" value="{{ settings.get('deposit_percent', deposit_percent) }}" style="font-size:1.15rem">
         </label>
         <label>Cancellation policy
-          <textarea name="cancellation_policy" rows="6">{{ settings.get('cancellation_policy','') }}</textarea>
+          <textarea name="cancellation_policy" rows="5">{{ settings.get('cancellation_policy','') }}</textarea>
         </label>
-        <button class="btn" type="submit">Save settings</button>
+        <button class="btn" type="submit">Save schedule</button>
+      </form>
+    </div>
+
+    <div class="owner-card">
+      <h2>Download records</h2>
+      <p class="muted" style="margin-bottom:1rem">Export appointments as CSV for any date range — leave dates blank for all time.</p>
+      <form method="get" action="{{ url_for('owner.export_appointments') }}" class="form-grid">
+        <label>From
+          <input name="from" type="date" value="">
+        </label>
+        <label>To
+          <input name="to" type="date" value="">
+        </label>
+        <div class="owner-actions">
+          <button class="btn" type="submit">Download CSV</button>
+          <a class="btn btn-outline" href="{{ url_for('owner.export_appointments') }}?from={{ today }}&to={{ today }}">Today only</a>
+        </div>
       </form>
       <p style="margin-top:1rem"><a class="btn btn-ghost" href="{{ url_for('owner.analytics') }}">Revenue &amp; analytics</a></p>
     </div>
+
     <div class="owner-card">
-      <h3>Boutique inventory</h3>
+      <h3>Product inventory</h3>
       {% for p in products %}
       <div class="appt-row">
         <strong>{{ p.name }}</strong>

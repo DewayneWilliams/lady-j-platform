@@ -9301,40 +9301,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"metro-file-map@patch:metro-file-map@npm%3A0.83.7#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch":
-  version: 0.83.7
-  resolution: "metro-file-map@patch:metro-file-map@npm%3A0.83.7#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch::version=0.83.7&hash=8a4e78"
-  dependencies:
-    debug: "npm:^4.4.0"
-    fb-watchman: "npm:^2.0.0"
-    flow-enums-runtime: "npm:^0.0.6"
-    graceful-fs: "npm:^4.2.4"
-    invariant: "npm:^2.2.4"
-    jest-worker: "npm:^29.7.0"
-    micromatch: "npm:^4.0.4"
-    nullthrows: "npm:^1.1.1"
-    walker: "npm:^1.0.7"
-  checksum: 10c0/636275d7b7383f0f60f18b35705c2d513c5c1ac781175ea6be07dfffc5cbc62e49acb38f66e1f533c487c47420fe68af079f14994d2e69fcfb6975a366e4d34f
-  languageName: node
-  linkType: hard
-
-"metro-file-map@patch:metro-file-map@npm%3A0.83.8#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch":
-  version: 0.83.8
-  resolution: "metro-file-map@patch:metro-file-map@npm%3A0.83.8#optional!~/.yarn/patches/metro-file-map-npm-0.83.7-61293ef06b.patch::version=0.83.8&hash=8a4e78"
-  dependencies:
-    debug: "npm:^4.4.0"
-    fb-watchman: "npm:^2.0.0"
-    flow-enums-runtime: "npm:^0.0.6"
-    graceful-fs: "npm:^4.2.4"
-    invariant: "npm:^2.2.4"
-    jest-worker: "npm:^29.7.0"
-    micromatch: "npm:^4.0.4"
-    nullthrows: "npm:^1.1.1"
-    walker: "npm:^1.0.7"
-  checksum: 10c0/b0442f4555cffaf0b348ba704088d23f513576caa2006f9c305de7358a774918ef0d646a83c7b4328f9ba5f2075d0d952a490ec2687eeeb5f9b16a584c620dda
-  languageName: node
-  linkType: hard
-
 "metro-minify-terser@npm:0.83.7":
   version: 0.83.7
   resolution: "metro-minify-terser@npm:0.83.7"

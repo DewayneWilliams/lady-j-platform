@@ -1,34 +1,62 @@
 {% extends "base.html" %}
 {% block title %}Services | Lady J{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/booking.css') }}">
+{% endblock %}
 {% block content %}
-<section class="section">
+<section class="book-shell">
   <div class="container">
-    <div class="section-head">
-      <span class="eyebrow">Menu</span>
-      <h1>Services</h1>
-      <p class="muted">Transparent pricing in TTD. Durations are estimates and may vary with consultation.</p>
-      <p style="margin-top:1rem"><a class="btn" href="{{ url_for('booking.step1') }}">Book Appointment</a></p>
+    <div class="book-head">
+      <span class="eyebrow" data-i18n="nav_services">Services</span>
+      <h1 data-i18n="services_title">Our Menu</h1>
+      <p data-i18n="services_help">Hair, skin, nails, and lashes — open a category to browse.</p>
     </div>
-    {% for category, items in categories.items() %}
-    <div style="margin-bottom:2.5rem">
-      <h2>{{ category }}</h2>
-      <div class="service-grid" style="margin-top:1rem">
-        {% for s in items %}
-        <article class="media-card">
-          <div class="body">
-            <h3>{{ s.name }}{% if s.is_addon %} <span class="muted" style="font-size:.85rem">Add-on</span>{% endif %}</h3>
-            <p class="muted">{{ s.description }}</p>
-            <div class="meta">
-              <span>{{ s.duration_minutes }} min{% if s.qty_suffix %} · {{ s.qty_suffix }}{% endif %}</span>
-              <span class="price">${{ '%.0f'|format(s.price_ttd) }}</span>
+
+    <div class="apple-accordions">
+      {% for group, items in groups.items() %}
+      <details class="apple-acc" {% if loop.first %}open{% endif %}>
+        <summary>
+          <span class="acc-label">
+            <span class="acc-name" data-i18n="group_{{ group|lower }}">{{ group }}</span>
+            <span class="acc-count">{{ items|length }}</span>
+          </span>
+          <span class="acc-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="acc-panel">
+          <div class="pick-list">
+            {% for s in items %}
+            <div class="pick-inner" style="border-bottom:1px solid var(--line)">
+              <span>
+                <p class="pick-name">{{ s.name }}{% if s.is_addon %} <span class="addon-tag">Add-on</span>{% endif %}</p>
+              </span>
+              <span class="pick-side">
+                <span class="pick-price">${{ '%.0f'|format(s.price_ttd) }}</span>
+                <span class="pick-meta">{{ s.duration_minutes }} min</span>
+              </span>
             </div>
-            {% if s.is_demo %}<p class="muted" style="font-size:.85rem;margin-top:.4rem">[DEMO] Editable placeholder</p>{% endif %}
+            {% endfor %}
           </div>
-        </article>
-        {% endfor %}
-      </div>
+        </div>
+      </details>
+      {% endfor %}
     </div>
-    {% endfor %}
+
+    <p style="margin-top:2.5rem">
+      <a class="btn" href="{{ url_for('booking.step1') }}" data-i18n="nav_book">Book Appointment</a>
+    </p>
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll(".apple-acc").forEach((el) => {
+    el.addEventListener("toggle", () => {
+      if (!el.open) return;
+      document.querySelectorAll(".apple-acc").forEach((other) => {
+        if (other !== el) other.open = false;
+      });
+    });
+  });
+</script>
 {% endblock %}

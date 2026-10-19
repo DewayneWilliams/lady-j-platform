@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import csv
 import io
+import calendar as calendar_lib
+from datetime import date, timedelta
 
 from flask import (
     Blueprint,
@@ -28,8 +30,8 @@ bp = Blueprint("owner", __name__, url_prefix="/owner")
 
 @bp.before_request
 @login_required
-def staff_only():
-    if not current_user.is_staff:
+def owner_only():
+    if not current_user.is_owner:
         abort(403)
 
 
@@ -72,6 +74,19 @@ def today():
 def calendar():
     db = get_db()
     day = request.args.get("date") or now_local().date().isoformat()
+    try:
+        selected_day = date.fromisoformat(day)
+    except ValueError:
+        selected_day = now_local().date()
+        day = selected_day.isoformat()
+    month_value = request.args.get("month") or selected_day.strftime("%Y-%m")
+    try:
+        month_start = date.fromisoformat(month_value + "-01")
+    except ValueError:
+        month_start = selected_day.replace(day=1)
+        month_value = month_start.strftime("%Y-%m")
+    month_end = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+
     appts = db.execute(
         """
         SELECT a.*, u.full_name AS client_name
@@ -90,11 +105,98 @@ def calendar():
         """,
         (f"{day}%",),
     ).fetchall()
+
+    month_appts = db.execute(
+        """
+        SELECT appointment_date, status, notes
+        FROM appointments
+        WHERE appointment_date >= ? AND appointment_date < ?
+          AND status IN ('confirmed', 'completed')
+        """,
+        (month_start.isoformat(), month_end.isoformat()),
+    ).fetchall()
+    month_blocks = db.execute(
+        """
+        SELECT start_at, end_at, reason
+        FROM blocked_times
+        WHERE start_at < ? AND end_at >= ?
+        """,
+        (month_end.isoformat(), month_start.isoformat()),
+    ).fetchall()
+    month_workshops = db.execute(
+        """
+        SELECT scheduled_at
+        FROM workshops
+        WHERE scheduled_at >= ? AND scheduled_at < ? AND is_published = 1
+        """,
+        (month_start.isoformat(), month_end.isoformat()),
+    ).fetchall()
+
+    day_types: dict[str, set[str]] = {}
+    for row in month_appts:
+        notes = (row["notes"] or "").lower()
+        kind = (
+            "vip"
+            if "vip" in notes
+            else "consultation"
+            if "consult" in notes
+            else "confirmed"
+        )
+        day_types.setdefault(row["appointment_date"], set()).add(kind)
+    for row in month_blocks:
+        reason = (row["reason"] or "").lower()
+        kind = (
+            "vip"
+            if reason == "vip" or reason.startswith("vip:")
+            else "consultation"
+            if reason == "consultation" or reason.startswith("consultation:")
+            else "event"
+            if reason == "event" or reason.startswith("event:")
+            else "blocked"
+        )
+        block_day = max(date.fromisoformat(row["start_at"][:10]), month_start)
+        raw_end_day = date.fromisoformat(row["end_at"][:10])
+        if row["end_at"][10:16] == "T00:00":
+            raw_end_day -= timedelta(days=1)
+        final_day = min(raw_end_day, month_end - timedelta(days=1))
+        while block_day <= final_day:
+            day_types.setdefault(block_day.isoformat(), set()).add(kind)
+            block_day += timedelta(days=1)
+    for row in month_workshops:
+        if row["scheduled_at"]:
+            day_types.setdefault(row["scheduled_at"][:10], set()).add("event")
+
+    dot_order = ("confirmed", "blocked", "vip", "consultation", "event")
+    month_weeks = []
+    for week in calendar_lib.Calendar(firstweekday=6).monthdatescalendar(
+        month_start.year, month_start.month
+    ):
+        month_weeks.append(
+            [
+                {
+                    "date": d.isoformat(),
+                    "day": d.day,
+                    "in_month": d.month == month_start.month,
+                    "selected": d == selected_day,
+                    "today": d == now_local().date(),
+                    "dots": [x for x in dot_order if x in day_types.get(d.isoformat(), set())],
+                }
+                for d in week
+            ]
+        )
+    previous_month = month_start - timedelta(days=1)
+    next_month = month_end
+
     return render_template(
         "owner/calendar.html",
         appointments=appts,
         blocks=blocks,
         day=day,
+        month_value=month_value,
+        month_label=month_start.strftime("%B %Y"),
+        month_weeks=month_weeks,
+        previous_month=previous_month.strftime("%Y-%m"),
+        next_month=next_month.strftime("%Y-%m"),
         minutes_to_label=minutes_to_label,
         nav="calendar",
     )
@@ -104,10 +206,19 @@ def calendar():
 def block_time():
     start_at = request.form.get("start_at", "").strip()
     end_at = request.form.get("end_at", "").strip()
-    reason = request.form.get("reason", "").strip()
+    reason = request.form.get("reason", "personal").strip()
+    custom_reason = request.form.get("custom_reason", "").strip()
+    if reason == "other":
+        if not custom_reason:
+            flash("Please describe Other (Specify).", "error")
+            return redirect(url_for("owner.calendar", date=start_at[:10]))
+        reason = f"other:{custom_reason}"
     if not start_at or not end_at:
         flash("Start and end are required.", "error")
         return redirect(url_for("owner.calendar"))
+    if end_at <= start_at:
+        flash("End time must be after start time.", "error")
+        return redirect(url_for("owner.calendar", date=start_at[:10]))
     db = get_db()
     db.execute(
         """
@@ -198,10 +309,20 @@ def business():
         ORDER BY created_at
         """
     ).fetchall()
+    from app.services.hours import WEEKDAY_LABELS, minutes_to_hhmm
+
     settings = {
         r["key"]: r["value"]
         for r in db.execute("SELECT key, value FROM business_settings").fetchall()
     }
+    open_days = {
+        x.strip()
+        for x in (settings.get("open_weekdays") or "2,3,4,5,6").split(",")
+        if x.strip()
+    }
+    open_hhmm = minutes_to_hhmm(int(settings.get("open_minutes", "600")))
+    close_hhmm = minutes_to_hhmm(int(settings.get("close_minutes", "1080")))
+    today = now_local().date().isoformat()
     revenue = db.execute(
         "SELECT COALESCE(SUM(amount_ttd),0) AS t FROM payments WHERE status='completed'"
     ).fetchone()["t"]
@@ -212,6 +333,11 @@ def business():
         workshops=workshops,
         payments=payments,
         settings=settings,
+        open_days=open_days,
+        open_hhmm=open_hhmm,
+        close_hhmm=close_hhmm,
+        weekday_labels=WEEKDAY_LABELS,
+        today=today,
         revenue=revenue,
         nav="business",
     )
@@ -336,21 +462,139 @@ def import_services_csv():
 def save_settings():
     if not current_user.is_owner:
         abort(403)
+    from app.services.hours import hhmm_to_minutes
+
     db = get_db()
     now = utcnow()
-    for key in ("deposit_percent", "cancellation_policy", "open_minutes", "close_minutes"):
-        if key in request.form:
-            db.execute(
-                """
-                INSERT INTO business_settings (key, value, updated_at)
-                VALUES (?, ?, ?)
-                ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
-                """,
-                (key, request.form.get(key, ""), now),
-            )
+    values: dict[str, str] = {}
+
+    open_hhmm = request.form.get("open_time")
+    close_hhmm = request.form.get("close_time")
+    if open_hhmm:
+        om = hhmm_to_minutes(open_hhmm)
+        if om is not None:
+            values["open_minutes"] = str(om)
+    if close_hhmm:
+        cm = hhmm_to_minutes(close_hhmm)
+        if cm is not None:
+            values["close_minutes"] = str(cm)
+
+    for key in (
+        "deposit_percent",
+        "cancellation_policy",
+        "slot_step_minutes",
+        "same_day_notice_minutes",
+        "max_advance_days",
+    ):
+        if key in request.form and request.form.get(key) is not None:
+            values[key] = request.form.get(key, "").strip()
+
+    # Any combination of weekdays (Sun=0 … Sat=6)
+    days = request.form.getlist("open_weekdays")
+    if days:
+        values["open_weekdays"] = ",".join(sorted(days, key=lambda x: int(x)))
+    elif "open_weekdays_submitted" in request.form:
+        values["open_weekdays"] = ""
+
+    for key, value in values.items():
+        db.execute(
+            """
+            INSERT INTO business_settings (key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+            """,
+            (key, value, now),
+        )
     db.commit()
-    flash("Business settings saved.", "success")
+    flash("Schedule and business settings saved.", "success")
     return redirect(url_for("owner.business"))
+
+
+@bp.get("/export/appointments.csv")
+def export_appointments():
+    """Download appointment records for any date range (defaults to all time)."""
+    start = (request.args.get("from") or "").strip() or "1970-01-01"
+    end = (request.args.get("to") or "").strip() or "2999-12-31"
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT a.id, a.appointment_date, a.start_minutes, a.end_minutes,
+               a.status, a.payment_status, a.payment_method,
+               a.total_ttd, a.deposit_ttd, a.amount_paid_ttd,
+               a.guest_name, a.guest_email, a.guest_phone, a.notes,
+               u.full_name AS client_name, u.email AS client_email, u.phone AS client_phone
+        FROM appointments a
+        LEFT JOIN users u ON u.id = a.client_id
+        WHERE a.appointment_date >= ? AND a.appointment_date <= ?
+        ORDER BY a.appointment_date, a.start_minutes
+        """,
+        (start, end),
+    ).fetchall()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(
+        [
+            "id",
+            "date",
+            "start",
+            "end",
+            "status",
+            "payment_status",
+            "payment_method",
+            "total_ttd",
+            "deposit_ttd",
+            "amount_paid_ttd",
+            "client_name",
+            "email",
+            "phone",
+            "notes",
+            "services",
+        ]
+    )
+    for r in rows:
+        services = db.execute(
+            """
+            SELECT s.name, asv.qty
+            FROM appointment_services asv
+            JOIN services s ON s.id = asv.service_id
+            WHERE asv.appointment_id = ?
+            """,
+            (r["id"],),
+        ).fetchall()
+        svc_txt = "; ".join(
+            f"{s['name']}" + (f" x{s['qty']}" if s["qty"] > 1 else "") for s in services
+        )
+        name = r["client_name"] or r["guest_name"] or ""
+        email = r["client_email"] or r["guest_email"] or ""
+        phone = r["client_phone"] or r["guest_phone"] or ""
+        writer.writerow(
+            [
+                r["id"],
+                r["appointment_date"],
+                minutes_to_label(r["start_minutes"]),
+                minutes_to_label(r["end_minutes"]),
+                r["status"],
+                r["payment_status"],
+                r["payment_method"] or "",
+                r["total_ttd"],
+                r["deposit_ttd"],
+                r["amount_paid_ttd"],
+                name,
+                email,
+                phone,
+                r["notes"] or "",
+                svc_txt,
+            ]
+        )
+
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=appointments_{start}_to_{end}.csv"
+        },
+    )
 
 
 @bp.post("/prefs")

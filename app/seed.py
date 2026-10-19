@@ -257,6 +257,9 @@ def ensure_seed_data(app: Flask) -> None:
         "open_minutes": "600",
         "close_minutes": "1080",
         "open_weekdays": "2,3,4,5,6",  # Tue–Sat
+        "slot_step_minutes": "30",
+        "same_day_notice_minutes": "30",
+        "max_advance_days": "90",
         "fulfillment_pickup": "1",
         "fulfillment_delivery": "0",
     }
