@@ -126,17 +126,19 @@ def ensure_seed_data(app: Flask) -> None:
     db = get_db()
     now = utcnow()
 
-    # Owner bootstrap
+    # Test-only owner bootstrap. Production owners are provisioned explicitly
+    # through the protected CLI command in app.admin.
     owner = db.execute(
-        "SELECT id FROM users WHERE role = 'owner' LIMIT 1"
+        "SELECT id FROM users WHERE email = ? COLLATE NOCASE LIMIT 1",
+        (app.config["OWNER_EMAIL"],),
     ).fetchone()
-    if not owner:
+    if app.config.get("TESTING") and not owner:
         db.execute(
             """
             INSERT INTO users (
-                email, password_hash, full_name, role, referral_code,
+                email, password_hash, full_name, role, referral_code, email_verified,
                 created_at, updated_at
-            ) VALUES (?, ?, ?, 'owner', ?, ?, ?)
+            ) VALUES (?, ?, ?, 'owner', ?, 1, ?, ?)
             """,
             (
                 app.config["OWNER_EMAIL"].strip().lower(),

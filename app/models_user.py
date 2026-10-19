@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from flask import current_app
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -19,6 +20,9 @@ class User(UserMixin):
         self.text_size = row["text_size"]
         self.theme = row["theme"]
         self.credits_balance = row["credits_balance"]
+        self.email_verified = bool(row["email_verified"])
+        self.must_change_password = bool(row["must_change_password"])
+        self.mfa_enabled = bool(row["mfa_enabled"])
         self._active = bool(row["is_active"])
 
     @property
@@ -27,11 +31,19 @@ class User(UserMixin):
 
     @property
     def is_owner(self) -> bool:
-        return self.role == "owner"
+        allowed = {
+            email.strip().lower()
+            for email in current_app.config.get("OWNER_EMAILS", ())
+        }
+        return (
+            self.role == "owner"
+            and self.email_verified
+            and self.email.lower() in allowed
+        )
 
     @property
     def is_staff(self) -> bool:
-        return self.role in ("owner", "staff")
+        return self.is_owner
 
 
 def load_user_by_id(user_id: str) -> User | None:

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Security Verification | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:520px">
+    <span class="eyebrow">Two-factor authentication</span>
+    <h1>Verify it is you</h1>
+    <p class="muted">Enter the six-digit code from your authenticator app, or one unused recovery code.</p>
+    <form method="post" class="form-grid" style="margin-top:1.5rem">
+      <label>Verification or recovery code
+        <input name="code" required autocomplete="one-time-code" inputmode="numeric" autofocus>
+      </label>
+      <button class="btn" type="submit">Verify and Sign In</button>
+    </form>
+    <p style="margin-top:1rem"><a href="{{ url_for('auth.login') }}">Cancel and sign in again</a></p>
+  </div>
+</section>
+{% endblock %}

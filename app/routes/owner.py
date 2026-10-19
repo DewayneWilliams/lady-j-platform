@@ -664,7 +664,7 @@ def analytics():
         product_sales=product_sales,
         workshop_regs=workshop_regs,
         outstanding=outstanding,
-        nav="business",
+        nav="analytics",
     )
 
 

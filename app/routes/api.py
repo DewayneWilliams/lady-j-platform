@@ -135,7 +135,7 @@ def maria_api():
     result = handle_command(
         text,
         actor_id=current_user.id,
-        actor_role=current_user.role,
+        actor_role="owner" if current_user.is_owner else "client",
         confirm_token=payload.get("confirm_token"),
         confirm_payload=payload.get("confirm_payload"),
     )

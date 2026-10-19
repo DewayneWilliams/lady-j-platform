@@ -6,10 +6,12 @@ import os
 import tempfile
 from datetime import timedelta
 
+import pyotp
 import pytest
 
 from app import create_app
 from app.db import get_db
+from app.models_user import create_user
 from app.services.hours import is_business_day, now_local, valid_dates
 from app.services.booking import available_slots, create_appointment
 
@@ -26,8 +28,22 @@ def app():
             "OWNER_EMAIL": "owner@test.local",
             "OWNER_PASSWORD": "testpass123",
             "OWNER_NAME": "Test Owner",
+            "OWNER_EMAILS": ("owner@test.local", "admin@test.local"),
         }
     )
+    with application.app_context():
+        second = create_user(
+            email="admin@test.local",
+            password="adminpass123",
+            full_name="Second Owner",
+            role="owner",
+        )
+        db = get_db()
+        db.execute(
+            "UPDATE users SET email_verified = 1 WHERE id = ?",
+            (second.id,),
+        )
+        db.commit()
     yield application
     os.unlink(db_path)
 
@@ -89,6 +105,167 @@ def test_owner_login_and_dashboard(client, app):
     assert b"Today" in res.data or b"Owner" in res.data
     assert client.get("/owner/today").status_code == 200
     assert client.get("/owner/maria").status_code == 200
+
+
+def test_two_owners_can_use_independent_simultaneous_sessions(app):
+    first = app.test_client()
+    second = app.test_client()
+    first_login = first.post(
+        "/auth/login",
+        data={"email": "owner@test.local", "password": "testpass123"},
+    )
+    second_login = second.post(
+        "/auth/login",
+        data={"email": "admin@test.local", "password": "adminpass123"},
+    )
+    assert first_login.headers["Location"].endswith("/owner/today")
+    assert second_login.headers["Location"].endswith("/owner/today")
+    assert first.get("/owner/today").status_code == 200
+    assert second.get("/owner/today").status_code == 200
+
+
+def test_owner_provisioning_is_idempotent_and_demotes_unlisted_admins(
+    app, tmp_path
+):
+    with app.app_context():
+        rogue = create_user(
+            email="former-owner@test.local",
+            password="formerpass123",
+            full_name="Former Owner",
+            role="owner",
+        )
+        get_db().execute(
+            "UPDATE users SET email_verified = 1 WHERE id = ?",
+            (rogue.id,),
+        )
+        get_db().commit()
+    password_file = tmp_path / "owner-password"
+    password_file.write_text("temporary-owner-pass", encoding="utf-8")
+    result = app.test_cli_runner().invoke(
+        args=["provision-owners", "--password-file", str(password_file)]
+    )
+    assert result.exit_code == 0
+    assert not password_file.exists()
+    with app.app_context():
+        owners = get_db().execute(
+            """
+            SELECT email, must_change_password, email_verified
+            FROM users WHERE role = 'owner' ORDER BY email
+            """
+        ).fetchall()
+        assert [row["email"] for row in owners] == [
+            "admin@test.local",
+            "owner@test.local",
+        ]
+        assert all(row["must_change_password"] for row in owners)
+        assert all(row["email_verified"] for row in owners)
+
+
+def test_unlisted_owner_role_cannot_access_dashboard_or_owner_maria(app):
+    with app.app_context():
+        rogue = create_user(
+            email="rogue@test.local",
+            password="roguepass123",
+            full_name="Unlisted Owner",
+            role="owner",
+        )
+        db = get_db()
+        db.execute(
+            "UPDATE users SET email_verified = 1 WHERE id = ?",
+            (rogue.id,),
+        )
+        db.commit()
+    rogue_client = app.test_client()
+    rogue_client.post(
+        "/auth/login",
+        data={"email": "rogue@test.local", "password": "roguepass123"},
+    )
+    assert rogue_client.get("/owner/today").status_code == 403
+    maria = rogue_client.post("/api/maria", json={"text": "revenue"}).get_json()
+    assert "Only the owner" in maria["message"]
+
+
+def test_temporary_password_forces_change_before_owner_access(client, app):
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            "UPDATE users SET must_change_password = 1 WHERE email = ?",
+            ("owner@test.local",),
+        )
+        db.commit()
+    login = client.post(
+        "/auth/login",
+        data={"email": "owner@test.local", "password": "testpass123"},
+    )
+    assert login.headers["Location"].endswith("/auth/change-password")
+    blocked = client.get("/owner/today")
+    assert blocked.status_code == 302
+    assert blocked.headers["Location"].endswith("/auth/change-password")
+    changed = client.post(
+        "/auth/change-password",
+        data={
+            "current_password": "testpass123",
+            "new_password": "A-new-owner-password-2026",
+            "confirm_password": "A-new-owner-password-2026",
+        },
+    )
+    assert changed.headers["Location"].endswith("/owner/today")
+    assert client.get("/owner/today").status_code == 200
+
+
+def test_password_recovery_and_owner_mfa(client, app, monkeypatch):
+    reset_urls = []
+    monkeypatch.setattr(
+        "app.routes.auth.send_password_reset_email",
+        lambda email, url: reset_urls.append((email, url)) or True,
+    )
+    response = client.post(
+        "/auth/forgot-password",
+        data={"email": "owner@test.local"},
+    )
+    assert response.status_code == 302
+    assert reset_urls and reset_urls[0][0] == "owner@test.local"
+    reset_path = reset_urls[0][1].split("http://localhost", 1)[-1]
+    reset = client.post(
+        reset_path,
+        data={
+            "password": "Recovered-owner-password-2026",
+            "confirm_password": "Recovered-owner-password-2026",
+        },
+    )
+    assert reset.status_code == 302
+
+    client.post(
+        "/auth/login",
+        data={
+            "email": "owner@test.local",
+            "password": "Recovered-owner-password-2026",
+        },
+    )
+    assert client.get("/auth/mfa/setup").status_code == 200
+    with client.session_transaction() as sess:
+        secret = sess["mfa_setup_secret"]
+    enabled = client.post(
+        "/auth/mfa/setup",
+        data={"code": pyotp.TOTP(secret).now()},
+    )
+    assert enabled.status_code == 200
+    assert b"recovery codes" in enabled.data
+    client.get("/auth/logout")
+
+    login = client.post(
+        "/auth/login",
+        data={
+            "email": "owner@test.local",
+            "password": "Recovered-owner-password-2026",
+        },
+    )
+    assert login.headers["Location"].endswith("/auth/mfa")
+    verified = client.post(
+        "/auth/mfa",
+        data={"code": pyotp.TOTP(secret).now()},
+    )
+    assert verified.headers["Location"].endswith("/owner/today")
 
 
 def test_booking_three_steps_and_overlap(app, client):

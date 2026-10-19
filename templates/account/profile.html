@@ -27,6 +27,12 @@
       <p class="muted">Credits balance: ${{ '%.2f'|format(user.credits_balance) }} TTD</p>
       <button class="btn" type="submit">Save</button>
     </form>
+    <div style="display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--line)">
+      <a class="btn btn-outline" href="{{ url_for('auth.change_password') }}">Change Password</a>
+      <a class="btn btn-outline" href="{{ url_for('auth.mfa_setup') }}">
+        {{ 'Manage' if current_user.mfa_enabled else 'Enable' }} Two-Factor Authentication
+      </a>
+    </div>
   </div>
 </section>
 {% endblock %}

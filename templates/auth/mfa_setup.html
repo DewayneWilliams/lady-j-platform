@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Two-Factor Authentication | Lady J{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container" style="max-width:620px" data-no-translate>
+    <span class="eyebrow">Account security</span>
+    <h1>Two-factor authentication</h1>
+    {% if enabled and recovery_codes %}
+      <p>Your authenticator is now connected. Save these one-time recovery codes somewhere private. They will not be shown again.</p>
+      <div class="owner-card" style="margin:1.5rem 0;padding:1.25rem">
+        {% for code in recovery_codes %}<code style="display:block;padding:.3rem">{{ code }}</code>{% endfor %}
+      </div>
+      <a class="btn" href="{{ url_for('account.profile') }}">Done</a>
+    {% elif enabled %}
+      <p class="muted">Two-factor authentication is enabled for this account.</p>
+      <form method="post" action="{{ url_for('auth.mfa_disable') }}" class="form-grid" style="margin-top:1.5rem">
+        <label>Current password
+          <input type="password" name="password" required autocomplete="current-password">
+        </label>
+        <label>Authenticator code
+          <input name="code" required autocomplete="one-time-code" inputmode="numeric">
+        </label>
+        <button class="btn btn-outline" type="submit">Disable Two-Factor Authentication</button>
+      </form>
+    {% else %}
+      <p class="muted">Add this account to Google Authenticator, Microsoft Authenticator, Authy, or another TOTP app.</p>
+      <label style="margin-top:1.5rem">Manual setup key
+        <input value="{{ secret }}" readonly>
+      </label>
+      <details style="margin-top:1rem">
+        <summary>Advanced setup URI</summary>
+        <code style="display:block;overflow-wrap:anywhere;margin-top:.5rem">{{ provisioning_uri }}</code>
+      </details>
+      <form method="post" class="form-grid" style="margin-top:1.5rem">
+        <label>Six-digit verification code
+          <input name="code" required autocomplete="one-time-code" inputmode="numeric">
+        </label>
+        <button class="btn" type="submit">Enable Two-Factor Authentication</button>
+      </form>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

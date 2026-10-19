@@ -18,7 +18,11 @@
         <h1>Lady J</h1>
         <p class="muted" style="margin:0;font-size:0.95rem">Owner dashboard</p>
       </div>
-      <a class="btn btn-ghost" href="{{ url_for('public.home') }}">Site</a>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <a class="btn btn-ghost" href="{{ url_for('account.profile') }}">Security</a>
+        <a class="btn btn-ghost" href="{{ url_for('auth.logout') }}">Sign out</a>
+        <a class="btn btn-ghost" href="{{ url_for('public.home') }}">Site</a>
+      </div>
     </header>
 
     <nav class="owner-nav container" aria-label="Owner" style="width:min(1200px,calc(100% - 1.5rem));margin:.75rem auto 0">
@@ -33,6 +37,9 @@
       </a>
       <a href="{{ url_for('owner.business') }}" class="{% if nav=='business' %}active{% endif %}" {% if nav=='business' %}aria-current="page"{% endif %}>
         <span class="dot"></span>Business
+      </a>
+      <a href="{{ url_for('owner.analytics') }}" class="{% if nav=='analytics' %}active{% endif %}" {% if nav=='analytics' %}aria-current="page"{% endif %}>
+        <span class="dot"></span>Reports
       </a>
       <a href="{{ url_for('owner.maria') }}" class="{% if nav=='maria' %}active{% endif %}" {% if nav=='maria' %}aria-current="page"{% endif %}>
         <span class="dot"></span>Maria

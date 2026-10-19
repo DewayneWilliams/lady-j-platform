@@ -50,6 +50,14 @@ CREATE TABLE IF NOT EXISTS users (
     allergies TEXT,
     preferences TEXT,
     oauth_providers TEXT,
+    email_verified INTEGER NOT NULL DEFAULT 0,
+    must_change_password INTEGER NOT NULL DEFAULT 0,
+    password_changed_at TEXT,
+    reset_token_hash TEXT,
+    reset_token_expires_at TEXT,
+    mfa_secret_encrypted TEXT,
+    mfa_enabled INTEGER NOT NULL DEFAULT 0,
+    mfa_recovery_codes TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -308,6 +316,22 @@ CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 def init_db() -> None:
     db = get_db()
     db.executescript(SCHEMA)
+    columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(users)").fetchall()
+    }
+    migrations = {
+        "email_verified": "INTEGER NOT NULL DEFAULT 0",
+        "must_change_password": "INTEGER NOT NULL DEFAULT 0",
+        "password_changed_at": "TEXT",
+        "reset_token_hash": "TEXT",
+        "reset_token_expires_at": "TEXT",
+        "mfa_secret_encrypted": "TEXT",
+        "mfa_enabled": "INTEGER NOT NULL DEFAULT 0",
+        "mfa_recovery_codes": "TEXT",
+    }
+    for name, definition in migrations.items():
+        if name not in columns:
+            db.execute(f"ALTER TABLE users ADD COLUMN {name} {definition}")
     db.commit()
 
 

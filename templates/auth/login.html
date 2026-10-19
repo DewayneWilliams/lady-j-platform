@@ -16,6 +16,7 @@
       <label class="checkbox"><input type="checkbox" name="remember" value="1"> Keep me signed in</label>
       <button class="btn" type="submit">Sign in</button>
     </form>
+    <p style="margin-top:1rem"><a href="{{ url_for('auth.forgot_password') }}">Forgot your password?</a></p>
     <p style="margin-top:1rem">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
     <div style="margin-top:1.5rem">
       <p class="muted" style="font-size:.95rem">Optional social login (prepared, inactive until credentials are set):</p>
