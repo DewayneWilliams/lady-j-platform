@@ -19,12 +19,16 @@
                 aria-expanded="false" aria-controls="languagePanel" aria-haspopup="dialog">
           <span class="language-globe" aria-hidden="true">◎</span>
           <span id="currentLanguageCode">EN</span>
+          <span class="language-trigger-name" id="currentLanguageName">English</span>
           <svg viewBox="0 0 12 8" aria-hidden="true"><path d="m1 1.5 5 5 5-5"/></svg>
         </button>
-        <div class="language-panel" id="languagePanel" role="dialog"
+        <div class="language-panel" id="languagePanel" role="dialog" tabindex="-1"
              aria-label="Choose language" hidden>
           <div class="language-panel-head">
-            <strong>Choose language</strong>
+            <div>
+              <strong>Choose your language</strong>
+              <span>Tap one below or search by name.</span>
+            </div>
             <button type="button" class="language-close" id="languageClose"
                     aria-label="Close language menu">×</button>
           </div>
@@ -38,7 +42,7 @@
           <label class="language-search-wrap">
             <span class="sr-only">Search all languages</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
-            <input type="search" id="languageSearch" placeholder="Search all languages"
+            <input type="search" id="languageSearch" placeholder="Type a language name"
                    autocomplete="off" spellcheck="false">
           </label>
           <div class="language-list" id="languageList" role="listbox"

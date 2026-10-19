@@ -27,7 +27,7 @@
   gap: 0.45rem;
   padding: 0.45rem 0.85rem;
   border-radius: 980px;
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   font-weight: 550;
   color: var(--black-soft);
   white-space: nowrap;
@@ -40,12 +40,12 @@
 }
 
 .fresha-step .n {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.15);
 }
@@ -86,7 +86,7 @@
 .book-head p {
   margin: 0;
   color: var(--black-soft);
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 /* Category tabs */
@@ -105,13 +105,13 @@
 
 .cat-tab {
   flex: 0 0 auto;
-  min-height: 40px;
+  min-height: 48px;
   padding: 0.5rem 1rem;
   border-radius: 980px;
   border: 1px solid var(--line);
   background: var(--white);
   color: var(--black);
-  font-size: 0.85rem;
+  font-size: 0.94rem;
   font-weight: 550;
   cursor: pointer;
   transition: background 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease);
@@ -431,7 +431,7 @@
   gap: 0.25rem;
   margin-bottom: 0.35rem;
   text-align: center;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -451,7 +451,7 @@
   border-radius: 12px;
   background: transparent;
   color: var(--black-soft);
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-weight: 550;
   cursor: default;
   display: flex;
@@ -501,7 +501,7 @@
 }
 
 .cal-day .tag {
-  font-size: 0.55rem;
+  font-size: 0.64rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--magenta);

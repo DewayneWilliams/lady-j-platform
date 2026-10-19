@@ -64,6 +64,7 @@ async function translateBatch(texts, targetLanguage) {
 async function applyLanguage(language, name) {
   const status = document.getElementById("languageStatus");
   const code = document.getElementById("currentLanguageCode");
+  const currentName = document.getElementById("currentLanguageName");
   const requestId = ++languageRequest;
   const textEntries = translatableTextEntries();
   const placeholderEntries = translatablePlaceholders();
@@ -77,6 +78,7 @@ async function applyLanguage(language, name) {
     });
     document.documentElement.lang = "en";
     code.textContent = "EN";
+    currentName.textContent = "English";
     status.textContent = "";
   } else {
     status.textContent = `Translating to ${name}…`;
@@ -102,6 +104,7 @@ async function applyLanguage(language, name) {
     });
     document.documentElement.lang = language;
     code.textContent = language.toUpperCase();
+    currentName.textContent = name;
     status.textContent = `${name} selected`;
   }
 
@@ -133,7 +136,14 @@ async function initializeLanguagePicker() {
   const setOpen = (open) => {
     panel.hidden = !open;
     trigger.setAttribute("aria-expanded", String(open));
-    if (open) search.focus();
+    document.body.classList.toggle("language-menu-open", open);
+    if (open) {
+      if (window.matchMedia("(min-width: 768px)").matches) {
+        search.focus();
+      } else {
+        panel.focus({ preventScroll: true });
+      }
+    }
   };
 
   trigger.addEventListener("click", () => setOpen(panel.hidden));
@@ -181,6 +191,7 @@ async function initializeLanguagePicker() {
             name.toLowerCase().includes(normalized) ||
             code.toLowerCase().includes(normalized))
       )
+      .sort((a, b) => a.name.localeCompare(b.name))
       .forEach(({ code, name }) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -195,6 +206,9 @@ async function initializeLanguagePicker() {
         button.addEventListener("click", () => selectLanguage(code, name));
         list.append(button);
       });
+    status.textContent = list.childElementCount
+      ? ""
+      : "No languages found. Try another name.";
   };
 
   search.addEventListener("input", () => renderLanguages(search.value));

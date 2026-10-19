@@ -31,6 +31,7 @@
 
   --bg: var(--white);
   --surface: var(--white);
+  --surface-soft: var(--off-white);
   --text: var(--black);
   --text-muted: var(--black-soft);
 
@@ -46,6 +47,7 @@
 [data-theme="dark"] {
   --bg: #000000;
   --surface: #1d1d1f;
+  --surface-soft: #2c2c2e;
   --text: #f5f5f7;
   --text-muted: #a1a1a6;
   --line: rgba(255, 255, 255, 0.12);
@@ -119,6 +121,15 @@ button,
   min-height: var(--touch);
   font-size: var(--btn-size);
   cursor: pointer;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
 }
 
 h1, h2, h3, h4 {

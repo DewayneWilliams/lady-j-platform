@@ -13,7 +13,7 @@
 .lang-bar-inner {
   width: min(1080px, calc(100% - 2.5rem));
   margin: auto;
-  min-height: 34px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -25,7 +25,7 @@
 }
 
 .language-trigger {
-  min-height: 28px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -34,7 +34,7 @@
   border-radius: 980px;
   background: var(--gold);
   color: #1d1d1f;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
@@ -54,6 +54,11 @@
 .language-globe {
   font-size: 1rem;
   line-height: 1;
+}
+
+.language-trigger-name {
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .language-panel {
@@ -76,12 +81,25 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 1rem;
+  gap: 1rem;
+  font-size: 1.08rem;
+}
+
+.language-panel-head div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.language-panel-head span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 400;
 }
 
 .language-close {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
   border: 0;
   border-radius: 50%;
   background: var(--surface-soft);
@@ -92,7 +110,7 @@
 .language-section-label {
   margin: 0.9rem 0 0.55rem;
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -106,7 +124,7 @@
 
 .language-option {
   min-width: 0;
-  min-height: 48px;
+  min-height: 58px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -129,12 +147,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.94rem;
   font-weight: 600;
 }
 
 .language-option small {
   color: var(--text-muted);
-  font-size: 0.65rem;
+  font-size: 0.76rem;
 }
 
 .language-search-wrap {
@@ -157,16 +176,17 @@
 
 .language-search-wrap input {
   width: 100%;
-  min-height: 44px;
+  min-height: 52px;
   padding: 0.65rem 0.8rem 0.65rem 2.35rem;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface-soft);
   color: var(--text);
+  font-size: 1rem;
 }
 
 .language-list {
-  max-height: 210px;
+  max-height: 250px;
   margin-top: 0.55rem;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -175,15 +195,15 @@
 }
 
 .language-list .language-option {
-  min-height: 42px;
+  min-height: 52px;
   border-color: transparent;
 }
 
 .language-status {
-  min-height: 1.1rem;
+  min-height: 1.25rem;
   margin: 0.55rem 0 0;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   text-align: center;
 }
 
@@ -338,7 +358,7 @@
   gap: 4px;
   border-radius: 26px;
   color: var(--text-muted);
-  font-size: clamp(0.55rem, 2.35vw, 0.66rem);
+  font-size: clamp(0.62rem, 2.55vw, 0.72rem);
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
@@ -372,6 +392,10 @@
     overflow-x: hidden;
   }
 
+  body.language-menu-open {
+    overflow: hidden;
+  }
+
   .nav-toggle,
   .mobile-nav {
     display: none !important;
@@ -379,8 +403,29 @@
 
   .lang-bar-inner {
     width: 100%;
-    min-height: 36px;
+    min-height: 48px;
     padding: 0 10px;
+  }
+
+  .language-trigger {
+    min-height: 40px;
+    padding-inline: 0.8rem;
+  }
+
+  .language-panel {
+    position: fixed;
+    inset: auto 8px max(8px, env(safe-area-inset-bottom)) 8px;
+    width: auto;
+    max-height: min(82dvh, 680px);
+    padding: 1.1rem;
+    border-radius: 26px;
+    box-shadow:
+      0 18px 50px rgba(29, 29, 31, 0.28),
+      0 0 0 100vmax rgba(29, 29, 31, 0.42);
+  }
+
+  .language-list {
+    max-height: min(30dvh, 260px);
   }
 
   .site-header {
@@ -406,13 +451,28 @@
   .brand small {
     display: block;
     color: rgba(29, 29, 31, 0.72);
-    font-size: 0.58rem;
+    font-size: 0.68rem;
     letter-spacing: 0.08em;
     margin-top: 3px;
   }
 
   .site-footer {
     margin-bottom: 0;
+  }
+}
+
+@media (max-height: 620px) and (max-width: 767px) {
+  .language-panel {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .language-panel-head span,
+  .language-section-label {
+    display: none;
+  }
+
+  .language-list {
+    max-height: 22dvh;
   }
 }
 
@@ -425,7 +485,7 @@
   }
 
   .app-tab-bar a {
-    font-size: 0.5rem;
+    font-size: 0.58rem;
   }
 
   .app-tab-bar svg {
