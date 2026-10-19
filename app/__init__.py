@@ -57,6 +57,7 @@ def create_app(test_config: dict | None = None) -> Flask:
         OWNER_NAME=os.environ.get("OWNER_NAME", "Lady J Owner"),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "0") == "1",
     )
 
     if test_config:
