@@ -184,3 +184,80 @@ def test_owner_block_time_calendar_color_sync(client):
     assert b"Time blocked" in saved.data
     assert b"calendar-dot vip" in saved.data
     assert b"VIP" in saved.data
+
+
+def test_product_checkout_and_workshop_registration(client, app):
+    client.post(
+        "/auth/register",
+        data={
+            "full_name": "Commerce Client",
+            "email": "commerce@test.local",
+            "phone": "18685550123",
+            "password": "password12",
+        },
+    )
+    with app.app_context():
+        db = get_db()
+        product = db.execute(
+            "SELECT id, stock FROM products WHERE is_published = 1 AND stock > 0 LIMIT 1"
+        ).fetchone()
+        workshop = db.execute(
+            "SELECT id FROM workshops WHERE is_published = 1 LIMIT 1"
+        ).fetchone()
+
+    added = client.post(
+        f"/account/cart/add/{product['id']}", follow_redirects=True
+    )
+    assert added.status_code == 200
+    assert b"Added to cart" in added.data
+    placed = client.post(
+        "/account/cart/checkout",
+        data={
+            "payment_method": "bank_transfer",
+            "fulfillment": "pickup",
+            "bank_reference": "TEST-ORDER-REF",
+            "bank_payment_date": now_local().date().isoformat(),
+        },
+        follow_redirects=True,
+    )
+    assert placed.status_code == 200
+    assert b"Order placed successfully" in placed.data
+
+    enrolled = client.post(
+        f"/account/workshops/{workshop['id']}/enroll",
+        follow_redirects=True,
+    )
+    assert enrolled.status_code == 200
+    assert b"Complete payment" in enrolled.data
+    with app.app_context():
+        db = get_db()
+        reg = db.execute(
+            """
+            SELECT wr.id
+            FROM workshop_registrations wr
+            JOIN users u ON u.id = wr.user_id
+            WHERE u.email = ?
+            """,
+            ("commerce@test.local",),
+        ).fetchone()
+    paid = client.post(
+        f"/account/workshops/pay/{reg['id']}",
+        data={"payment_method": "card"},
+        follow_redirects=True,
+    )
+    assert paid.status_code == 200
+    assert b"Workshop payment confirmed" in paid.data
+
+    with app.app_context():
+        db = get_db()
+        order = db.execute("SELECT * FROM orders LIMIT 1").fetchone()
+        registration = db.execute(
+            "SELECT * FROM workshop_registrations WHERE id = ?", (reg["id"],)
+        ).fetchone()
+        remaining = db.execute(
+            "SELECT stock FROM products WHERE id = ?", (product["id"],)
+        ).fetchone()["stock"]
+        assert order["payment_status"] == "unpaid"
+        assert registration["status"] == "confirmed"
+        assert registration["payment_status"] == "paid"
+        assert remaining == product["stock"] - 1

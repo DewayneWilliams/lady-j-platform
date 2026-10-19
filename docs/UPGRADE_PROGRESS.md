@@ -85,7 +85,7 @@ Owner dashboard: body 18px, details 20–24px, headings 26–32px, buttons 17–
 - [x] Confirmation for destructive / financial actions
 
 ### Phase 9 — Verification
-- [x] Unit/integration tests (`pytest` — 10 passed)
+- [x] Unit/integration tests (`pytest` — 11 passed)
 - [x] Local preview docs in README
 - [x] No secrets committed; no production deploy
 
