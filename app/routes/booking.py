@@ -68,6 +68,14 @@ def step1():
     ).fetchall()
     groups = group_services(rows)
 
+    requested_service = request.args.get("service", type=int)
+    if request.method == "GET" and requested_service:
+        valid_ids = {row["id"] for row in rows}
+        if requested_service in valid_ids:
+            cart = [item for item in _cart() if item["service_id"] != requested_service]
+            cart.append({"service_id": requested_service, "qty": 1})
+            _set_cart(cart)
+
     recommendations = None
     if request.method == "POST":
         action = request.form.get("action")

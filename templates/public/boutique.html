@@ -1,14 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Products | Lady J{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+{% endblock %}
 {% block content %}
-<section class="section">
+<section class="public-hero">
   <div class="container">
-    <div class="section-head">
+    <div class="public-hero-copy">
       <span class="eyebrow">Shop</span>
-      <h1>Products</h1>
-      <p class="muted">Private shopping with secure checkout. Inventory is reserved when you place an order.</p>
+      <h1>Professional care, at home.</h1>
+      <p>Curated beauty essentials selected to support your results between visits.</p>
+      <div class="public-hero-actions">
+        <a class="btn shimmer" href="#product-catalog">Browse Products</a>
+        {% if current_user.is_authenticated and not current_user.is_staff %}
+        <a class="btn btn-outline" href="{{ url_for('account.cart') }}">View Your Cart</a>
+        {% endif %}
+      </div>
     </div>
-    <form method="get" class="form-grid" style="margin-bottom:1.5rem;grid-template-columns:1fr auto auto;gap:.75rem">
+  </div>
+</section>
+
+<section class="public-section public-section-soft" id="product-catalog">
+  <div class="container">
+    <div class="public-intro">
+      <span class="eyebrow">Product collection</span>
+      <h2>Find your essentials</h2>
+      <p>Search by name or filter by category. Inventory is reserved when your order is placed.</p>
+    </div>
+    <form method="get" class="store-toolbar">
       <input type="search" name="q" value="{{ q }}" placeholder="Search products" aria-label="Search products">
       <select name="category" aria-label="Category">
         <option value="">All categories</option>
@@ -18,32 +37,40 @@
       </select>
       <button class="btn" type="submit">Filter</button>
     </form>
-    {% if current_user.is_authenticated %}
-    <p style="margin-bottom:1rem"><a href="{{ url_for('account.cart') }}">View cart</a></p>
-    {% endif %}
     <div class="product-grid">
       {% for p in products %}
-      <article class="media-card">
+      <article class="media-card store-card pixar-hover">
         <div class="body">
           <span class="eyebrow">{{ p.category }}</span>
           <h3>{{ p.name }}</h3>
-          <p class="muted">{{ p.description }}</p>
+          <p class="store-card-description">{{ p.description }}</p>
           <div class="meta">
             <span>{{ p.stock }} available</span>
             <span class="price">${{ '%.0f'|format(p.price_ttd) }}</span>
           </div>
           {% if current_user.is_authenticated and not current_user.is_staff %}
-          <form method="post" action="{{ url_for('account.cart_add', product_id=p.id) }}" style="margin-top:1rem">
+          <form method="post" action="{{ url_for('account.cart_add', product_id=p.id) }}" class="store-card-action">
             <button class="btn btn-outline" type="submit" {% if p.stock < 1 %}disabled{% endif %}>Add to cart</button>
           </form>
           {% elif not current_user.is_authenticated %}
-          <p style="margin-top:1rem"><a href="{{ url_for('auth.login') }}">Sign in to purchase</a></p>
+          <p class="store-card-action"><a class="btn btn-outline" href="{{ url_for('auth.login') }}">Sign in to purchase</a></p>
           {% endif %}
         </div>
       </article>
       {% else %}
       <p class="muted">No products match your filters.</p>
       {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="public-section">
+  <div class="container">
+    <div class="public-cta">
+      <span class="eyebrow">Professional guidance</span>
+      <h2>Not sure what belongs in your routine?</h2>
+      <p>Book a consultation or ask during your next visit. We will help you choose only what supports your needs.</p>
+      <a class="btn btn-gold shimmer" href="{{ url_for('booking.step1') }}">Book a Consultation</a>
     </div>
   </div>
 </section>

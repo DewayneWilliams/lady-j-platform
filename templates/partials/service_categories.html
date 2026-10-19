@@ -1,0 +1,34 @@
+<div class="service-categories">
+  {% for group, items in groups.items() %}
+  <details class="service-category">
+    <summary>
+      <span class="service-category-title">
+        <span data-i18n="group_{{ group|lower }}">{{ group }}</span>
+        <small>{{ items|length }} service{{ '' if items|length == 1 else 's' }}</small>
+      </span>
+      <span class="service-category-open" aria-hidden="true">
+        <span>View</span>
+        <svg viewBox="0 0 16 10"><path d="m1 1 7 7 7-7"/></svg>
+      </span>
+    </summary>
+    <div class="service-category-panel">
+      {% for s in items %}
+      <a class="service-menu-row pixar-hover"
+         href="{{ url_for('booking.step1', service=s.id) }}"
+         aria-label="Select {{ s.name }}, {{ s.duration_minutes }} minutes, ${{ '%.0f'|format(s.price_ttd) }}">
+        <span class="service-menu-copy">
+          <strong>{{ s.name }}</strong>
+          {% if s.description %}<small>{{ s.description }}</small>{% endif %}
+          {% if s.is_addon %}<em>Add-on</em>{% endif %}
+        </span>
+        <span class="service-menu-meta">
+          <small>{{ s.duration_minutes }} min</small>
+          <strong>${{ '%.0f'|format(s.price_ttd) }}</strong>
+          <span class="service-select-label">Select <span aria-hidden="true">→</span></span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  </details>
+  {% endfor %}
+</div>

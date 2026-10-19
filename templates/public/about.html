@@ -1,22 +1,62 @@
 {% extends "base.html" %}
 {% block title %}About | Lady J{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="container" style="max-width:720px">
-    <span class="eyebrow">Our story</span>
-    <h1>About Lady J</h1>
-    <p class="detail">
-      Lady J Salon &amp; Day Spa is a private beauty destination in Petit Valley.
-      We focus on calm appointments, skilled artistry, and care you can trust —
-      never a social feed, never public client profiles.
-    </p>
-    <p>
-      Whether you are booking a silk press, spa treatment, professional workshop,
-      or curated products, your experience stays personal and secure.
-    </p>
-    <p style="margin-top:1.5rem">
-      <a class="btn" href="{{ url_for('booking.step1') }}">Book Appointment</a>
-    </p>
+<section class="public-hero">
+  <div class="container public-hero-grid">
+    <div class="public-hero-copy">
+      <span class="eyebrow">Our story</span>
+      <h1>Beauty care that feels personal.</h1>
+      <p>Lady J Salon &amp; Day Spa is a private beauty destination in Petit Valley, created for calm appointments, skilled artistry, and care you can trust.</p>
+      <div class="public-hero-actions">
+        <a class="btn shimmer" href="{{ url_for('booking.step1') }}">Book Appointment</a>
+        <a class="btn btn-outline" href="{{ url_for('public.services') }}">Explore Services</a>
+      </div>
+    </div>
+    <div class="public-photo pixar-hover">
+      <img src="{{ url_for('static', filename='Images/LadyJ_Outside.jpg') }}"
+           alt="Lady J Salon and Day Spa in Petit Valley" width="1600" height="1067">
+    </div>
+  </div>
+</section>
+
+<section class="public-section public-section-soft">
+  <div class="container">
+    <div class="public-intro">
+      <span class="eyebrow">The Lady J standard</span>
+      <h2>Simple, private, thoughtful.</h2>
+      <p>Every part of the experience is designed to make choosing and booking care feel easy.</p>
+    </div>
+    <div class="value-grid">
+      <article class="value-card pixar-hover">
+        <strong>01 · Care</strong>
+        <h3>Made for you</h3>
+        <p>Services are tailored with professional guidance and realistic expectations.</p>
+      </article>
+      <article class="value-card pixar-hover">
+        <strong>02 · Privacy</strong>
+        <h3>Your visit stays yours</h3>
+        <p>No public client profiles and no social feed—just secure, respectful service.</p>
+      </article>
+      <article class="value-card pixar-hover">
+        <strong>03 · Time</strong>
+        <h3>Clear booking</h3>
+        <p>See services, prices, durations, and available times before you confirm.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="public-section">
+  <div class="container">
+    <div class="public-cta">
+      <span class="eyebrow">Petit Valley · Tuesday–Saturday</span>
+      <h2>Come as you are.</h2>
+      <p>Choose your services and reserve a time in three easy steps. Same-day appointments appear whenever availability remains.</p>
+      <a class="btn btn-gold shimmer" href="{{ url_for('booking.step1') }}">Reserve Your Time</a>
+    </div>
   </div>
 </section>
 {% endblock %}

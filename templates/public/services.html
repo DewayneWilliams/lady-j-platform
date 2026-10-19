@@ -2,61 +2,42 @@
 {% block title %}Services | Lady J{% endblock %}
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/booking.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
 {% endblock %}
 {% block content %}
-<section class="book-shell">
+<section class="public-hero">
   <div class="container">
-    <div class="book-head">
+    <div class="public-hero-copy">
       <span class="eyebrow" data-i18n="nav_services">Services</span>
-      <h1 data-i18n="services_title">Our Menu</h1>
-      <p data-i18n="services_help">Hair, skin, nails, and lashes — open a category to browse.</p>
+      <h1>Find your perfect service.</h1>
+      <p>Open any category and tap a service to add it directly to your booking.</p>
+      <div class="public-hero-actions">
+        <a class="btn shimmer" href="{{ url_for('booking.step1') }}">Start a Booking</a>
+        <a class="btn btn-outline" href="#service-menu">Browse the Menu</a>
+      </div>
     </div>
-
-    <div class="apple-accordions">
-      {% for group, items in groups.items() %}
-      <details class="apple-acc" {% if loop.first %}open{% endif %}>
-        <summary>
-          <span class="acc-label">
-            <span class="acc-name" data-i18n="group_{{ group|lower }}">{{ group }}</span>
-            <span class="acc-count">{{ items|length }}</span>
-          </span>
-          <span class="acc-chevron" aria-hidden="true"></span>
-        </summary>
-        <div class="acc-panel">
-          <div class="pick-list">
-            {% for s in items %}
-            <div class="pick-inner" style="border-bottom:1px solid var(--line)">
-              <span>
-                <p class="pick-name">{{ s.name }}{% if s.is_addon %} <span class="addon-tag">Add-on</span>{% endif %}</p>
-              </span>
-              <span class="pick-side">
-                <span class="pick-price">${{ '%.0f'|format(s.price_ttd) }}</span>
-                <span class="pick-meta">{{ s.duration_minutes }} min</span>
-              </span>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </details>
-      {% endfor %}
-    </div>
-
-    <p style="margin-top:2.5rem">
-      <a class="btn" href="{{ url_for('booking.step1') }}" data-i18n="nav_book">Book Appointment</a>
-    </p>
   </div>
 </section>
-{% endblock %}
 
-{% block scripts %}
-<script>
-  document.querySelectorAll(".apple-acc").forEach((el) => {
-    el.addEventListener("toggle", () => {
-      if (!el.open) return;
-      document.querySelectorAll(".apple-acc").forEach((other) => {
-        if (other !== el) other.open = false;
-      });
-    });
-  });
-</script>
+<section class="public-section public-section-soft" id="service-menu">
+  <div class="container">
+    <div class="public-intro">
+      <span class="eyebrow">Complete menu</span>
+      <h2>Everything we offer</h2>
+      <p>Prices are shown in TTD. Select more than one service during booking.</p>
+    </div>
+    {% include "partials/service_categories.html" %}
+  </div>
+</section>
+
+<section class="public-section">
+  <div class="container">
+    <div class="public-cta">
+      <span class="eyebrow">Need help choosing?</span>
+      <h2>Start with what you know.</h2>
+      <p>Add a service now, or use the inspiration-photo guide during booking for suggestions.</p>
+      <a class="btn btn-gold shimmer" href="{{ url_for('booking.step1') }}">Book Appointment</a>
+    </div>
+  </div>
+</section>
 {% endblock %}

@@ -1,34 +1,79 @@
 {% extends "base.html" %}
 {% block title %}Workshops | Lady J{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+{% endblock %}
 {% block content %}
-<section class="section">
+<section class="public-hero">
   <div class="container">
-    <div class="section-head">
+    <div class="public-hero-copy">
       <span class="eyebrow">Education</span>
-      <h1>Workshops</h1>
-      <p class="muted">Professional workshops for beauty artists. Sign in to enroll and access protected content.</p>
+      <h1>Learn the craft. Build your confidence.</h1>
+      <p>Live and recorded professional workshops for beauty artists at every stage.</p>
+      <div class="public-hero-actions">
+        <a class="btn shimmer" href="#workshop-catalog">Explore Workshops</a>
+        {% if not current_user.is_authenticated %}
+        <a class="btn btn-outline" href="{{ url_for('auth.register') }}">Create an Account</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="public-section public-section-soft" id="workshop-catalog">
+  <div class="container">
+    <div class="public-intro">
+      <span class="eyebrow">Current program</span>
+      <h2>Choose how you learn</h2>
+      <p>See the format, instructor, availability, and full curriculum before enrolling.</p>
     </div>
     <div class="workshop-grid">
       {% for w in workshops %}
-      <article class="media-card">
+      <article class="media-card store-card pixar-hover">
         <div class="body">
           <span class="eyebrow">{{ w.mode|capitalize }}</span>
-          <h2>{{ w.title }}</h2>
-          <p class="muted">{{ w.description }}</p>
+          <h3>{{ w.title }}</h3>
+          <p class="store-card-description">{{ w.description }}</p>
+          <div class="workshop-facts">
+            <span>{{ w.instructor_name }}</span>
+            {% if w.duration_minutes %}<span>{{ w.duration_minutes }} min</span>{% endif %}
+          </div>
           <div class="meta">
             <span>
               {% if w.capacity %}{{ w.seats_taken }}/{{ w.capacity }} enrolled{% else %}Open enrollment{% endif %}
             </span>
             <span class="price">${{ '%.0f'|format(w.price_ttd) }} TTD</span>
           </div>
-          <p style="margin-top:1rem">
-            <a class="btn" href="{{ url_for('public.workshop_detail', slug=w.slug) }}">Details</a>
+          <p class="store-card-action">
+            <a class="btn btn-outline" href="{{ url_for('public.workshop_detail', slug=w.slug) }}">View workshop</a>
           </p>
         </div>
       </article>
       {% else %}
       <p class="muted">No workshops published yet.</p>
       {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="public-section">
+  <div class="container">
+    <div class="value-grid">
+      <article class="value-card pixar-hover">
+        <strong>Learn clearly</strong>
+        <h3>Step-by-step teaching</h3>
+        <p>Focused instruction designed to turn techniques into repeatable skills.</p>
+      </article>
+      <article class="value-card pixar-hover">
+        <strong>Practice confidently</strong>
+        <h3>Professional guidance</h3>
+        <p>Understand the why behind each technique, not only the steps.</p>
+      </article>
+      <article class="value-card pixar-hover">
+        <strong>Keep growing</strong>
+        <h3>Protected learning</h3>
+        <p>Your enrolled content stays available through your private account.</p>
+      </article>
     </div>
   </div>
 </section>

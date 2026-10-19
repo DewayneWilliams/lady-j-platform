@@ -13,20 +13,23 @@ bp = Blueprint("public", __name__)
 
 @bp.get("/")
 def home():
+    from app.services.catalog import group_services
+
     db = get_db()
-    featured = db.execute(
+    services = db.execute(
         """
         SELECT * FROM services
-        WHERE is_active = 1 AND is_addon = 0
-        ORDER BY is_demo ASC, sort_order ASC
-        LIMIT 6
+        WHERE is_active = 1
+        ORDER BY category, is_addon, sort_order, name
         """
     ).fetchall()
+    featured = [service for service in services if not service["is_addon"]][:6]
     workshops = list_workshops()[:3]
     products = list_products()[:4]
     return render_template(
         "public/home.html",
         featured=featured,
+        groups=group_services(services),
         workshops=workshops,
         products=products,
     )

@@ -155,6 +155,39 @@ def test_mobile_navigation_matches_draftbit_and_products_route(client):
     assert legacy.headers["Location"].endswith("/products")
 
 
+def test_public_service_categories_are_expandable_and_click_to_book(client, app):
+    home = client.get("/").get_data(as_text=True)
+    assert 'class="service-categories"' in home
+    assert 'class="service-category"' in home
+
+    with app.app_context():
+        service_id = get_db().execute(
+            "SELECT id FROM services WHERE is_active = 1 LIMIT 1"
+        ).fetchone()["id"]
+    selected = client.get(f"/book/step-1?service={service_id}")
+    assert selected.status_code == 200
+    with client.session_transaction() as sess:
+        assert {"service_id": service_id, "qty": 1} in sess["booking_cart"]
+
+
+def test_public_pages_and_footer_order(client):
+    expectations = {
+        "/about": "Beauty care that feels personal",
+        "/services": "Find your perfect service",
+        "/products": "Professional care, at home",
+        "/workshops": "Learn the craft",
+    }
+    for path, heading in expectations.items():
+        html = client.get(path).get_data(as_text=True)
+        assert heading in html
+
+    html = client.get("/").get_data(as_text=True)
+    footer = html[html.index('<footer class="site-footer">') :]
+    labels = ["About", "Services", "Products", "Workshops"]
+    positions = [footer.index(f">{label}</a>") for label in labels]
+    assert positions == sorted(positions)
+
+
 def test_amazon_translate_api(client, monkeypatch):
     monkeypatch.setattr(
         "app.routes.api.translate_text",
