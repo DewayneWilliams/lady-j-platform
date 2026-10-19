@@ -602,13 +602,34 @@
 }
 
 @media (min-width: 960px) {
+  .book-shell {
+    padding: 3rem 0 8rem;
+    background: var(--off-white);
+  }
+
+  .book-shell > .container {
+    padding: 2.5rem;
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    background: var(--white);
+  }
+
   .fresha-layout {
     grid-template-columns: minmax(0, 1fr) 320px;
     gap: 2rem;
   }
 
+  .fresha-main {
+    padding: 2.25rem;
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    background: var(--white);
+  }
+
   .fresha-basket {
     display: block;
+    padding: 1.75rem;
+    border-radius: 24px;
   }
 
   .mobile-basket {

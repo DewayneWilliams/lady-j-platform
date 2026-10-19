@@ -17,14 +17,29 @@
     <div class="hero-scrim"></div>
   </div>
   <div class="hero-content animate-in">
-    <p class="hero-sub">Petit Valley</p>
-    <h1 class="hero-brand">Lady J</h1>
-    <div class="hero-rule" aria-hidden="true"></div>
-    <p>Beauty, privately reserved.</p>
-    <div class="hero-actions">
-      <a class="btn" href="{{ url_for('booking.step1') }}">Book Appointment</a>
-      <a class="btn btn-outline" href="{{ url_for('public.services') }}">Explore Services</a>
+    <div class="hero-copy">
+      <p class="hero-sub">Salon &amp; Day Spa · Petit Valley</p>
+      <h1 class="hero-brand">Beauty,<br>privately reserved.</h1>
+      <p class="hero-intro">Thoughtful hair, skin, nail, and spa services—booked around your time.</p>
+      <div class="hero-actions">
+        <a class="btn" href="{{ url_for('booking.step1') }}">Book Appointment</a>
+        <a class="btn btn-outline" href="{{ url_for('public.services') }}">View Services</a>
+      </div>
+      <div class="hero-proof" aria-label="Booking benefits">
+        <span>Same-day when available</span>
+        <span>Book in three easy steps</span>
+        <span>No account required</span>
+      </div>
     </div>
+  </div>
+</section>
+
+<section class="booking-promise" aria-label="Why book with Lady J">
+  <div class="container booking-promise-grid">
+    <div><strong>01</strong><span>Choose your service</span></div>
+    <div><strong>02</strong><span>Pick a date and time</span></div>
+    <div><strong>03</strong><span>Confirm your visit</span></div>
+    <a href="{{ url_for('booking.step1') }}">Start booking <span aria-hidden="true">→</span></a>
   </div>
 </section>
 

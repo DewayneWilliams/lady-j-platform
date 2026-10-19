@@ -26,13 +26,7 @@
 .hero-scrim {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.82) 0%,
-      rgba(0, 0, 0, 0.28) 48%,
-      rgba(0, 0, 0, 0.12) 100%
-    );
+  background: rgba(0, 0, 0, 0.48);
 }
 
 .hero-content {
@@ -40,15 +34,19 @@
   z-index: 1;
   width: min(1080px, calc(100% - 2.5rem));
   margin: 0 auto 4rem;
-  max-width: 40rem;
+  max-width: none;
   text-align: left;
 }
 
-.hero-sub {
+.hero-copy {
+  max-width: 42rem;
+}
+
+.hero .hero-sub {
   color: var(--gold);
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   font-weight: 600;
   margin: 0 0 1rem;
 }
@@ -63,20 +61,11 @@
   color: var(--white);
 }
 
-.hero-rule {
-  width: 48px;
-  height: 1px;
-  background: var(--magenta);
-  margin: 0 0 1.25rem;
-  transform-origin: left;
-  animation: goldLine 0.9s var(--ease) 0.25s both;
-}
-
-.hero p {
+.hero .hero-intro {
   font-size: clamp(1.05rem, 2vw, 1.25rem);
-  max-width: 26rem;
+  max-width: 31rem;
   margin: 0 0 2rem;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 400;
   letter-spacing: -0.015em;
   line-height: 1.45;
@@ -111,6 +100,59 @@
   border-color: var(--magenta);
   background: transparent;
   color: var(--magenta);
+}
+
+.hero-proof {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+.hero-proof span {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 980px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.booking-promise {
+  background: var(--black);
+  color: var(--white);
+}
+
+.booking-promise-grid {
+  display: grid;
+  gap: 0;
+}
+
+.booking-promise-grid > div,
+.booking-promise-grid > a {
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.booking-promise-grid strong {
+  color: var(--gold);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+}
+
+.booking-promise-grid span {
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.booking-promise-grid > a {
+  justify-content: space-between;
+  color: var(--gold);
+  font-weight: 650;
 }
 
 .band {
@@ -155,7 +197,48 @@
   .hero-content {
     margin-bottom: 5.5rem;
   }
+  .hero-proof {
+    display: flex;
+  }
+  .booking-promise-grid {
+    grid-template-columns: repeat(3, 1fr) auto;
+    align-items: stretch;
+  }
+  .booking-promise-grid > div,
+  .booking-promise-grid > a {
+    min-height: 92px;
+    padding: 1rem 1.5rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.13);
+    border-bottom: 0;
+  }
+  .booking-promise-grid > div:first-child {
+    padding-left: 0;
+  }
+  .booking-promise-grid > a {
+    min-width: 190px;
+    padding-right: 0;
+    border-right: 0;
+  }
   .split-cta {
     grid-template-columns: 1.4fr auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    width: min(1400px, calc(100% - 32px));
+    min-height: min(760px, calc(100svh - 150px));
+    margin: 16px auto 0;
+    border-radius: 32px;
+  }
+
+  .hero-content {
+    width: min(1240px, calc(100% - 7rem));
+    margin-bottom: 5rem;
+  }
+
+  .hero-brand {
+    font-size: clamp(4.8rem, 7.2vw, 7.4rem);
+    max-width: 9ch;
   }
 }
