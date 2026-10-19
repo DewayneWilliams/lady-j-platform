@@ -12,12 +12,39 @@
   {% block head %}{% endblock %}
 </head>
 <body>
-  <div class="lang-bar" role="navigation" aria-label="Language">
+  <div class="lang-bar" role="navigation" aria-label="Language" data-no-translate>
     <div class="lang-bar-inner">
-      <span class="lang-label" data-i18n="lang_label">Language</span>
-      <div class="lang-switch" role="group" aria-label="Language selector">
-        <button type="button" class="lang-btn" data-lang="en" aria-pressed="true">EN</button>
-        <button type="button" class="lang-btn" data-lang="es" aria-pressed="false">ES</button>
+      <div class="language-picker" id="languagePicker">
+        <button type="button" class="language-trigger" id="languageTrigger"
+                aria-expanded="false" aria-controls="languagePanel" aria-haspopup="dialog">
+          <span class="language-globe" aria-hidden="true">◎</span>
+          <span id="currentLanguageCode">EN</span>
+          <svg viewBox="0 0 12 8" aria-hidden="true"><path d="m1 1.5 5 5 5-5"/></svg>
+        </button>
+        <div class="language-panel" id="languagePanel" role="dialog"
+             aria-label="Choose language" hidden>
+          <div class="language-panel-head">
+            <strong>Choose language</strong>
+            <button type="button" class="language-close" id="languageClose"
+                    aria-label="Close language menu">×</button>
+          </div>
+          <p class="language-section-label">Popular languages</p>
+          <div class="language-featured">
+            <button type="button" class="language-option" data-lang="es"><span>Español</span><small>Spanish</small></button>
+            <button type="button" class="language-option" data-lang="fr"><span>Français</span><small>French</small></button>
+            <button type="button" class="language-option" data-lang="zh"><span>中文</span><small>Chinese</small></button>
+            <button type="button" class="language-option" data-lang="hi"><span>हिन्दी</span><small>Hindi</small></button>
+          </div>
+          <label class="language-search-wrap">
+            <span class="sr-only">Search all languages</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+            <input type="search" id="languageSearch" placeholder="Search all languages"
+                   autocomplete="off" spellcheck="false">
+          </label>
+          <div class="language-list" id="languageList" role="listbox"
+               aria-label="All languages"></div>
+          <p class="language-status" id="languageStatus" role="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </div>

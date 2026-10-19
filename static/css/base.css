@@ -2,6 +2,8 @@
 
 /* Language bar — very top */
 .lang-bar {
+  position: relative;
+  z-index: 120;
   background: #1d1d1f;
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.72rem;
@@ -18,37 +20,171 @@
   gap: 0.85rem;
 }
 
-.lang-label {
-  opacity: 0.55;
-  text-transform: uppercase;
-  font-size: 0.65rem;
-  letter-spacing: 0.14em;
+.language-picker {
+  position: relative;
 }
 
-.lang-switch {
+.language-trigger {
+  min-height: 28px;
   display: inline-flex;
-  gap: 0.15rem;
-  padding: 2px;
-  border-radius: 980px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.lang-btn {
-  min-height: 26px;
-  min-width: 40px;
-  padding: 0 0.65rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.7rem;
   border: 0;
   border-radius: 980px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 0.72rem;
-  font-weight: 560;
-  letter-spacing: 0.06em;
-}
-
-.lang-btn[aria-pressed="true"] {
   background: var(--gold);
   color: #1d1d1f;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.language-trigger svg {
+  width: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  transition: transform 0.2s var(--ease);
+}
+
+.language-trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.language-globe {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.language-panel {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  width: min(390px, calc(100vw - 20px));
+  max-height: min(620px, calc(100vh - 54px));
+  overflow: hidden;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 50px rgba(29, 29, 31, 0.24);
+  letter-spacing: normal;
+}
+
+.language-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1rem;
+}
+
+.language-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 1.4rem;
+}
+
+.language-section-label {
+  margin: 0.9rem 0 0.55rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.language-featured {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.language-option {
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.language-option:hover,
+.language-option[aria-selected="true"] {
+  border-color: var(--gold);
+  background: var(--gold-mist);
+}
+
+.language-option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.language-option small {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+}
+
+.language-search-wrap {
+  position: relative;
+  display: block;
+  margin-top: 0.8rem;
+}
+
+.language-search-wrap svg {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 0.8rem;
+  width: 17px;
+  transform: translateY(-50%);
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.8;
+}
+
+.language-search-wrap input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.65rem 0.8rem 0.65rem 2.35rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.language-list {
+  max-height: 210px;
+  margin-top: 0.55rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.language-list .language-option {
+  min-height: 42px;
+  border-color: transparent;
+}
+
+.language-status {
+  min-height: 1.1rem;
+  margin: 0.55rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-align: center;
 }
 
 .site-header {
@@ -236,10 +372,15 @@
     overflow-x: hidden;
   }
 
-  .lang-bar,
   .nav-toggle,
   .mobile-nav {
     display: none !important;
+  }
+
+  .lang-bar-inner {
+    width: 100%;
+    min-height: 36px;
+    padding: 0 10px;
   }
 
   .site-header {

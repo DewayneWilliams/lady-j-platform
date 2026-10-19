@@ -139,6 +139,10 @@ def test_mobile_navigation_matches_draftbit_and_products_route(client):
     res = client.get("/")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
+    assert 'id="languageTrigger"' in html
+    assert 'id="languageSearch"' in html
+    for language in ("Spanish", "French", "Chinese", "Hindi"):
+        assert language in html
     assert 'class="app-tab-bar"' in html
     nav_start = html.index('class="app-tab-bar"')
     nav_html = html[nav_start : html.index("</nav>", nav_start)]
@@ -149,6 +153,31 @@ def test_mobile_navigation_matches_draftbit_and_products_route(client):
     legacy = client.get("/boutique")
     assert legacy.status_code == 301
     assert legacy.headers["Location"].endswith("/products")
+
+
+def test_amazon_translate_api(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.routes.api.translate_text",
+        lambda text, target: f"{target}:{text}",
+    )
+    available = client.get("/api/languages")
+    assert available.status_code == 200
+    language_data = available.get_json()
+    assert language_data["featured"] == ["es", "fr", "zh", "hi"]
+    assert any(item["code"] == "ja" for item in language_data["languages"])
+
+    translated = client.post(
+        "/api/translate",
+        json={"target_language": "fr", "texts": ["Book", "Services"]},
+    )
+    assert translated.status_code == 200
+    assert translated.get_json()["translations"] == ["fr:Book", "fr:Services"]
+
+    invalid = client.post(
+        "/api/translate",
+        json={"target_language": "not-a-language", "texts": ["Book"]},
+    )
+    assert invalid.status_code == 400
 
 
 def test_booking_calendar_hides_past_days(client, app):

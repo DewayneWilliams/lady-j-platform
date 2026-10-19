@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections import defaultdict, deque
 from datetime import date
+from time import monotonic
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
@@ -11,8 +13,28 @@ from app.ai.maria import handle_command
 from app.ai.photo_recommend import recommend_from_image
 from app.services.booking import available_slots
 from app.services.hours import month_calendar, now_local, valid_dates
+from app.services.translation import (
+    LANGUAGES,
+    LANGUAGE_CODES,
+    TranslationUnavailable,
+    translate_text,
+)
 
 bp = Blueprint("api", __name__, url_prefix="/api")
+_translation_requests: dict[str, deque[float]] = defaultdict(deque)
+
+
+def _translation_rate_limited() -> bool:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    client_ip = forwarded.split(",", 1)[0].strip() or request.remote_addr or "unknown"
+    now = monotonic()
+    history = _translation_requests[client_ip]
+    while history and history[0] < now - 60:
+        history.popleft()
+    if len(history) >= 30:
+        return True
+    history.append(now)
+    return False
 
 
 @bp.get("/availability")
@@ -53,6 +75,46 @@ def dates():
     page = int(request.args.get("page", 0))
     days = [d.isoformat() for d in valid_dates(page, 7)]
     return jsonify({"page": page, "dates": days})
+
+
+@bp.get("/languages")
+def languages():
+    return jsonify(
+        {
+            "languages": [
+                {"code": code, "name": name} for code, name in LANGUAGES
+            ],
+            "featured": ["es", "fr", "zh", "hi"],
+        }
+    )
+
+
+@bp.post("/translate")
+def translate():
+    if _translation_rate_limited():
+        return jsonify({"error": "Too many translation requests"}), 429
+
+    payload = request.get_json(silent=True) or {}
+    target = str(payload.get("target_language", ""))
+    texts = payload.get("texts")
+    if target not in LANGUAGE_CODES:
+        return jsonify({"error": "Unsupported target language"}), 400
+    if not isinstance(texts, list) or not texts or len(texts) > 30:
+        return jsonify({"error": "Provide between 1 and 30 text items"}), 400
+    if any(not isinstance(text, str) for text in texts):
+        return jsonify({"error": "Every text item must be a string"}), 400
+    if sum(len(text) for text in texts) > 30_000:
+        return jsonify({"error": "Translation request is too large"}), 413
+    if any(len(text.encode("utf-8")) > 9_000 for text in texts):
+        return jsonify({"error": "A text item is too large"}), 413
+
+    try:
+        translated = [translate_text(text, target) for text in texts]
+    except ValueError:
+        return jsonify({"error": "Unsupported target language"}), 400
+    except TranslationUnavailable:
+        return jsonify({"error": "Translation service is not configured"}), 503
+    return jsonify({"target_language": target, "translations": translated})
 
 
 @bp.post("/photo-recommend")
