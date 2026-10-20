@@ -4,7 +4,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Button } from "@/components/ui/button";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { whatsappSupportUrl } from "@/lib/salon/whatsapp";
-import { Txt, useColors } from "./ui";
+import { Txt, ButtonLabel, useColors } from "./ui";
 /** Support is available through Contact, separate from the five navigation tabs. */
 export default function SupportContact() {
   const c = useColors();
@@ -25,17 +25,26 @@ export default function SupportContact() {
         style={{
           minHeight: 52,
           borderRadius: 11,
-          paddingHorizontal: 20,
+          paddingHorizontal: 12,
+          paddingVertical: 12,
+          height: "auto",
+          maxWidth: "100%",
+          minWidth: 0,
+          flexShrink: 1,
           flexDirection: "row",
           gap: 10,
           alignSelf: "flex-start",
-          backgroundColor: c.tertiary,
+          backgroundColor: url ? c.tertiary : c.muted,
         }}
       >
-        <FontAwesome name="whatsapp" size={23} color={c.tertiaryForeground} />
-        <Txt size={15} bold color={c.tertiaryForeground}>
+        <FontAwesome
+          name="whatsapp"
+          size={23}
+          color={url ? c.tertiaryForeground : c.mutedForeground}
+        />
+        <ButtonLabel color={url ? c.tertiaryForeground : c.mutedForeground}>
           WhatsApp support
-        </Txt>
+        </ButtonLabel>
       </Button>
       {!url && (
         <Txt size={13} color={c.mutedForeground}>

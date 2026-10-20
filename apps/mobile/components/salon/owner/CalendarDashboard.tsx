@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FlatList, View, useWindowDimensions } from "react-native";
-import { Appointment, dateLabel } from "@/lib/salon/types";
+import { Appointment } from "@/lib/salon/types";
+import { headerDate } from "@/lib/salon/ownerToday";
 import { addCalendarDays } from "@/lib/salon/calendarActivity";
 import { useBottomNavigationSpacing } from "../BottomNavigation";
 import { Card, ErrorBox } from "../ui";
@@ -73,7 +74,7 @@ export default function CalendarDashboard({
       }}
       contentContainerStyle={{
         padding: width >= 1100 ? 32 : 20,
-        paddingBottom: Math.max(50, spacing + 20),
+        paddingBottom: selected ? Math.max(32, spacing) : 16,
         maxWidth: 1200,
         width: "100%",
         alignSelf: "center",
@@ -97,7 +98,7 @@ export default function CalendarDashboard({
           {selected && (
             <View style={{ marginBottom: 20 }}>
               <OwnerText muted>
-                {dateLabel(from + "T12:00:00-04:00", { weekday: "long" })}
+                {headerDate(from + "T12:00:00-04:00")}
                 {view !== "Day" ? " and following activity" : ""}
               </OwnerText>
             </View>
@@ -110,7 +111,7 @@ export default function CalendarDashboard({
             <OwnerText>
               {live
                 ? "No appointments or blocked periods for this selection."
-                : "No demo activities for this selection."}
+                : "No activity for this selection."}
             </OwnerText>
           </Card>
         ) : null
@@ -121,7 +122,7 @@ export default function CalendarDashboard({
         ) : (
           <View>
             <OwnerText size={16} muted>
-              {dateLabel(item.starts_at)}
+              {headerDate(item.starts_at)}
             </OwnerText>
             <View style={{ height: 10 }} />
             {renderAppointment(item)}

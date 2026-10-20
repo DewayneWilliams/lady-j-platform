@@ -5,7 +5,7 @@ import { useSalon } from "@/lib/salon/SalonProvider";
 import { salonIdentity } from "@/lib/salon/identity";
 import SupportContact from "./SupportContact";
 import Shell, { useNav } from "./Shell";
-import { Txt, Action, Heading, Photo, Tag, Card, Empty, LinkText, useColors } from "./ui";
+import { Txt, Action, Heading, Photo, Tag, Card, LinkText, useColors } from "./ui";
 const policies = [
   [
     "Your appointment",
@@ -36,7 +36,7 @@ export default function InfoScreen({ page }: { page: string }) {
   if (page === "gallery")
     return (
       <Shell>
-        <Heading sub="A glimpse into the rituals, details and moments we love.">
+        <Heading sub="A glimpse into the care, details and moments we love.">
           The Lady J edit
         </Heading>
         <Tag>Inspiration imagery · Not actual salon portfolio</Tag>
@@ -122,14 +122,14 @@ export default function InfoScreen({ page }: { page: string }) {
             </Txt>
             <Txt color={c.mutedForeground}>
               Lady J Salon & Day Spa brings beauty and wellbeing together in one considered
-              experience. From a signature style to a quiet spa ritual, every appointment is time
-              set aside for you.
+              experience. From a signature style to a relaxing spa treatment, every appointment is
+              time set aside for you.
             </Txt>
             <Txt color={c.mutedForeground}>
               We believe exceptional care feels personal. Your preferences are heard, your privacy
               is respected, and your time matters.
             </Txt>
-            <Action label="Discover your ritual" onPress={() => go("services")} />
+            <Action label="Discover your treatment" onPress={() => go("services")} />
             <Txt size={11} color={c.mutedForeground}>
               Brand introduction and inspiration imagery for owner review.
             </Txt>
@@ -158,11 +158,11 @@ export default function InfoScreen({ page }: { page: string }) {
             ],
             [
               "Photos and sensitive information",
-              "Inspiration photos selected in the current booking simulation remain on your device. The owner should only store photos or relevant sensitivities with your permission.",
+              "Your selected inspiration photos remain on your device. The salon stores photos or health details only with your permission.",
             ],
             [
               "Free account and sign-in",
-              "A free account is required to view prices, open the appointment calendar and book. Email sign-in is available. Google, Facebook and Apple sign-in are available only after the salon configures those providers. The chosen provider shares account details such as your name and email; Lady J does not receive your provider password.",
+              "Catalog prices are available without an account. A free account is required to open private availability, book, shop or check out. Email sign-in is available. Google, Facebook and Apple sign-in are available only after the salon configures those providers. The chosen provider shares account details such as your name and email; Lady J does not receive your provider password.",
             ],
             [
               "Your choices",
@@ -176,7 +176,7 @@ export default function InfoScreen({ page }: { page: string }) {
         : [
             [
               "Booking and payment",
-              "All amounts are in TTD. Appointment deposits are 50%. Pending bank requests are not confirmed payments. Card checkout currently runs only as an explicitly labeled simulation. See the booking policy for cancellations.",
+              "All amounts are in TTD. Appointment deposits are 50%. Pending bank requests are not confirmed payments. Card payments are not connected. See the booking policy for cancellations.",
             ],
             [
               "Boutique purchases",
@@ -219,6 +219,21 @@ export default function InfoScreen({ page }: { page: string }) {
           </Card>
         ))}
       </View>
+      {(page === "privacy" || page === "terms") && (
+        <Card style={{ gap: 12, marginTop: 20 }}>
+          <Txt bold>Google Maps Reviews</Txt>
+          <Txt>
+            The Google reviews section uses Google Maps Platform. Google's terms apply to this
+            content, and Google's Privacy Policy explains how Google handles information.
+          </Txt>
+          <LinkText onPress={() => void Linking.openURL("https://policies.google.com/terms")}>
+            Google Terms of Service
+          </LinkText>
+          <LinkText onPress={() => void Linking.openURL("https://policies.google.com/privacy")}>
+            Google Privacy Policy
+          </LinkText>
+        </Card>
+      )}
     </Shell>
   );
 }

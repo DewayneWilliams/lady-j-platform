@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { View, Modal, ScrollView } from "react-native";
+import { View, Modal, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Appointment, Purchase, money } from "@/lib/salon/types";
-import { Field, Chip, ErrorBox, useColors } from "../ui";
+import { Field, ButtonLabel, ErrorBox, useColors } from "../ui";
 import { OwnerText, OwnerButton } from "./OwnerUI";
 
 export type DiscountTarget =
@@ -10,7 +10,6 @@ export type DiscountTarget =
   | { kind: "purchase"; record: Purchase };
 export default function OrderDiscountDialog({
   target,
-  demo,
   receivedAmount = 0,
   onClose,
   onSave,
@@ -23,14 +22,15 @@ export default function OrderDiscountDialog({
 }) {
   const c = useColors();
   const [percentage, setPercentage] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pct = Number(percentage);
   const valid =
-    /^\d{1,2}(?:\.\d{1,2})?$/.test(percentage.trim()) &&
+    /^\d{1,3}(?:\.\d{1,2})?$/.test(percentage.trim()) &&
     Number.isFinite(pct) &&
     pct >= 0 &&
-    pct < 100;
+    pct <= 100;
   const items =
     target.kind === "appointment"
       ? target.record.services.map((v) => ({ ...v, quantity: 1 }))
@@ -72,7 +72,10 @@ export default function OrderDiscountDialog({
       visible
       animationType="fade"
       onRequestClose={() => {
-        if (!busy) onClose();
+        if (!busy) {
+          if (confirming) setConfirming(false);
+          else onClose();
+        }
       }}
     >
       <View
@@ -94,26 +97,52 @@ export default function OrderDiscountDialog({
             borderRadius: 20,
           }}
         >
-          <ScrollView contentContainerStyle={{ padding: 26, gap: 18 }}>
+          <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }}>
             <OwnerText size={27} bold>
               {target.kind === "appointment"
-                ? "Custom appointment discount"
-                : "Apply discount to total"}
+                ? "Custom Appointment Discount"
+                : "Apply Discount to Total"}
             </OwnerText>
-            {demo && <OwnerText muted>Demo only · No customer prices change</OwnerText>}
+
             <OwnerText>{items.map((v) => v.name).join(", ")}</OwnerText>
             <OwnerText>
               Choose your percentage for the combined service, product or workshop subtotal.
               Delivery is excluded. Recorded receipts stay unchanged.
             </OwnerText>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {[5, 10, 15, 20, 25, 50].map((value) => (
-                <Chip
+            <View
+              testID="discount-presets"
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "stretch",
+                gap: 4,
+                width: "100%",
+              }}
+            >
+              {[5, 10, 15, 20, 25].map((value) => (
+                <Pressable
                   key={value}
-                  label={value + "%"}
-                  selected={pct === value}
+                  accessibilityRole="button"
+                  accessibilityLabel={value + "%"}
+                  accessibilityState={{ selected: percentage !== "" && pct === value }}
+                  disabled={busy || confirming}
                   onPress={() => setPercentage(String(value))}
-                />
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    minHeight: 48,
+                    paddingVertical: 12,
+                    paddingHorizontal: 2,
+                    borderWidth: 1,
+                    borderColor: pct === value ? c.brandAccent : c.border,
+                    backgroundColor: pct === value ? c.brandAccentSurface : c.card,
+                    borderRadius: 12,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <ButtonLabel size={14}>{value}%</ButtonLabel>
+                </Pressable>
               ))}
             </View>
             <OwnerText muted>
@@ -126,8 +155,11 @@ export default function OrderDiscountDialog({
               value={percentage}
               onChangeText={setPercentage}
               keyboardType="decimal-pad"
-              placeholder="10"
+              placeholder="0–100"
             />
+            {!!percentage.trim() && !valid && (
+              <ErrorBox message="Enter a percentage from 0 to 100, with up to two decimal places." />
+            )}
             {!!error && <ErrorBox message={error} />}
             <OwnerText>Current total: {money(target.record.total)}</OwnerText>
             {valid && <OwnerText bold>New total: {money(nextTotal)}</OwnerText>}
@@ -146,14 +178,50 @@ export default function OrderDiscountDialog({
             {valid && target.kind === "appointment" && receivedAmount === 0 && (
               <OwnerText>50% deposit: {money(Math.round(nextTotal * 50) / 100)}</OwnerText>
             )}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-              <OwnerButton
-                label={busy ? "Applying…" : "Apply discount"}
-                disabled={!valid || nextTotal < receivedAmount || busy}
-                onPress={() => void save()}
-              />
-              <OwnerButton label="Cancel" secondary disabled={busy} onPress={onClose} />
-            </View>
+            {confirming ? (
+              <View
+                accessibilityRole="alert"
+                style={{
+                  gap: 16,
+                  borderWidth: 1,
+                  borderColor: c.goldBorder,
+                  backgroundColor: c.goldSurface,
+                  borderRadius: 16,
+                  padding: 16,
+                }}
+              >
+                <OwnerText bold>Are you sure you want to apply this discount?</OwnerText>
+                <OwnerText>
+                  {pct}% off · New total: {money(nextTotal)}
+                </OwnerText>
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <OwnerButton
+                      fill
+                      label="Cancel"
+                      secondary
+                      disabled={busy}
+                      onPress={() => setConfirming(false)}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <OwnerButton fill label="Confirm" busy={busy} onPress={() => void save()} />
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                <OwnerButton
+                  label={busy ? "Applying" : "Apply Discount"}
+                  disabled={!valid || nextTotal < receivedAmount || busy}
+                  onPress={() => {
+                    if (pct > 25) setConfirming(true);
+                    else void save();
+                  }}
+                />
+                <OwnerButton label="Cancel" secondary disabled={busy} onPress={onClose} />
+              </View>
+            )}
           </ScrollView>
         </SafeAreaView>
       </View>

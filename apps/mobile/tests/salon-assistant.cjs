@@ -25,7 +25,7 @@ const appointment = {
 test("completed balances use verified receipts rather than the deposit flag or unpaid requests", () => {
   const pending = { id: "t", appointment_id: "a", amount: 100, status: "pending" };
   let tasks = ownerAttention([appointment], [pending], [], [], []);
-  assert.equal(tasks.find((v) => v.key === "balances").detail, "TT$100 remains to be recorded.");
+  assert.equal(tasks.find((v) => v.key === "balances").detail, "$100 remains to be recorded.");
   tasks = ownerAttention([appointment], [{ ...pending, status: "verified" }], [], [], []);
   assert.equal(
     tasks.some((v) => v.key === "balances"),
@@ -212,7 +212,7 @@ test("duration wording stays consistent for quarter hours, full hours and mixed 
 });
 
 const { activityColor, dotsOnDate, activitiesOnDate } = require("../lib/salon/calendarActivity.ts");
-test("calendar dots use exact activity categories and combine types without duplicating dots", () => {
+test("calendar dots show only booked client visits and deduplicate applicable colors", () => {
   const row = {
     ...appointment,
     starts_at: "2026-10-20T14:00:00Z",
@@ -222,6 +222,7 @@ test("calendar dots use exact activity categories and combine types without dupl
   const rows = [
     row,
     { ...row, id: "duplicate-type" },
+    { ...row, id: "consult-visit", services: [{ name: "Consult", price: 0 }] },
     ...[
       ["personal", "blocked"],
       ["vip", "vip"],
@@ -234,18 +235,12 @@ test("calendar dots use exact activity categories and combine types without dupl
       return block;
     }),
   ];
-  assert.deepEqual(dotsOnDate(rows, "2026-10-20"), [
-    "confirmed",
-    "blocked",
-    "vip",
-    "consultation",
-    "event",
-  ]);
-  assert.equal(activitiesOnDate(rows, "2026-10-20").length, 7);
+  assert.deepEqual(dotsOnDate(rows, "2026-10-20"), ["confirmed", "consultation"]);
+  assert.equal(activitiesOnDate(rows, "2026-10-20").length, 8);
   assert.deepEqual(dotsOnDate([{ ...row, status: "cancelled" }], "2026-10-20"), []);
   assert.deepEqual(dotsOnDate([{ ...row, status: "pending" }], "2026-10-20"), []);
 });
-test("multi-day blocks mark every intersecting date, with exclusive midnight end and local timezone", () => {
+test("multi-day blocks remain in the agenda without creating appointment dots", () => {
   const block = {
     ...appointment,
     id: "multi",
@@ -256,15 +251,15 @@ test("multi-day blocks mark every intersecting date, with exclusive midnight end
     ends_at: "2026-10-22T04:00:00Z",
   };
   assert.deepEqual(dotsOnDate([block], "2026-10-19"), []);
-  assert.deepEqual(dotsOnDate([block], "2026-10-20"), ["blocked"]);
-  assert.deepEqual(dotsOnDate([block], "2026-10-21"), ["blocked"]);
+  assert.deepEqual(dotsOnDate([block], "2026-10-20"), []);
+  assert.deepEqual(dotsOnDate([block], "2026-10-21"), []);
   assert.deepEqual(dotsOnDate([block], "2026-10-22"), []);
   assert.equal(activitiesOnDate([block], "2026-10-21").length, 1);
 });
 
 const { createOwnerCalendarDemo } = require("../lib/salon/ownerCalendarDemo.ts");
 const { appointmentsForToday } = require("../lib/salon/ownerToday.ts");
-test("Bible-inspired demo blocks cover all activity colors without changing visit totals", () => {
+test("fictional demo blocks preserve agenda entries and never change visit totals", () => {
   const day = "2026-10-20",
     blocks = createOwnerCalendarDemo(day);
   const visit = {
@@ -280,16 +275,10 @@ test("Bible-inspired demo blocks cover all activity colors without changing visi
         row.id.startsWith("demo-") &&
         row.kind === "block" &&
         row.total === 0 &&
-        row.block_description.includes("Fictional example"),
+        Boolean(row.block_description),
     ),
   );
-  assert.deepEqual(dotsOnDate([visit, ...blocks], day), [
-    "confirmed",
-    "blocked",
-    "vip",
-    "consultation",
-    "event",
-  ]);
-  assert.equal(activitiesOnDate([visit, ...blocks], day).length, 5);
+  assert.deepEqual(dotsOnDate([visit, ...blocks], day), ["confirmed"]);
+  assert.equal(activitiesOnDate([visit, ...blocks], day).length, 2);
   assert.deepEqual(appointmentsForToday([visit, ...blocks], day), [visit]);
 });

@@ -1,17 +1,33 @@
+import { useLocalSearchParams } from "expo-router";
+import OwnerFeedback, {
+  appreciationMessages,
+  type OwnerFeedbackValue,
+} from "./owner/OwnerFeedback";
+import MessageClientMenu from "./owner/MessageClientMenu";
+import ClientMediaGallery from "./media/ClientMediaGallery";
+import MediaUpload from "./media/MediaUpload";
+import { useCelebrationSounds } from "@/lib/salon/useCelebrationSounds";
+import StatusNotice from "./StatusNotice";
+import ContactRemovalConfirmation from "./owner/ContactRemovalConfirmation";
+import ClientPurchaseHistory from "./owner/ClientPurchaseHistory";
+import MoneyCelebration from "./owner/MoneyCelebration";
+import DownloadReports from "./owner/DownloadReports";
+import BusinessSettings from "./owner/BusinessSettings";
+import CompletionCelebration from "./owner/CompletionCelebration";
 import { createOwnerCalendarDemo } from "@/lib/salon/ownerCalendarDemo";
 import { activitiesOnDate } from "@/lib/salon/calendarActivity";
 import BlockActivityCard from "./owner/BlockActivityCard";
 import { useCalendarRealtime } from "@/lib/salon/useCalendarRealtime";
-import { localCalendarTime } from "@/lib/salon/calendarActivity";
 import CalendarDashboard from "./owner/CalendarDashboard";
 import BlockTimeEditor from "./owner/BlockTimeEditor";
-import { formatDuration } from "@/lib/salon/duration";
+import { formatDuration, serviceDurationLabel } from "@/lib/salon/duration";
 import ServiceCategoryField from "./owner/ServiceCategoryField";
 import OwnerEditorPortal from "./owner/OwnerEditorPortal";
 import { useBottomNavigationSpacing } from "./BottomNavigation";
 import { AgreementList } from "./ServiceAgreement";
 import { DateField, DateTimeField, DurationField } from "./DateFields";
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { orderServicesByCategory } from "@/lib/salon/categories";
 import {
   View,
   ScrollView,
@@ -21,7 +37,6 @@ import {
   TextInput,
   useWindowDimensions,
   ActivityIndicator,
-  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "@/lib/icons/LucideIcon";
@@ -36,14 +51,15 @@ import {
   Product,
   Workshop,
   money,
+  servicePriceLabel,
   dateLabel,
 } from "@/lib/salon/types";
 import { demoClients, demoAppointments, demoTransactions } from "@/lib/salon/demo";
 import { createOwnerDemoCommerce } from "@/lib/salon/ownerDemo";
-import { fonts } from "@/lib/salon/design";
+import { fonts, fieldLabel } from "@/lib/salon/design";
 import { useNav } from "./Shell";
-import { Txt, Card, Chip, useColors, shared, ErrorBox, Photo } from "./ui";
-import { whatsappSupportUrl, whatsappContactUrl } from "@/lib/salon/whatsapp";
+import { Card, ButtonLabel, useColors, shared, ErrorBox, Photo } from "./ui";
+import { whatsappSupportUrl } from "@/lib/salon/whatsapp";
 import CatalogPhotoEditor from "./owner/CatalogPhotoEditor";
 import SpecialsPanel from "./owner/SpecialsPanel";
 import { todayKey } from "./BookingScreen";
@@ -83,43 +99,92 @@ function OF({
   value,
   onChange,
   multiline = false,
+  keyboardType = "default",
+  readOnly = false,
+  wrap = false,
 }: {
   label: string;
   value: string;
   onChange: (s: string) => void;
   multiline?: boolean;
+  readOnly?: boolean;
+  wrap?: boolean;
+  keyboardType?: "default" | "email-address" | "phone-pad";
 }) {
   const c = useColors();
+  const [inputHeight, setInputHeight] = useState(0);
   return (
     <View style={{ gap: 9, marginBottom: 18 }}>
-      <OT>{label}</OT>
-      <TextInput
-        accessibilityLabel={label}
-        value={value}
-        onChangeText={onChange}
-        multiline={multiline}
-        style={{
-          backgroundColor: c.background,
-          borderWidth: 1,
-          borderColor: c.border,
-          color: c.foreground,
-          padding: 15,
-          borderRadius: 10,
-          fontFamily: fonts.body,
-          fontSize: 20,
-          minHeight: multiline ? 130 : 58,
-          textAlignVertical: multiline ? "top" : "center",
-        }}
-      />
+      {readOnly ? (
+        <>
+          <OT>{fieldLabel(label)}</OT>
+          <View
+            style={{
+              backgroundColor: c.background,
+              borderWidth: 1,
+              borderColor: c.border,
+              padding: 15,
+              borderRadius: 10,
+              minHeight: 58,
+              justifyContent: "center",
+            }}
+          >
+            <OT>{value || "Not recorded"}</OT>
+          </View>
+        </>
+      ) : (
+        <>
+          <OT>{fieldLabel(label)}</OT>
+          <TextInput
+            accessibilityLabel={fieldLabel(label)}
+            value={value}
+            onChangeText={wrap ? (text) => onChange(text.replace(/\r?\n/g, "")) : onChange}
+            multiline={multiline || wrap}
+            scrollEnabled={!(multiline || wrap)}
+            onContentSizeChange={
+              multiline || wrap
+                ? (event) => setInputHeight(event.nativeEvent.contentSize.height)
+                : undefined
+            }
+            keyboardType={keyboardType}
+            autoCapitalize={keyboardType === "email-address" ? "none" : "sentences"}
+            style={{
+              backgroundColor: c.background,
+              borderWidth: 1,
+              borderColor: c.border,
+              color: c.foreground,
+              padding: 15,
+              borderRadius: 10,
+              fontFamily: fonts.body,
+              fontSize: 20,
+              minHeight: multiline
+                ? Math.max(130, inputHeight)
+                : wrap
+                  ? Math.max(58, inputHeight)
+                  : 58,
+              textAlignVertical: multiline || wrap ? "top" : "center",
+            }}
+          />
+        </>
+      )}
     </View>
   );
 }
 export default function OwnerScreen() {
+  const routeParams = useLocalSearchParams<{ tab?: string }>();
+  const routeTab = ["Today", "Calendar", "Clients", "Business", "Maria"].includes(
+    String(routeParams.tab),
+  )
+    ? String(routeParams.tab)
+    : undefined;
+
   const s = useSalon(),
     c = useColors(),
     go = useNav(),
     { width } = useWindowDimensions();
+  const sounds = useCelebrationSounds();
   const navigationSpacing = useBottomNavigationSpacing(true);
+  const catalogScroll = useRef<ScrollView>(null);
   const [todayDate, setTodayDate] = useState(() => salonDayKey());
   useEffect(() => {
     const timer = setInterval(() => setTodayDate(salonDayKey()), 60000);
@@ -128,18 +193,35 @@ export default function OwnerScreen() {
   const loadGeneration = useRef(0);
   const demoLoaded = useRef(false);
   const hasLoaded = useRef(false);
+  const [feedback, setFeedback] = useState<OwnerFeedbackValue | null>(null);
+  const previousAppreciation = useRef<string>("");
+  const [contactActions, setContactActions] = useState<{
+    name: string;
+    whatsapp?: string;
+    phone?: string;
+    message?: string;
+  } | null>(null);
+  const [mediaContext, setMediaContext] = useState<{
+    mode: "upload" | "gallery";
+    clientId?: string;
+    appointmentId?: string;
+  } | null>(null);
   const [waiting, setWaiting] = useState<WaitlistEntry[]>([]);
   const [failedMessages, setFailedMessages] = useState(0);
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [catalogPage, setCatalogPage] = useState(0);
+  const [demoNotifications, setDemoNotifications] = useState(false);
+  const [paymentCelebration, setPaymentCelebration] = useState(0);
+  const [celebration, setCelebration] = useState<Appointment | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
-  const [tab, setTab] = useState("Today"),
+  const [tab, setTab] = useState(routeTab || "Today"),
     [section, setSection] = useState("Overview"),
     [appointments, setAppointments] = useState<Appointment[]>([]),
     [clients, setClients] = useState<Client[]>([]),
     [transactions, setTransactions] = useState<Transaction[]>([]),
     [purchases, setPurchases] = useState<Purchase[]>([]),
-    [services, setServices] = useState<Service[]>([]),
+    [serviceRecords, setServices] = useState<Service[]>([]),
     [products, setProducts] = useState<Product[]>([]),
     [workshops, setWorkshops] = useState<Workshop[]>([]),
     [profiles, setProfiles] = useState<Row[]>([]),
@@ -162,6 +244,7 @@ export default function OwnerScreen() {
     [discountTarget, setDiscountTarget] = useState<DiscountTarget | null>(null),
     [paymentAppointment, setPaymentAppointment] = useState<Appointment | null>(null),
     [selectedClient, setSelectedClient] = useState<Client | null>(null),
+    [editingContact, setEditingContact] = useState(false),
     [expandedAppointment, setExpandedAppointment] = useState(""),
     [enrollmentWorkshopId, setEnrollmentWorkshopId] = useState(""),
     [calendarDate, setCalendarDate] = useState(todayKey()),
@@ -173,9 +256,20 @@ export default function OwnerScreen() {
     [start, setStart] = useState(`${todayKey()}T10:00`),
     [note, setNote] = useState(""),
     [serviceId, setServiceId] = useState(""),
-    [customerId, setCustomerId] = useState("");
+    [customerId, setCustomerId] = useState(""),
+    [newClientName, setNewClientName] = useState(""),
+    [newClientEmail, setNewClientEmail] = useState(""),
+    [newClientPhone, setNewClientPhone] = useState("");
+  const services = useMemo(() => orderServicesByCategory(serviceRecords), [serviceRecords]);
+  useEffect(() => {
+    if (routeTab) setTab(routeTab);
+  }, [routeTab]);
   const demo = s.demoOwner && !s.owner,
     allowed = s.owner || demo;
+  useEffect(() => {
+    setEditingContact(false);
+    setError("");
+  }, [selectedClient?.id]);
   const load = useCallback(
     async (quiet = false) => {
       const generation = ++loadGeneration.current;
@@ -198,7 +292,29 @@ export default function OwnerScreen() {
         setTransactions([...demoTransactions, ...commerce.transactions]);
         setPurchases(commerce.purchases);
         setServices(s.session ? s.services : s.services.map((v) => ({ ...v, price: 350 })));
-        setProducts(demoProducts.map((v, i) => (i === 0 ? { ...v, stock: 2 } : v)));
+        const cream = demoProducts.find((product) => /anti.?ag(?:e|ing)/i.test(product.name));
+        setProducts(
+          cream
+            ? demoProducts.map((product) =>
+                product.id === cream.id ? { ...product, stock: 2, reorder_level: 3 } : product,
+              )
+            : [
+                ...demoProducts,
+                {
+                  id: "demo-anti-aging-cream",
+                  name: "Anti-aging cream",
+                  description: "Daily skincare cream.",
+                  brand: "Lady J",
+                  category: "Skincare",
+                  price: 240,
+                  stock: 2,
+                  reorder_level: 3,
+                  image: "body",
+                  active: true,
+                  is_demo: true,
+                },
+              ],
+        );
         setWorkshops(demoWorkshops);
         hasLoaded.current = true;
         setLoading(false);
@@ -291,6 +407,20 @@ export default function OwnerScreen() {
       setRefreshing(false);
     }
   };
+  useEffect(() => {
+    setCatalogPage(0);
+  }, [section, lowStockOnly]);
+  const catalogItems =
+    section === "Services"
+      ? services.filter((v) => !v.is_special)
+      : section === "Products"
+        ? products.filter((v) => !lowStockOnly || isLowStock(v))
+        : workshops;
+  const catalogPages = Math.max(1, Math.ceil(catalogItems.length / 12));
+  const currentCatalogPage = Math.min(catalogPage, catalogPages - 1);
+  useEffect(() => {
+    catalogScroll.current?.scrollTo({ y: 0, animated: false });
+  }, [currentCatalogPage]);
   const attention = ownerAttention(
     appointments,
     transactions,
@@ -299,8 +429,8 @@ export default function OwnerScreen() {
     waiting,
     failedMessages,
   );
-  const nameFor = (id: string | null) =>
-    clients.find((v) => v.id === id || v.customer_id === id)?.full_name ||
+  const nameFor = (id: string | null, clientId?: string | null) =>
+    clients.find((v) => v.id === clientId || v.id === id || v.customer_id === id)?.full_name ||
     String(profiles.find((v) => v.id === id)?.full_name || "Client");
   const pending = transactions.filter((v) => v.status === "pending");
   const today = appointmentsForToday(appointments, todayDate);
@@ -313,7 +443,7 @@ export default function OwnerScreen() {
           { key: "category", label: "Category" },
           { key: "description", label: "Description", type: "multiline" },
           { key: "duration", label: "Duration", type: "number" },
-          { key: "price", label: "Price in TTD", type: "number" },
+          { key: "price", label: "Price", type: "number" },
           { key: "active", label: "Available for booking", type: "boolean" },
         ],
         defaults: {
@@ -334,7 +464,7 @@ export default function OwnerScreen() {
           { key: "brand", label: "Brand" },
           { key: "category", label: "Category" },
           { key: "description", label: "Description & ingredients", type: "multiline" },
-          { key: "price", label: "Price in TTD", type: "number" },
+          { key: "price", label: "Price", type: "number" },
           { key: "stock", label: "Stock quantity", type: "number" },
           { key: "reorder_level", label: "Low-stock alert level (0 = off)", type: "number" },
           { key: "active", label: "Available in boutique", type: "boolean" },
@@ -360,7 +490,7 @@ export default function OwnerScreen() {
           { key: "starts_at", label: "Workshop start" },
           { key: "duration", label: "Duration", type: "number" },
           { key: "format", label: "Workshop format" },
-          { key: "price", label: "Price in TTD", type: "number" },
+          { key: "price", label: "Price", type: "number" },
           { key: "capacity", label: "Capacity", type: "number" },
           { key: "active", label: "Accepting registrations", type: "boolean" },
         ],
@@ -379,18 +509,14 @@ export default function OwnerScreen() {
         },
       },
       lj_client_records: {
-        title: row ? "Client details" : "Add client",
+        title: row ? "Client Details" : "Add Client",
         fields: [
-          { key: "first_name", label: "First name" },
-          { key: "last_name", label: "Last name" },
+          { key: "first_name", label: "First Name" },
+          { key: "last_name", label: "Last Name" },
+          { key: "birthday", label: "DOB" },
           { key: "email", label: "Email" },
-          { key: "phone", label: "Phone" },
-          { key: "whatsapp_phone", label: "WhatsApp number (include country code, optional)" },
-          { key: "birthday", label: "Date of birth (optional)" },
-          { key: "preferences", label: "Preferences", type: "multiline" },
-          { key: "sensitivities", label: "Relevant sensitivities", type: "multiline" },
+          { key: "whatsapp_phone", label: "WhatsApp Number" },
           { key: "private_notes", label: "Notes", type: "multiline" },
-          { key: "photo_consent", label: "Photo consent received", type: "boolean" },
         ],
         defaults: {
           first_name: "",
@@ -419,7 +545,7 @@ export default function OwnerScreen() {
           { key: "whatsapp_phone", label: "WhatsApp support number (include country code)" },
           { key: "contact_email", label: "Contact email" },
           { key: "bank_instructions", label: "Bank transfer instructions", type: "multiline" },
-          { key: "delivery_fee", label: "Delivery fee in TTD", type: "number" },
+          { key: "delivery_fee", label: "Delivery Fee", type: "number" },
           {
             key: "max_daily_bookings_per_client",
             label: "Appointments per client per day (0 = unlimited)",
@@ -491,7 +617,7 @@ export default function OwnerScreen() {
           if (kind === "service") setServices((old) => old.filter((value) => value.id !== id));
           if (kind === "product") setProducts((old) => old.filter((value) => value.id !== id));
           if (kind === "workshop") setWorkshops((old) => old.filter((value) => value.id !== id));
-          s.notify("Demo " + kind + " deleted. No real records were changed.");
+          s.notify(kind.charAt(0).toUpperCase() + kind.slice(1) + " deleted.");
         } else {
           check(await db().rpc("lj_delete_catalog_item", { p_kind: kind, p_id: id }));
           await load();
@@ -517,7 +643,7 @@ export default function OwnerScreen() {
         if (f.type === "number") {
           const n = Number(values[f.key]);
           if (!Number.isFinite(n) || n < 0)
-            throw new Error(`${f.label} must be a valid positive number.`);
+            throw new Error(`${fieldLabel(f.label)} must be a valid positive number.`);
           values[f.key] = n;
         }
         if (
@@ -564,15 +690,8 @@ export default function OwnerScreen() {
           values.birthday ? String(values.birthday) : null,
           Boolean(values.is_minor),
         );
-        if (
-          values.is_minor &&
-          (!String(values.guardian_name || "").trim() ||
-            !String(values.guardian_relationship || "").trim() ||
-            !/^[0-9]{7,15}$/.test(String(values.guardian_phone || "").replace(/[^0-9]/g, "")))
-        )
-          throw new Error(
-            "Enter the parent or guardian name, relationship and phone for this minor.",
-          );
+        if (values.is_minor && !String(values.guardian_name || "").trim())
+          throw new Error("Enter a parent or guardian name.");
         if (
           values.guardian_email &&
           !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(values.guardian_email))
@@ -602,8 +721,9 @@ export default function OwnerScreen() {
             ...old.filter((v) => v.purchase_id !== values.purchase_id),
             values,
           ]);
-        s.notify("Demo change saved for this visit. No real records were changed.");
+        s.notify("Changes saved.");
       } else {
+        if (editor.table === "lj_client_records") delete values.medical_conditions;
         check(await db().from(editor.table).upsert(values));
         await load();
         await s.refresh();
@@ -629,13 +749,24 @@ export default function OwnerScreen() {
       if (Number.isNaN(date.valueOf()) || !mins || mins < 1 || mins > 480)
         throw new Error("Choose a valid date, time and a duration of up to 8 hours.");
       if (calendarForm === "appointment" && !service) throw new Error("Choose a service.");
+      if (
+        calendarForm === "appointment" &&
+        !customerId &&
+        (!newClientName.trim() || !newClientEmail.trim() || !newClientPhone.trim())
+      )
+        throw new Error("Select a saved client or enter the new client’s name, email and phone.");
+      const demoClientId = customerId || `demo-client-${Date.now()}`;
       const row = {
         starts_at: date.toISOString(),
         ends_at: new Date(date.valueOf() + mins * 60000).toISOString(),
         kind: calendarForm || "appointment",
         deposit_paid: false,
         status: "pending",
-        customer_id: calendarForm === "appointment" ? customerId || null : null,
+        customer_id:
+          calendarForm === "appointment"
+            ? clients.find((client) => client.id === customerId)?.customer_id || null
+            : null,
+        client_id: calendarForm === "appointment" ? demoClientId : null,
         note,
         services: service
           ? [
@@ -658,18 +789,39 @@ export default function OwnerScreen() {
             new Date(a.ends_at) > date,
         );
         if (overlap) throw new Error("This time overlaps another appointment or block.");
+        if (calendarForm === "appointment" && !customerId) {
+          const names = newClientName.trim().split(/\s+/);
+          setClients((old) => [
+            ...old,
+            {
+              id: demoClientId,
+              full_name: newClientName.trim(),
+              first_name: names[0] || "",
+              last_name: names.slice(1).join(" "),
+              email: newClientEmail.trim(),
+              phone: newClientPhone.trim(),
+              preferences: "",
+              sensitivities: "",
+              private_notes: "",
+              photo_consent: false,
+            },
+          ]);
+        }
         setAppointments((old) => [
           ...old,
           { ...row, id: `demo-${Date.now()}` } as unknown as Appointment,
         ]);
-        s.notify("Demo calendar updated. No real time was reserved.");
+        s.notify("Appointment saved.");
       } else {
         if (calendarForm === "appointment")
           check(
-            await db().rpc("lj_manual_book", {
+            await db().rpc("lj_owner_book_client", {
               p_service: serviceId,
               p_start: row.starts_at,
-              p_customer: customerId || null,
+              p_client: customerId || null,
+              p_name: newClientName.trim(),
+              p_email: newClientEmail.trim(),
+              p_phone: newClientPhone.trim(),
               p_note: note,
             }),
           );
@@ -678,6 +830,11 @@ export default function OwnerScreen() {
         s.notify("Manual appointment saved as pending payment.");
       }
       setCalendarForm(null);
+      setCustomerId("");
+      setNewClientName("");
+      setNewClientEmail("");
+      setNewClientPhone("");
+      setNote("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save this time.");
     } finally {
@@ -685,6 +842,7 @@ export default function OwnerScreen() {
     }
   }
   async function verify(t: Transaction) {
+    sounds.prepare("payment");
     if (demo) {
       setTransactions((old) =>
         old.map((v) =>
@@ -698,12 +856,13 @@ export default function OwnerScreen() {
             : v,
         ),
       );
-      s.notify("Demo payment verified. No real funds were processed.");
+      s.notify("Payment verified.");
     } else {
       check(await db().rpc("lj_verify_payment", { p_id: t.id }));
       await load();
       s.notify("Bank payment verified. The linked booking or purchase is now confirmed.");
     }
+    sounds.play("payment", t.id);
   }
   async function recordPayment(
     a: Appointment,
@@ -711,10 +870,11 @@ export default function OwnerScreen() {
     reference: string,
     amount: number,
   ) {
+    sounds.prepare("payment");
     if (demo) {
       const current = appointments.find((v) => v.id === a.id);
-      if (!current || current.status !== "completed")
-        throw new Error("Mark the service complete first.");
+      if (!current || !["pending", "confirmed", "completed"].includes(current.status))
+        throw new Error("This appointment cannot receive payment.");
       if (appointmentPayment(current, transactions).remaining !== amount)
         throw new Error("The balance changed. Reopen this appointment.");
       const timestamp = new Date().toISOString();
@@ -735,9 +895,15 @@ export default function OwnerScreen() {
           received_at: timestamp,
         },
       ]);
-      setAppointments((old) => old.map((v) => (v.id === a.id ? { ...v, deposit_paid: true } : v)));
+      setAppointments((old) =>
+        old.map((v) =>
+          v.id === a.id
+            ? { ...v, deposit_paid: true, status: v.status === "pending" ? "confirmed" : v.status }
+            : v,
+        ),
+      );
     } else {
-      check(
+      const receipt = check(
         await db().rpc("lj_complete_appointment_payment", {
           p_id: a.id,
           p_method: method,
@@ -745,14 +911,18 @@ export default function OwnerScreen() {
           p_expected_balance: amount,
         }),
       );
+      if (receipt?.already_paid) {
+        setPaymentAppointment(null);
+        s.notify("Payment is already recorded.");
+        await load();
+        return;
+      }
       await load();
     }
     setPaymentAppointment(null);
-    s.notify(
-      demo
-        ? "Demo payment complete. Revenue report updated; no real funds processed."
-        : "Payment complete. The confirmed receipt is recorded in Revenue.",
-    );
+    sounds.play("payment", a.id);
+    setPaymentCelebration(Date.now());
+    setFeedback({ id: Date.now(), message: "Payment Received", duration: 7000 });
   }
   async function complete(a: Appointment, status: string) {
     if (demo) setAppointments((old) => old.map((v) => (v.id === a.id ? { ...v, status } : v)));
@@ -760,28 +930,37 @@ export default function OwnerScreen() {
       check(await db().from("lj_calendar").update({ status }).eq("id", a.id).select("id").single());
       await load();
     }
-    s.notify(
-      status === "completed"
-        ? `${demo ? "Demo service" : "Service"} complete. Payment status is unchanged.`
-        : `${demo ? "Demo appointment" : "Appointment"} marked ${status.replace("_", " ")}.`,
-    );
+    if (status === "completed") {
+      sounds.play("service", a.id);
+      const choices = appreciationMessages.filter(
+        (message) => message !== previousAppreciation.current,
+      );
+      const message = choices[Math.floor(Math.random() * choices.length)];
+      previousAppreciation.current = message;
+      setFeedback({ id: Date.now(), message, duration: 10000 });
+    } else s.notify("Appointment marked " + status.replace("_", " ") + ".");
   }
+
   if (!s.authReady && !demo)
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: c.background, justifyContent: "center" }}>
-        <ActivityIndicator color={c.primary} />
+      <SafeAreaView
+        edges={{ top: "additive", bottom: "additive", left: "additive", right: "additive" }}
+        style={{ flex: 1, backgroundColor: c.background, justifyContent: "center" }}
+      >
+        <ActivityIndicator color={c.brandAccent} />
       </SafeAreaView>
     );
   if (!allowed)
     return (
       <SafeAreaView
+        edges={{ top: "additive", bottom: "additive", left: "additive", right: "additive" }}
         style={{ flex: 1, backgroundColor: c.background, padding: 30, justifyContent: "center" }}
       >
         <Card style={{ gap: 22, maxWidth: 550, alignSelf: "center" }}>
           <OT size={30}>Private owner workspace</OT>
           <OT>Only the verified salon owner can open the administrative workspace.</OT>
-          <OA label="Owner sign-in" onPress={() => go("owner-login")} />
-          <OA label="Return to salon" secondary onPress={() => go("home")} />
+          <OA label="Owner Sign-In" onPress={() => go("owner-login")} />
+          <OA label="Return to Salon" secondary onPress={() => go("home")} />
         </Card>
       </SafeAreaView>
     );
@@ -898,7 +1077,7 @@ export default function OwnerScreen() {
     }
     s.notify(
       demo
-        ? "Demo discount applied to this fictional record."
+        ? "Discount applied."
         : "Discount applied. Recorded receipts are unchanged and the balance is updated.",
     );
   }
@@ -907,65 +1086,83 @@ export default function OwnerScreen() {
       key={a.id}
       appointment={a}
       transactions={transactions}
-      name={a.note || nameFor(a.customer_id)}
+      name={nameFor(a.customer_id, a.client_id)}
       expanded={expandedAppointment === a.id}
       onToggle={() => setExpandedAppointment(expandedAppointment === a.id ? "" : a.id)}
     >
-      {a.kind === "appointment" &&
-        (() => {
-          const contact = clients.find(
-            (v) => v.customer_id === a.customer_id || v.id === a.customer_id,
-          );
-          const url = whatsappContactUrl(
-            contact?.whatsapp_phone || contact?.phone,
-            "Hello " +
-              (contact?.first_name || contact?.full_name || "") +
-              ", about your Lady J appointment on " +
-              dateLabel(a.starts_at) +
-              ": ",
-          );
-          return (
-            <OA
-              label="Message client"
-              icon="MessageCircle"
-              secondary
-              disabled={demo || !url}
-              onPress={() => {
-                if (url)
-                  void Linking.openURL(url).catch(() => s.notify("Unable to open WhatsApp."));
-              }}
-            />
-          );
-        })()}
+      {a.kind === "appointment" && (
+        <OA
+          fill
+          label="Message Client"
+          icon="MessageCircle"
+          secondary
+          onPress={() => {
+            const contact = clients.find(
+              (v) => v.id === a.client_id || (!!a.customer_id && v.customer_id === a.customer_id),
+            );
+            setContactActions({
+              name: contact?.full_name || nameFor(a.customer_id, a.client_id),
+              whatsapp: contact?.whatsapp_phone,
+              phone: contact?.phone,
+              message:
+                "Hello " +
+                (contact?.first_name || contact?.full_name || "") +
+                ", about your Lady J appointment on " +
+                dateLabel(a.starts_at) +
+                ": ",
+            });
+          }}
+        />
+      )}
+      {a.kind === "appointment" && (
+        <OA
+          fill
+          label="Add Photo or Video"
+          icon="Images"
+          secondary
+          onPress={() => {
+            const contact = clients.find(
+              (v) => v.id === a.client_id || (!!a.customer_id && v.customer_id === a.customer_id),
+            );
+            if (!contact) {
+              s.notify("Link this appointment to a saved client before adding photos or videos.");
+              return;
+            }
+            setMediaContext({ mode: "upload", clientId: contact.id, appointmentId: a.id });
+          }}
+        />
+      )}
       {a.kind === "appointment" && ["pending", "confirmed", "completed"].includes(a.status) && (
         <OA
-          label="Custom discount"
+          fill
+          label="Custom Discount"
           secondary
           disabled={!canDiscount("appointment", a.id, a.status)}
           icon="Gift"
           onPress={() => setDiscountTarget({ kind: "appointment", record: a })}
         />
       )}
-      {Number(a.discount_total) > 0 && (
-        <OT>
-          Discount applied: {money(a.discount_total!)}
-          {a.promo_code ? ` · ${a.promo_code}` : ""}
-        </OT>
-      )}
       {a.kind === "appointment" && ["pending", "confirmed"].includes(a.status) && (
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 12 }}>
           <OA
-            label="Service complete"
+            fill
+            label="Service Complete"
             secondary
             onPress={() =>
               setConfirm({
-                text: "Mark the service complete? Payment remains separate. Record the received balance with Payment complete.",
-                run: () => complete(a, "completed"),
+                text: "Complete this service?",
+                detail: "Payment is recorded separately.",
+                actionLabel: "Confirm Complete Service",
+                run: async () => {
+                  setConfirm(null);
+                  setCelebration(a);
+                },
               })
             }
           />
           <OA
-            label="Cancel / no-show"
+            fill
+            label="Cancel / No-Show"
             secondary
             onPress={() =>
               setConfirm({
@@ -979,7 +1176,7 @@ export default function OwnerScreen() {
                     setAppointments((old) =>
                       old.map((v) => (v.id === a.id ? { ...v, status: "cancelled" } : v)),
                     );
-                    s.notify("Demo appointment cancelled.");
+                    s.notify("Appointment cancelled.");
                   } else {
                     const message = check(await db().rpc("lj_cancel", { p_id: a.id }));
                     await load();
@@ -992,13 +1189,13 @@ export default function OwnerScreen() {
         </View>
       )}
       {a.kind === "appointment" && ["pending", "confirmed", "completed"].includes(a.status) && (
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 12 }}>
           <OA
-            label="Payment complete"
+            fill
+            payment
+            label="Payment Complete"
             icon="Wallet"
-            disabled={
-              a.status !== "completed" || appointmentPayment(a, transactions).remaining <= 0
-            }
+            disabled={appointmentPayment(a, transactions).remaining <= 0}
             onPress={() => {
               setError("");
               setPaymentAppointment(a);
@@ -1007,26 +1204,101 @@ export default function OwnerScreen() {
           <OT muted>
             {appointmentPayment(a, transactions).remaining <= 0
               ? "The full payment is already recorded."
-              : a.status !== "completed"
-                ? "Complete the service, then record the received balance."
-                : "Confirm money received to settle this appointment and update Revenue."}
+              : "Record money received. Service completion is separate."}
           </OT>
         </View>
       )}
       {a.kind === "block" && a.status !== "cancelled" && (
-        <OA label="Edit blocked period" secondary onPress={() => editBlock(a)} />
+        <OA fill label="Delete Block" secondary onPress={() => editBlock(a)} />
       )}
     </AppointmentCard>
   );
+  async function saveSelectedContact() {
+    if (!selectedClient || !editingContact || busy) return;
+    setError("");
+    const first_name = (selectedClient.first_name ?? selectedClient.full_name.split(" ")[0]).trim();
+    const last_name = (
+      selectedClient.last_name ?? selectedClient.full_name.split(" ").slice(1).join(" ")
+    ).trim();
+    const email = selectedClient.email.trim();
+    const phone = selectedClient.phone.trim();
+    if (!first_name || !last_name) {
+      setError("Enter a first and last name.");
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    const values = {
+      first_name,
+      last_name,
+      full_name: `${first_name} ${last_name}`,
+      email,
+      phone,
+      private_notes: selectedClient.private_notes,
+    };
+    setBusy(true);
+    try {
+      if (!demo)
+        check(
+          await db()
+            .from("lj_client_records")
+            .update(values)
+            .eq("id", selectedClient.id)
+            .select("id")
+            .single(),
+        );
+      const contact = { ...selectedClient, ...values };
+      setClients((old) => old.map((v) => (v.id === contact.id ? { ...v, ...values } : v)));
+      setSelectedClient(contact);
+      setEditingContact(false);
+      s.notify("Client saved.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to save client.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function runConfirmedAction() {
+    if (!confirm || busy) return;
+    if (confirm.actionLabel === "Confirm complete service") sounds.prepare("service");
+    setBusy(true);
+    setError("");
+    try {
+      await confirm.run();
+      setConfirm(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to complete the action.");
+    } finally {
+      setBusy(false);
+    }
+  }
   function openBusiness(value: string) {
     setTab("Business");
     setSection(value);
   }
   function editBlock(block: Appointment) {
     setError("");
-    setEditingBlock(block);
-    setStart(localCalendarTime(block.starts_at));
-    setCalendarForm("block");
+    setConfirm({
+      text: "Delete this blocked time?",
+      actionLabel: "Delete block",
+      cancelLabel: "Keep block",
+      run: async () => {
+        if (demo) setAppointments((old) => old.filter((a) => a.id !== block.id));
+        else {
+          check(
+            await db().rpc("lj_delete_calendar_block", {
+              p_id: block.id,
+              p_scope: "one",
+              p_expected: block.updated_at,
+            }),
+          );
+          await load(true);
+        }
+        s.notify(demo ? "Block deleted. Time is available." : "Block deleted. Time is available.");
+      },
+    });
   }
   function ownerAction(action: OwnerAction) {
     setError("");
@@ -1035,6 +1307,9 @@ export default function OwnerScreen() {
       setInitialBlockReason("personal");
       setServiceId("");
       setCustomerId("");
+      setNewClientName("");
+      setNewClientEmail("");
+      setNewClientPhone("");
       setNote("");
       setStart((tab === "Calendar" ? calendarDate : todayKey()) + "T10:00");
       setCalendarForm(action);
@@ -1060,6 +1335,7 @@ export default function OwnerScreen() {
   }
   return (
     <OwnerWorkspace
+      onAction={() => setFeedback(null)}
       tab={tab}
       onTab={(value) => {
         if (value === "Calendar") setCalendarSelected(false);
@@ -1152,6 +1428,7 @@ export default function OwnerScreen() {
         )
       ) : (
         <ScrollView
+          ref={catalogScroll}
           key={tab + ":" + section + ":" + navigationRevision}
           keyboardShouldPersistTaps="handled"
           refreshControl={
@@ -1170,7 +1447,10 @@ export default function OwnerScreen() {
           <View style={[shared.responsive, { maxWidth: 1200 }]}>
             {tab !== "Today" &&
               tab !== "Calendar" &&
-              !(tab === "Business" && ["Overview", "Revenue"].includes(section)) && (
+              !(
+                tab === "Business" &&
+                ["Overview", "Revenue", "Reports", "Settings"].includes(section)
+              ) && (
                 <View style={{ marginBottom: 26 }}>
                   <OT size={32} bold>
                     {tab === "Today"
@@ -1198,42 +1478,32 @@ export default function OwnerScreen() {
               <ErrorBox message={error} retry={() => void load()} />
             )}
             {loading ? (
-              <ActivityIndicator color={c.primary} />
+              <ActivityIndicator color={c.brandAccent} />
             ) : (
               <>
                 {tab === "Business" && (
                   <>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ gap: 10, paddingBottom: 22 }}
-                    >
-                      {[
-                        "Overview",
-                        "Services",
-                        "Products",
-                        "Workshops",
-                        "Orders",
-                        "Payments",
-                        "Revenue",
-                        "Expenses",
-                        "Balances",
-                        "Waitlist",
-                        "Agreements",
-                        "Discounts",
-                        "Specials",
-                        "Promotions",
-                        "Automation",
-                        "Settings",
-                      ].map((v) => (
+                    {section !== "Overview" && (
+                      <View style={{ marginBottom: 24 }}>
                         <OA
-                          key={v}
-                          label={v}
-                          secondary={v !== section}
-                          onPress={() => setSection(v)}
+                          label="Back to Business"
+                          icon="ChevronLeft"
+                          secondary
+                          onPress={() => setSection("Overview")}
                         />
-                      ))}
-                    </ScrollView>
+                      </View>
+                    )}
+                    {section === "Reports" && (
+                      <DownloadReports
+                        purchases={purchases}
+                        services={services}
+                        appointments={appointments}
+                        transactions={transactions}
+                        products={products}
+                        clients={clients}
+                        demo={demo}
+                      />
+                    )}
                     {section === "Expenses" && (
                       <ExpensesPanel
                         demo={demo}
@@ -1268,13 +1538,13 @@ export default function OwnerScreen() {
                           )
                           .map((a) => (
                             <Card key={a.id} style={{ gap: 12 }}>
-                              <OT bold>{nameFor(a.customer_id)}</OT>
+                              <OT bold>{nameFor(a.customer_id, a.client_id)}</OT>
                               <OT>
                                 {dateLabel(a.starts_at)} ·{" "}
                                 {money(appointmentPayment(a, transactions).remaining)} remaining
                               </OT>
                               <OA
-                                label="Record money received"
+                                label="Record Money Received"
                                 icon="Wallet"
                                 onPress={() => setPaymentAppointment(a)}
                               />
@@ -1297,6 +1567,9 @@ export default function OwnerScreen() {
                         services={services}
                         demo={demo}
                         onSaved={load}
+                        onDemoDelete={(id) =>
+                          setServices((old) => old.filter((service) => service.id !== id))
+                        }
                         onDemoSave={(service) =>
                           setServices((old) => [...old.filter((v) => v.id !== service.id), service])
                         }
@@ -1305,19 +1578,40 @@ export default function OwnerScreen() {
                     {section === "Overview" && (
                       <View style={{ gap: 28 }}>
                         <DailyBriefing
-                          items={attention}
+                          items={[...attention].sort((a, b) => {
+                            const rank = (key: string) =>
+                              key === "payments" ? 0 : key === "stock" ? 1 : 2;
+                            return rank(a.key) - rank(b.key);
+                          })}
                           onOpen={(item) => {
                             setLowStockOnly(item.key === "stock");
                             openBusiness(item.section);
                           }}
                         />
                         <BusinessOverview
-                          services={services.length}
+                          specials={
+                            <SpecialsPanel
+                              services={services}
+                              demo={demo}
+                              onSaved={load}
+                              onDemoSave={(service) =>
+                                setServices((old) => [
+                                  ...old.filter((v) => v.id !== service.id),
+                                  service,
+                                ])
+                              }
+                              onDemoDelete={(id) =>
+                                setServices((old) => old.filter((v) => v.id !== id))
+                              }
+                            />
+                          }
+                          services={services.filter((v) => !v.is_special).length}
                           workshops={workshops.length}
                           products={products.length}
                           pending={pending.length}
                           orders={purchases.filter((v) => v.kind === "product").length}
                           onOpen={setSection}
+                          onMedia={() => setMediaContext({ mode: "gallery" })}
                           bankReady={!!s.settings?.bank_instructions}
                         />
                       </View>
@@ -1356,94 +1650,131 @@ export default function OwnerScreen() {
                           </View>
                         )}
                         <View style={{ height: 20 }} />
-                        {(section === "Services"
-                          ? services.filter((v) => !v.is_special)
-                          : section === "Products"
-                            ? products.filter((v) => !lowStockOnly || isLowStock(v))
-                            : workshops
-                        ).map((v) => (
-                          <Card key={v.id} style={{ marginBottom: 16, gap: 14 }}>
-                            <View style={{ flexDirection: "row", gap: 18, alignItems: "center" }}>
-                              <Photo
-                                name={v.image}
-                                style={{ width: 80, height: 90, borderRadius: 10 }}
-                              />
-                              <View style={{ flex: 1 }}>
-                                <OT size={23} bold>
-                                  {String(v.name)}
-                                </OT>
-                                <OT muted>
-                                  {money(v.price)} ·
-                                  {"stock" in v
-                                    ? `${v.stock} in stock`
-                                    : "duration" in v
-                                      ? formatDuration(v.duration)
-                                      : ""}
-                                  {!v.active ? " · Archived" : ""}
-                                </OT>
+                        <View accessibilityLiveRegion="polite" style={{ marginBottom: 18 }}>
+                          <OT muted>
+                            {catalogItems.length} {section.toLowerCase()}
+                          </OT>
+                        </View>
+                        {catalogItems
+                          .slice(currentCatalogPage * 12, currentCatalogPage * 12 + 12)
+                          .map((v) => (
+                            <Card key={v.id} style={{ marginBottom: 16, gap: 14 }}>
+                              <View style={{ flexDirection: "row", gap: 18, alignItems: "center" }}>
+                                <Photo
+                                  name={v.image}
+                                  style={{ width: 80, height: 90, borderRadius: 10 }}
+                                />
+                                <View style={{ flex: 1 }}>
+                                  <OT size={23} bold>
+                                    {String(v.name)}
+                                  </OT>
+                                  <OT muted>
+                                    {"duration" in v ? servicePriceLabel(v as Service) : money(v.price)} ·
+                                    {"stock" in v
+                                      ? `${v.stock} in stock`
+                                      : "duration" in v
+                                        ? serviceDurationLabel(v as Service)
+                                        : ""}
+                                    {"is_add_on" in v && v.is_add_on
+                                      ? " · Add-on"
+                                      : "bookable" in v && v.bookable === false
+                                        ? " · Not bookable"
+                                        : !v.active
+                                          ? " · Archived"
+                                          : ""}
+                                  </OT>
+                                </View>
                               </View>
-                            </View>
-                            <View style={[shared.row, { flexWrap: "wrap" }]}>
-                              <OA
-                                label="Edit details"
-                                secondary
-                                onPress={() =>
-                                  openEditor(
-                                    section === "Services"
-                                      ? "lj_services"
-                                      : section === "Products"
-                                        ? "lj_products"
-                                        : "lj_workshops",
-                                    v as unknown as Row,
-                                  )
-                                }
-                              />
-                              {section === "Workshops" && (
-                                <>
-                                  <OA
-                                    label="Resources"
-                                    secondary
-                                    onPress={() => {
-                                      if (demo)
-                                        openEditor(
-                                          "lj_workshop_resources",
-                                          demoResources[v.id] || { workshop_id: v.id },
-                                        );
-                                      else
-                                        void db()
-                                          .from("lj_workshop_resources")
-                                          .select("*")
-                                          .eq("workshop_id", v.id)
-                                          .maybeSingle()
-                                          .then((r) => {
-                                            if (r.error) setError(r.error.message);
-                                            else
-                                              openEditor(
-                                                "lj_workshop_resources",
-                                                r.data || { workshop_id: v.id },
-                                              );
-                                          });
-                                    }}
-                                  />
-                                  <OA
-                                    label="Enrollment"
-                                    secondary
-                                    onPress={() => {
-                                      setSection("Enrollment");
-                                      setEnrollmentWorkshopId(v.id);
-                                    }}
-                                  />
-                                </>
-                              )}
-                            </View>
-                          </Card>
-                        ))}
+                              <View style={[shared.row, { flexWrap: "wrap" }]}>
+                                <OA
+                                  label="Edit Details"
+                                  secondary
+                                  onPress={() =>
+                                    openEditor(
+                                      section === "Services"
+                                        ? "lj_services"
+                                        : section === "Products"
+                                          ? "lj_products"
+                                          : "lj_workshops",
+                                      v as unknown as Row,
+                                    )
+                                  }
+                                />
+                                {section === "Workshops" && (
+                                  <>
+                                    <OA
+                                      label="Resources"
+                                      secondary
+                                      onPress={() => {
+                                        if (demo)
+                                          openEditor(
+                                            "lj_workshop_resources",
+                                            demoResources[v.id] || { workshop_id: v.id },
+                                          );
+                                        else
+                                          void db()
+                                            .from("lj_workshop_resources")
+                                            .select("*")
+                                            .eq("workshop_id", v.id)
+                                            .maybeSingle()
+                                            .then((r) => {
+                                              if (r.error) setError(r.error.message);
+                                              else
+                                                openEditor(
+                                                  "lj_workshop_resources",
+                                                  r.data || { workshop_id: v.id },
+                                                );
+                                            });
+                                      }}
+                                    />
+                                    <OA
+                                      label="Enrollment"
+                                      secondary
+                                      onPress={() => {
+                                        setSection("Enrollment");
+                                        setEnrollmentWorkshopId(v.id);
+                                      }}
+                                    />
+                                  </>
+                                )}
+                              </View>
+                            </Card>
+                          ))}
+                        {catalogPages > 1 && (
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 14,
+                            }}
+                          >
+                            <OA
+                              label="Previous"
+                              compact
+                              secondary
+                              disabled={currentCatalogPage === 0}
+                              onPress={() => setCatalogPage(currentCatalogPage - 1)}
+                            />
+                            <OT size={16}>
+                              {currentCatalogPage + 1} / {catalogPages}
+                            </OT>
+                            <OA
+                              label="Next"
+                              compact
+                              secondary
+                              disabled={currentCatalogPage === catalogPages - 1}
+                              onPress={() => setCatalogPage(currentCatalogPage + 1)}
+                            />
+                          </View>
+                        )}
                       </>
                     )}
                     {section === "Enrollment" && (
                       <>
                         <OA
-                          label="Back to workshops"
+                          label="Back to Workshops"
                           secondary
                           onPress={() => setSection("Workshops")}
                         />
@@ -1467,7 +1798,7 @@ export default function OwnerScreen() {
                                 </OT>
                                 {canDiscount("purchase", p.id, p.status) && (
                                   <OA
-                                    label="Apply discount"
+                                    label="Apply Discount"
                                     secondary
                                     icon="Gift"
                                     onPress={() =>
@@ -1485,7 +1816,7 @@ export default function OwnerScreen() {
                                 </OT>
                                 {["paid", "fulfilled"].includes(p.status) && (
                                   <OA
-                                    label="Attendance & certificate"
+                                    label="Attendance & Certificate"
                                     secondary
                                     onPress={() =>
                                       openEditor(
@@ -1522,7 +1853,7 @@ export default function OwnerScreen() {
                               <OT muted>{p.status}</OT>
                               {canDiscount("purchase", p.id, p.status) && (
                                 <OA
-                                  label="Apply discount"
+                                  label="Apply Discount"
                                   secondary
                                   icon="Gift"
                                   onPress={() => setDiscountTarget({ kind: "purchase", record: p })}
@@ -1595,7 +1926,7 @@ export default function OwnerScreen() {
                             <OT muted>{dateLabel(t.created_at)}</OT>
                             {t.status === "pending" && (
                               <OA
-                                label="Verify bank payment"
+                                label="Verify Bank Payment"
                                 icon="ShieldCheck"
                                 onPress={() =>
                                   setConfirm({
@@ -1612,7 +1943,7 @@ export default function OwnerScreen() {
                                   Process this refund with your bank first, then record it here.
                                 </OT>
                                 <OA
-                                  label="Record completed refund"
+                                  label="Record Completed Refund"
                                   secondary
                                   onPress={() =>
                                     setConfirm({
@@ -1669,7 +2000,7 @@ export default function OwnerScreen() {
                     {section === "Promotions" && (
                       <View style={{ gap: 18 }}>
                         <OA
-                          label="Create promotion"
+                          label="Create Promotion"
                           icon="Gift"
                           onPress={() => openEditor("lj_promotions")}
                         />
@@ -1680,7 +2011,7 @@ export default function OwnerScreen() {
                             </OT>
                             <OT>{String(v.description)}</OT>
                             <OA
-                              label="Edit promotion"
+                              label="Edit Promotion"
                               secondary
                               onPress={() => openEditor("lj_promotions", v as unknown as Row)}
                             />
@@ -1696,48 +2027,31 @@ export default function OwnerScreen() {
                     )}
                     {section === "Automation" && <CommunicationPanel demo={demo} />}
                     {section === "Settings" && (
-                      <View style={{ gap: 18 }}>
-                        <Card style={{ gap: 18 }}>
-                          <OT size={24} bold>
-                            {String(
-                              (demo ? demoSettings?.business_name : undefined) ||
-                                s.settings?.business_name ||
-                                "Lady J Salon & Day Spa",
-                            )}
-                          </OT>
-                          <OT>Tuesday–Saturday · 10 AM–6 PM</OT>
-                          <OT>
-                            Daily bookings per client:{" "}
-                            {Number(
-                              (demo
-                                ? demoSettings?.max_daily_bookings_per_client
-                                : s.settings?.max_daily_bookings_per_client) ?? 1,
-                            ) || "Unlimited"}
-                          </OT>
-                          <OT muted>America/Port_of_Spain · GMT−4</OT>
-                          <OA
-                            label="Edit business details"
-                            onPress={() =>
-                              openEditor(
-                                "lj_settings",
-                                (demo ? demoSettings || s.settings : s.settings) as unknown as Row,
-                              )
-                            }
-                          />
-                        </Card>
-                        <Card style={{ gap: 14 }}>
-                          <OT bold size={23}>
-                            Payment connections
-                          </OT>
-                          <OT>Card processor: not configured</OT>
-                          <OT>Bank transfers: manual verification only</OT>
-                          <OT muted>
-                            The merchant’s processor must support Trinidad & Tobago and verify
-                            payments server-side. No card details are collected by this app.
-                          </OT>
-                        </Card>
+                      <View style={{ gap: 24 }}>
+                        <BusinessSettings
+                          demo={demo}
+                          settings={
+                            (demo ? demoSettings || s.settings : s.settings) as unknown as
+                              | import("@/lib/salon/types").Settings
+                              | null
+                          }
+                          demoNotifications={demoNotifications}
+                          onDemoNotifications={setDemoNotifications}
+                          onDemoSave={(value) => setDemoSettings(value as unknown as Row)}
+                          onSaved={() => load(true)}
+                        />
                         <OA
-                          label={demo ? "Exit demo workspace" : "Sign out securely"}
+                          label="More Business Settings"
+                          secondary
+                          onPress={() =>
+                            openEditor(
+                              "lj_settings",
+                              (demo ? demoSettings || s.settings : s.settings) as unknown as Row,
+                            )
+                          }
+                        />
+                        <OA
+                          label={demo ? "Return to salon" : "Sign out securely"}
                           secondary
                           onPress={() => {
                             s.setDemoOwner(false);
@@ -1749,7 +2063,7 @@ export default function OwnerScreen() {
                                   if (error) s.notify(error.message);
                                   else go("home");
                                 })
-                                .catch(() => s.notify("Unable to sign out. Please try again."));
+                                .catch(() => s.notify("Unable to sign out."));
                           }}
                         />
                       </View>
@@ -1762,24 +2076,7 @@ export default function OwnerScreen() {
           </View>
         </ScrollView>
       )}
-      {!!s.notice && (
-        <Pressable
-          onPress={() => s.notify("")}
-          style={{
-            position: "absolute",
-            bottom: navigationSpacing + 20,
-            left: 20,
-            right: 20,
-            backgroundColor: c.foreground,
-            borderRadius: 12,
-            padding: 18,
-          }}
-        >
-          <Txt size={18} color={c.background}>
-            {s.notice}
-          </Txt>
-        </Pressable>
-      )}
+      {!!s.notice && <StatusNotice message={s.notice} onDismiss={() => s.notify("")} large />}
       {discountTarget && (
         <OrderDiscountDialog
           target={discountTarget}
@@ -1793,487 +2090,685 @@ export default function OwnerScreen() {
           onSave={applyPersonalDiscount}
         />
       )}
-      {(!!editor || !!calendarForm || !!selectedClient || !!confirm || !!paymentAppointment) && (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          onRequestClose={() => {
-            if (busy) return;
-            setEditor(null);
-            setCalendarForm(null);
-            setSelectedClient(null);
-            setPaymentAppointment(null);
-            setConfirm(null);
-            setError("");
+      {mediaContext?.mode === "gallery" && (
+        <ClientMediaGallery
+          key={(s.session?.user.id || "demo") + ":" + (mediaContext.clientId || "all")}
+          owner
+          demo={demo}
+          {...mediaContext}
+          clients={clients}
+          appointments={appointments}
+          services={services}
+          onClose={() => setMediaContext(null)}
+        />
+      )}
+      {mediaContext?.mode === "upload" && (
+        <MediaUpload
+          key={(mediaContext.clientId || "") + ":" + (mediaContext.appointmentId || "")}
+          minimal
+          demo={demo}
+          clients={clients}
+          clientId={mediaContext.clientId}
+          appointmentId={mediaContext.appointmentId}
+          appointments={appointments}
+          services={services}
+          albums={[]}
+          onClose={() => setMediaContext(null)}
+          onDone={(complete) => {
+            if (complete) {
+              setMediaContext(null);
+              s.notify("Photos and videos saved privately.");
+            }
           }}
-        >
-          <OwnerEditorPortal>
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: "rgba(0,0,0,0.4)",
-                justifyContent: "center",
-                padding: 20,
-              }}
-            >
-              <SafeAreaView
+        />
+      )}
+      {!mediaContext &&
+        (!!editor || !!calendarForm || !!selectedClient || !!confirm || !!paymentAppointment) && (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            onRequestClose={() => {
+              if (busy) return;
+              setEditor(null);
+              setCalendarForm(null);
+              setSelectedClient(null);
+              setPaymentAppointment(null);
+              setConfirm(null);
+              setError("");
+            }}
+          >
+            <OwnerEditorPortal>
+              <View
                 style={{
-                  maxHeight: "92%",
-                  maxWidth: calendarForm === "block" ? 520 : 650,
-                  width: "100%",
-                  alignSelf: "center",
-                  backgroundColor: c.card,
-                  borderRadius: 20,
+                  flex: 1,
+                  backgroundColor: "rgba(0,0,0,0.4)",
+                  justifyContent: "center",
+                  padding: 20,
                 }}
               >
-                <ScrollView contentContainerStyle={{ padding: 26 }}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      gap: 15,
-                      alignItems: "center",
-                      marginBottom: 25,
-                    }}
-                  >
-                    <OT size={27} bold>
-                      {confirm
-                        ? "Please confirm"
-                        : editor?.title ||
-                          (calendarForm === "block"
-                            ? editingBlock
-                              ? "Edit blocked period"
-                              : "Block time"
-                            : calendarForm
-                              ? "Add appointment"
-                              : paymentAppointment
-                                ? "Payment complete"
-                                : selectedClient?.full_name || "Details")}
-                    </OT>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Close dialog"
-                      disabled={busy}
-                      onPress={() => {
-                        setEditor(null);
-                        setCalendarForm(null);
-                        setSelectedClient(null);
-                        setPaymentAppointment(null);
-                        setConfirm(null);
-                        setError("");
-                      }}
+                <SafeAreaView
+                  edges={{ top: "off", bottom: "off", left: "off", right: "off" }}
+                  style={{
+                    maxHeight: "92%",
+                    maxWidth: calendarForm === "block" ? 520 : 650,
+                    width: "100%",
+                    alignSelf: "center",
+                    backgroundColor: c.card,
+                    borderRadius: 20,
+                  }}
+                >
+                  <ScrollView contentContainerStyle={{ padding: width < 440 ? 18 : 26 }}>
+                    <View
                       style={{
-                        minWidth: 54,
-                        minHeight: 54,
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        gap: 10,
                         alignItems: "center",
-                        justifyContent: "center",
+                        marginBottom: 25,
+                        minHeight: 54,
                       }}
                     >
-                      <Icon name="X" size={24} color={c.foreground} />
-                    </Pressable>
-                  </View>
-                  {!!error && <ErrorBox message={error} />}
-                  {editor && !confirm && (
-                    <>
-                      {editor.fields.map((f) =>
-                        f.type === "boolean" ? (
-                          <Pressable
-                            key={f.key}
-                            accessibilityRole="checkbox"
-                            accessibilityState={{ checked: !!editor.values[f.key] }}
-                            onPress={() =>
-                              setEditor({
-                                ...editor,
-                                values: { ...editor.values, [f.key]: !editor.values[f.key] },
-                              })
-                            }
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 13,
-                              minHeight: 56,
-                              marginBottom: 15,
-                            }}
-                          >
-                            <Icon
-                              name={editor.values[f.key] ? "SquareCheck" : "Square"}
-                              size={26}
-                              color={c.primary}
+                      <View
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          alignItems:
+                            selectedClient || editor?.table === "lj_client_records"
+                              ? "center"
+                              : undefined,
+                          paddingHorizontal:
+                            selectedClient || editor?.table === "lj_client_records" ? 54 : 0,
+                        }}
+                      >
+                        <OT size={27} bold>
+                          {confirm
+                            ? "Please confirm"
+                            : editor?.title ||
+                              (calendarForm === "block"
+                                ? editingBlock
+                                  ? "Edit blocked period"
+                                  : "Block time"
+                                : calendarForm
+                                  ? "Add Appointment"
+                                  : paymentAppointment
+                                    ? "Payment Complete"
+                                    : selectedClient
+                                      ? "Client"
+                                      : "Details")}
+                        </OT>
+                      </View>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Close dialog"
+                        disabled={busy}
+                        onPress={() => {
+                          setEditor(null);
+                          setCalendarForm(null);
+                          setSelectedClient(null);
+                          setPaymentAppointment(null);
+                          setConfirm(null);
+                          setError("");
+                        }}
+                        style={{
+                          position:
+                            selectedClient || editor?.table === "lj_client_records"
+                              ? "absolute"
+                              : undefined,
+                          right:
+                            selectedClient || editor?.table === "lj_client_records" ? 0 : undefined,
+                          top:
+                            selectedClient || editor?.table === "lj_client_records" ? 0 : undefined,
+                          minWidth: 54,
+                          minHeight: 54,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Icon name="X" size={24} color={c.foreground} />
+                      </Pressable>
+                    </View>
+                    {!!error && <ErrorBox message={error} />}
+                    {editor && !confirm && (
+                      <>
+                        {editor.fields.map((f) =>
+                          f.type === "boolean" ? (
+                            <Pressable
+                              key={f.key}
+                              accessibilityRole="checkbox"
+                              accessibilityState={{ checked: !!editor.values[f.key] }}
+                              onPress={() =>
+                                setEditor({
+                                  ...editor,
+                                  values: { ...editor.values, [f.key]: !editor.values[f.key] },
+                                })
+                              }
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 13,
+                                minHeight: 56,
+                                marginBottom: 15,
+                              }}
+                            >
+                              <Icon
+                                name={editor.values[f.key] ? "SquareCheck" : "Square"}
+                                size={26}
+                                color={c.brandAccent}
+                              />
+                              <ButtonLabel size={20} style={{ flex: 1, textAlign: "left" }}>
+                                {fieldLabel(f.label)}
+                              </ButtonLabel>
+                            </Pressable>
+                          ) : f.key === "category" && editor.table === "lj_services" ? (
+                            <ServiceCategoryField
+                              key={f.key}
+                              value={String(editor.values.category || "Hair")}
+                              onChange={(category) =>
+                                setEditor({ ...editor, values: { ...editor.values, category } })
+                              }
                             />
-                            <OT>{f.label}</OT>
-                          </Pressable>
-                        ) : f.key === "category" && editor.table === "lj_services" ? (
-                          <ServiceCategoryField
-                            key={f.key}
-                            value={String(editor.values.category || "Hair")}
-                            onChange={(category) =>
-                              setEditor({ ...editor, values: { ...editor.values, category } })
-                            }
-                          />
-                        ) : f.key === "birthday" ? (
-                          <DateField
-                            key={f.key}
-                            label={f.label}
-                            value={String(editor.values[f.key] || "")}
-                            birthday
-                            optional
-                            onChange={(value) =>
-                              setEditor({ ...editor, values: { ...editor.values, [f.key]: value } })
-                            }
-                          />
-                        ) : f.key === "starts_at" ? (
-                          <DateTimeField
-                            key={f.key}
-                            label={f.label}
-                            value={String(editor.values[f.key] || "")}
-                            onChange={(value) =>
-                              setEditor({ ...editor, values: { ...editor.values, [f.key]: value } })
-                            }
-                          />
-                        ) : f.key === "duration" ? (
-                          <DurationField
-                            key={f.key}
-                            label={f.label}
-                            value={String(editor.values[f.key] || "60")}
-                            onChange={(value) =>
-                              setEditor({ ...editor, values: { ...editor.values, [f.key]: value } })
-                            }
-                          />
-                        ) : f.key === "format" ? (
-                          <View key={f.key} style={{ gap: 10, marginBottom: 20 }}>
-                            <OT bold>{f.label}</OT>
-                            {["In person", "Online"].map((value) => (
-                              <OA
-                                key={value}
-                                label={value}
-                                secondary={editor.values[f.key] !== value}
-                                onPress={() =>
+                          ) : f.key === "birthday" ? (
+                            <DateField
+                              key={f.key}
+                              label={fieldLabel(f.label)}
+                              value={String(editor.values[f.key] || "")}
+                              birthday
+                              optional
+                              onChange={(value) =>
+                                setEditor({
+                                  ...editor,
+                                  values: { ...editor.values, [f.key]: value },
+                                })
+                              }
+                            />
+                          ) : f.key === "starts_at" ? (
+                            <DateTimeField
+                              key={f.key}
+                              label={fieldLabel(f.label)}
+                              value={String(editor.values[f.key] || "")}
+                              onChange={(value) =>
+                                setEditor({
+                                  ...editor,
+                                  values: { ...editor.values, [f.key]: value },
+                                })
+                              }
+                            />
+                          ) : f.key === "duration" ? (
+                            <DurationField
+                              key={f.key}
+                              label={fieldLabel(f.label)}
+                              value={String(editor.values[f.key] || "60")}
+                              onChange={(value) =>
+                                setEditor({
+                                  ...editor,
+                                  values: { ...editor.values, [f.key]: value },
+                                })
+                              }
+                            />
+                          ) : f.key === "format" ? (
+                            <View key={f.key} style={{ gap: 10, marginBottom: 20 }}>
+                              <OT bold>{fieldLabel(f.label)}</OT>
+                              {["In person", "Online"].map((value) => (
+                                <OA
+                                  key={value}
+                                  label={value}
+                                  secondary={editor.values[f.key] !== value}
+                                  onPress={() =>
+                                    setEditor({
+                                      ...editor,
+                                      values: { ...editor.values, [f.key]: value },
+                                    })
+                                  }
+                                />
+                              ))}
+                            </View>
+                          ) : (
+                            <View key={f.key}>
+                              {editor.table === "lj_client_records" &&
+                                f.key === "private_notes" && (
+                                  <View style={{ gap: 12, marginBottom: 18 }}>
+                                    <OT bold>Medical Conditions:</OT>
+                                    <OT muted>
+                                      {String(
+                                        profiles.find((p) => p.id === editor.values.customer_id)
+                                          ?.medical_conditions ||
+                                          editor.values.medical_conditions ||
+                                          "None recorded",
+                                      )}
+                                    </OT>
+                                  </View>
+                                )}
+                              <OF
+                                label={fieldLabel(f.label)}
+                                value={String(editor.values[f.key] ?? "")}
+                                multiline={f.type === "multiline"}
+                                onChange={(value) =>
                                   setEditor({
                                     ...editor,
                                     values: { ...editor.values, [f.key]: value },
                                   })
                                 }
                               />
-                            ))}
-                          </View>
-                        ) : (
-                          <OF
-                            key={f.key}
-                            label={f.label}
-                            value={String(editor.values[f.key] ?? "")}
-                            multiline={f.type === "multiline"}
-                            onChange={(value) =>
-                              setEditor({ ...editor, values: { ...editor.values, [f.key]: value } })
+                            </View>
+                          ),
+                        )}
+                        {editor.table === "lj_client_records" && (
+                          <GuardianFields
+                            values={editor.values}
+                            onChange={(values) => setEditor({ ...editor, values })}
+                          />
+                        )}
+                        {["lj_services", "lj_products", "lj_workshops", "lj_promotions"].includes(
+                          editor.table,
+                        ) && (
+                          <CatalogPhotoEditor
+                            demo={demo}
+                            disabled={busy}
+                            onBusyChange={setBusy}
+                            value={
+                              Array.isArray(editor.values.photos)
+                                ? editor.values.photos.map(String)
+                                : []
+                            }
+                            onChange={(photos) =>
+                              setEditor((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      values: {
+                                        ...current.values,
+                                        photos,
+                                        ...(current.table === "lj_promotions"
+                                          ? {}
+                                          : { image: photos[0] || current.values.image }),
+                                      },
+                                    }
+                                  : null,
+                              )
                             }
                           />
-                        ),
-                      )}
-                      {editor.table === "lj_client_records" && (
-                        <GuardianFields
-                          values={editor.values}
-                          onChange={(values) => setEditor({ ...editor, values })}
-                        />
-                      )}
-                      {["lj_services", "lj_products", "lj_workshops", "lj_promotions"].includes(
-                        editor.table,
-                      ) && (
-                        <CatalogPhotoEditor
-                          demo={demo}
-                          disabled={busy}
-                          onBusyChange={setBusy}
-                          value={
-                            Array.isArray(editor.values.photos)
-                              ? editor.values.photos.map(String)
-                              : []
-                          }
-                          onChange={(photos) =>
-                            setEditor((current) =>
-                              current
-                                ? {
-                                    ...current,
-                                    values: {
-                                      ...current.values,
-                                      photos,
-                                      ...(current.table === "lj_promotions"
-                                        ? {}
-                                        : { image: photos[0] || current.values.image }),
-                                    },
-                                  }
-                                : null,
-                            )
-                          }
-                        />
-                      )}
-                      <OA
-                        label={busy ? "Saving…" : demo ? "Save demo changes" : "Save changes"}
-                        disabled={busy}
-                        onPress={() => void save()}
-                      />
-                      {!!editor.values.id &&
-                        ["lj_services", "lj_products", "lj_workshops"].includes(editor.table) && (
-                          <View
-                            style={{
-                              marginTop: 28,
-                              paddingTop: 24,
-                              borderTopWidth: 1,
-                              borderColor: c.border,
-                            }}
-                          >
-                            <OA
-                              label={
-                                "Delete " +
-                                (editor.table === "lj_services"
-                                  ? "service"
-                                  : editor.table === "lj_products"
-                                    ? "product"
-                                    : "workshop")
-                              }
-                              icon="Trash2"
-                              destructive
-                              disabled={busy}
-                              onPress={requestCatalogRemoval}
-                            />
-                          </View>
                         )}
-                    </>
-                  )}
-                  {calendarForm === "block" && (
-                    <BlockTimeEditor
-                      key={editingBlock?.id || start.slice(0, 10)}
-                      date={start.slice(0, 10)}
-                      block={editingBlock}
-                      initialReason={initialBlockReason}
-                      live={allowed && !demo}
-                      onBusyChange={setBusy}
-                      onSaved={async () => {
-                        await load(true);
-                        setCalendarForm(null);
-                        setEditingBlock(null);
-                      }}
-                    />
-                  )}
-                  {calendarForm === "appointment" && (
-                    <>
-                      <DateTimeField label="Start" value={start} onChange={setStart} />
-                      <OT muted>Local Trinidad & Tobago time (GMT−4)</OT>
-                      <View style={{ height: 20 }} />
-                      {calendarForm === "appointment" && (
-                        <>
-                          <OT bold>Choose one service</OT>
-                          <View style={{ gap: 10, marginVertical: 18 }}>
-                            {services
-                              .filter((v) => v.active)
-                              .map((v) => (
+                        <OA
+                          label={busy ? "Saving" : demo ? "Save changes" : "Save changes"}
+                          disabled={busy}
+                          onPress={() => void save()}
+                        />
+                        {!!editor.values.id &&
+                          ["lj_services", "lj_products", "lj_workshops"].includes(editor.table) && (
+                            <View
+                              style={{
+                                marginTop: 28,
+                                paddingTop: 24,
+                                borderTopWidth: 1,
+                                borderColor: c.border,
+                              }}
+                            >
+                              <OA
+                                label={
+                                  "Delete " +
+                                  (editor.table === "lj_services"
+                                    ? "service"
+                                    : editor.table === "lj_products"
+                                      ? "product"
+                                      : "workshop")
+                                }
+                                icon="Trash2"
+                                destructive
+                                disabled={busy}
+                                onPress={requestCatalogRemoval}
+                              />
+                            </View>
+                          )}
+                      </>
+                    )}
+                    {calendarForm === "block" && (
+                      <BlockTimeEditor
+                        key={editingBlock?.id || start.slice(0, 10)}
+                        date={start.slice(0, 10)}
+                        block={editingBlock}
+                        initialReason={initialBlockReason}
+                        live={allowed && !demo}
+                        onBusyChange={setBusy}
+                        onDemoSave={(block) => {
+                          if (
+                            appointments.some(
+                              (a) =>
+                                a.id !== block.id &&
+                                ["pending", "confirmed", "completed"].includes(a.status) &&
+                                Date.parse(a.starts_at) < Date.parse(block.ends_at) &&
+                                Date.parse(a.ends_at) > Date.parse(block.starts_at),
+                            )
+                          )
+                            throw new Error("Time overlaps an appointment or block.");
+                          setAppointments((old) => [
+                            ...old.filter((a) => a.id !== block.id),
+                            block,
+                          ]);
+                        }}
+                        onSaved={async () => {
+                          await load(true);
+                          setCalendarForm(null);
+                          setEditingBlock(null);
+                        }}
+                      />
+                    )}
+                    {calendarForm === "appointment" && (
+                      <>
+                        <DateTimeField label="Date" value={start} onChange={setStart} />
+                        <OT muted>Local Trinidad & Tobago time (GMT−4)</OT>
+                        <View style={{ height: 20 }} />
+                        {calendarForm === "appointment" && (
+                          <>
+                            <OT bold>Choose One Service</OT>
+                            <View style={{ gap: 10, marginVertical: 18 }}>
+                              {services
+                                .filter((v) => v.active && v.bookable !== false)
+                                .map((v) => (
+                                  <OA
+                                    key={v.id}
+                                    label={`${String(v.name)} · ${servicePriceLabel(v)}`}
+                                    secondary={serviceId !== v.id}
+                                    onPress={() => setServiceId(v.id)}
+                                  />
+                                ))}
+                            </View>
+                            <OT bold>Saved Client</OT>
+                            <View style={{ gap: 10, marginVertical: 18 }}>
+                              <OA
+                                label="Create New Client"
+                                secondary={!customerId}
+                                onPress={() => setCustomerId("")}
+                              />
+                              {clients.map((v) => (
                                 <OA
-                                  key={v.id}
-                                  label={`${String(v.name)} · ${money(v.price)}`}
-                                  secondary={serviceId !== v.id}
-                                  onPress={() => setServiceId(v.id)}
+                                  key={String(v.id)}
+                                  label={String(v.full_name || v.id)}
+                                  secondary={customerId !== v.id}
+                                  onPress={() => setCustomerId(String(v.id))}
                                 />
                               ))}
+                            </View>
+                            {!customerId && (
+                              <View style={{ gap: 14, marginBottom: 18 }}>
+                                <OF label="Full Name" value={newClientName} onChange={setNewClientName} />
+                                <OF label="Email" value={newClientEmail} onChange={setNewClientEmail} />
+                                <OF
+                                  label="Mobile Number"
+                                  value={newClientPhone}
+                                  onChange={setNewClientPhone}
+                                />
+                              </View>
+                            )}
+                            <OT muted>
+                              Manual appointments remain pending until payment arrangements are
+                              confirmed by the owner.
+                            </OT>
+                          </>
+                        )}
+                        <OF label="Appointment Note (Optional)" value={note} onChange={setNote} />
+                        <OA
+                          label={busy ? "Saving" : "Save Appointment"}
+                          disabled={busy}
+                          onPress={() => void addCalendar()}
+                        />
+                      </>
+                    )}
+                    {selectedClient && (
+                      <View style={{ gap: 16 }}>
+                        <OF
+                          label="First Name"
+                          wrap
+                          readOnly={!editingContact || busy}
+                          value={
+                            selectedClient.first_name ?? selectedClient.full_name.split(" ")[0]
+                          }
+                          onChange={(first_name) =>
+                            setSelectedClient({ ...selectedClient, first_name })
+                          }
+                        />
+                        <OF
+                          label="Last Name"
+                          wrap
+                          readOnly={!editingContact || busy}
+                          value={
+                            selectedClient.last_name ??
+                            selectedClient.full_name.split(" ").slice(1).join(" ")
+                          }
+                          onChange={(last_name) =>
+                            setSelectedClient({ ...selectedClient, last_name })
+                          }
+                        />
+                        <OT>
+                          DOB:{" "}
+                          {selectedClient.birthday
+                            ? dateLabel(selectedClient.birthday + "T12:00:00Z", { year: "numeric" })
+                            : "Not provided"}
+                        </OT>
+                        <OF
+                          label="Email"
+                          wrap
+                          readOnly={!editingContact || busy}
+                          keyboardType="email-address"
+                          value={selectedClient.email}
+                          onChange={(email) => setSelectedClient({ ...selectedClient, email })}
+                        />
+                        <OF
+                          label="Mobile Number"
+                          wrap
+                          readOnly={!editingContact || busy}
+                          keyboardType="phone-pad"
+                          value={selectedClient.phone}
+                          onChange={(phone) => setSelectedClient({ ...selectedClient, phone })}
+                        />
+                        <OA
+                          label="Message Client"
+                          icon="MessageCircle"
+                          secondary
+                          fill
+                          onPress={() =>
+                            setContactActions({
+                              name: selectedClient.full_name,
+                              whatsapp: selectedClient.whatsapp_phone,
+                              phone: selectedClient.phone,
+                            })
+                          }
+                        />
+                        <OA
+                          label="Add Photo or Video"
+                          icon="Images"
+                          secondary
+                          fill
+                          onPress={() => {
+                            setMediaContext({ mode: "upload", clientId: selectedClient.id });
+                          }}
+                        />
+                        <OA
+                          label="View Photos & Videos"
+                          icon="Images"
+                          secondary
+                          fill
+                          onPress={() =>
+                            setMediaContext({ mode: "gallery", clientId: selectedClient.id })
+                          }
+                        />
+                        <AgreementList
+                          title="Service Agreement"
+                          demo={demo}
+                          customerId={selectedClient.customer_id || selectedClient.id}
+                        />
+                        <OT bold>Medical Conditions:</OT>
+                        <OT muted>
+                          {String(
+                            profiles.find((p) => p.id === selectedClient.customer_id)
+                              ?.medical_conditions ||
+                              selectedClient.medical_conditions ||
+                              "None recorded",
+                          )}
+                        </OT>
+                        <OF
+                          label="Notes"
+                          readOnly={!editingContact || busy}
+                          value={selectedClient.private_notes || ""}
+                          multiline
+                          onChange={(private_notes) =>
+                            setSelectedClient({ ...selectedClient, private_notes })
+                          }
+                        />
+                        <ClientPurchaseHistory
+                          customerId={selectedClient.customer_id || selectedClient.id}
+                          appointments={appointments}
+                        />
+                        {contactIsMinor(selectedClient.birthday, selectedClient.is_minor) && (
+                          <View style={{ gap: 8 }}>
+                            <OT bold>Parent/Guardian</OT>
+                            <OT>{selectedClient.guardian_name || "Not recorded"}</OT>
                           </View>
-                          <OT bold>Registered client (optional)</OT>
-                          <View style={{ gap: 10, marginVertical: 18 }}>
+                        )}
+                        <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
                             <OA
-                              label="Walk-in / private note"
-                              secondary={!customerId}
-                              onPress={() => setCustomerId("")}
+                              label={editingContact ? "Cancel Edit" : "Edit Client"}
+                              secondary
+                              compact
+                              fill
+                              disabled={busy}
+                              onPress={() => {
+                                if (editingContact) {
+                                  const saved = clients.find(
+                                    (client) => client.id === selectedClient.id,
+                                  );
+                                  if (saved) setSelectedClient(saved);
+                                }
+                                setError("");
+                                setEditingContact(!editingContact);
+                              }}
                             />
-                            {profiles.map((v) => (
-                              <OA
-                                key={String(v.id)}
-                                label={String(v.full_name || v.id)}
-                                secondary={customerId !== v.id}
-                                onPress={() => setCustomerId(String(v.id))}
-                              />
-                            ))}
                           </View>
-                          <OT muted>
-                            Manual appointments remain pending until payment arrangements are
-                            confirmed by the owner.
-                          </OT>
-                        </>
-                      )}
-                      <OF label={"Client name / private note"} value={note} onChange={setNote} />
-                      <OA
-                        label={busy ? "Saving…" : "Save appointment"}
-                        disabled={busy}
-                        onPress={() => void addCalendar()}
-                      />
-                    </>
-                  )}
-                  {selectedClient && (
-                    <View style={{ gap: 16 }}>
-                      <OT>Name: {selectedClient.full_name}</OT>
-                      <OT>
-                        First: {selectedClient.first_name || selectedClient.full_name.split(" ")[0]}
-                      </OT>
-                      <OT>
-                        Last:{" "}
-                        {selectedClient.last_name ||
-                          selectedClient.full_name.split(" ").slice(1).join(" ")}
-                      </OT>
-                      <OT>
-                        DOB:{" "}
-                        {selectedClient.birthday
-                          ? dateLabel(selectedClient.birthday + "T12:00:00Z", { year: "numeric" })
-                          : "Not provided"}
-                      </OT>
-                      {contactIsMinor(selectedClient.birthday, selectedClient.is_minor) && (
-                        <View style={{ gap: 8 }}>
-                          <OT bold>Parent / guardian · Client under 18</OT>
-                          <OT>{selectedClient.guardian_name || "Guardian details needed"}</OT>
-                          {!!selectedClient.guardian_relationship && (
-                            <OT muted>{selectedClient.guardian_relationship}</OT>
-                          )}
-                          {!!selectedClient.guardian_phone && (
-                            <OT>{selectedClient.guardian_phone}</OT>
-                          )}
-                          {!!selectedClient.guardian_email && (
-                            <OT>{selectedClient.guardian_email}</OT>
-                          )}
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <OA
+                              label={busy ? "Saving" : "Save Client"}
+                              accent
+                              compact
+                              fill
+                              disabled={busy || !editingContact}
+                              onPress={() => void saveSelectedContact()}
+                            />
+                          </View>
                         </View>
-                      )}
-                      <OT>{selectedClient.phone}</OT>
-                      <OA
-                        label="Open WhatsApp"
-                        icon="MessageCircle"
-                        secondary
-                        disabled={
-                          demo ||
-                          !whatsappContactUrl(selectedClient.whatsapp_phone || selectedClient.phone)
+                        <View
+                          style={{
+                            marginTop: 32,
+                            paddingTop: 28,
+                            borderTopWidth: 1,
+                            borderColor: c.border,
+                          }}
+                        >
+                          <OA
+                            label="Delete Client"
+                            icon="Trash2"
+                            secondary
+                            onPress={() => {
+                              const contact = selectedClient;
+                              setSelectedClient(null);
+                              setError("");
+                              setConfirm({
+                                text: "Delete " + contact.full_name + "?",
+                                detail:
+                                  "This removes the client from your directory. Their account, appointments and payment history are kept.",
+                                actionLabel: "Delete Client",
+                                run: async () => {
+                                  if (demo) {
+                                    setClients((old) =>
+                                      old.filter((item) => item.id !== contact.id),
+                                    );
+                                    s.notify("Client deleted.");
+                                  } else {
+                                    check(
+                                      await db().rpc("lj_delete_contact", { p_id: contact.id }),
+                                    );
+                                    await load(true);
+                                    s.notify("Client removed from the salon directory.");
+                                  }
+                                },
+                              });
+                            }}
+                          />
+                        </View>
+                      </View>
+                    )}
+                    {paymentAppointment && (
+                      <PaymentCompletion
+                        appointment={
+                          appointments.find((a) => a.id === paymentAppointment.id) ??
+                          paymentAppointment
                         }
-                        onPress={() => {
-                          const url = whatsappContactUrl(
-                            selectedClient.whatsapp_phone || selectedClient.phone,
-                          );
-                          if (url && !demo)
-                            void Linking.openURL(url).catch(() =>
-                              s.notify("Unable to open WhatsApp."),
-                            );
-                        }}
-                      />
-                      <OT>{selectedClient.email}</OT>
-                      <OT bold>Preferences</OT>
-                      <OT muted>{selectedClient.preferences || "None recorded"}</OT>
-                      <OT bold>Relevant sensitivities</OT>
-                      <OT muted>{selectedClient.sensitivities || "None recorded"}</OT>
-                      <AgreementList
+                        transactions={transactions}
                         demo={demo}
-                        customerId={selectedClient.customer_id || selectedClient.id}
-                      />
-                      <OT bold>Notes</OT>
-                      <OT muted>{selectedClient.private_notes || "None recorded"}</OT>
-                      <OT>
-                        Photo consent: {selectedClient.photo_consent ? "Received" : "Not received"}
-                      </OT>
-                      <OT bold>Service history</OT>
-                      {appointments
-                        .filter(
-                          (v) =>
-                            v.customer_id === (selectedClient.customer_id || selectedClient.id),
-                        )
-                        .map((v) => (
-                          <OT key={v.id}>
-                            {dateLabel(v.starts_at)} · {v.services.map((x) => x.name).join(", ")} ·
-                            {v.status}
-                          </OT>
-                        ))}
-                      <OT bold>Purchase & workshop history</OT>
-                      {purchases
-                        .filter(
-                          (v) =>
-                            v.customer_id === (selectedClient.customer_id || selectedClient.id),
-                        )
-                        .map((v) => (
-                          <OT key={v.id}>
-                            {v.items.map((x) => x.name).join(", ")} · {money(v.total)} · {v.status}
-                          </OT>
-                        ))}
-                      <OA
-                        label="Edit client"
-                        onPress={() => {
-                          openEditor("lj_client_records", selectedClient as unknown as Row);
-                          setSelectedClient(null);
-                        }}
-                      />
-                      <OA
-                        label="Delete contact"
-                        icon="Trash2"
-                        secondary
-                        onPress={() => {
-                          const contact = selectedClient;
-                          setSelectedClient(null);
-                          setError("");
-                          setConfirm({
-                            text: "Are you sure you want to delete contact?",
-                            detail:
-                              contact.full_name +
-                              " will be removed from the salon contact list. Their account, appointments and payment history stay available.",
-                            actionLabel: "Delete contact",
-                            run: async () => {
-                              if (demo) {
-                                setClients((old) => old.filter((item) => item.id !== contact.id));
-                                s.notify("Demo contact deleted. No real records were changed.");
-                              } else {
-                                check(await db().rpc("lj_delete_contact", { p_id: contact.id }));
-                                await load(true);
-                                s.notify("Contact removed from the salon directory.");
-                              }
-                            },
-                          });
-                        }}
-                      />
-                    </View>
-                  )}
-                  {paymentAppointment && (
-                    <PaymentCompletion
-                      appointment={paymentAppointment}
-                      transactions={transactions}
-                      demo={demo}
-                      onConfirm={(method, reference, amount) =>
-                        recordPayment(paymentAppointment, method, reference, amount)
-                      }
-                    />
-                  )}
-                  {confirm && (
-                    <View style={{ gap: 22 }}>
-                      <OT>{confirm.text}</OT>
-                      {!!confirm.detail && <OT muted>{confirm.detail}</OT>}
-                      <OA
-                        label={busy ? "Confirming…" : confirm.actionLabel || "Confirm"}
-                        destructive={confirm.actionLabel?.startsWith("Delete")}
-                        disabled={busy}
-                        onPress={() => {
-                          setBusy(true);
-                          void confirm
-                            .run()
-                            .then(() => setConfirm(null))
-                            .catch((e) =>
-                              setError(
-                                e instanceof Error ? e.message : "Unable to complete the action.",
-                              ),
-                            )
-                            .finally(() => setBusy(false));
-                        }}
-                      />
-                      <OA
-                        label={
-                          confirm.cancelLabel ||
-                          (confirm.actionLabel === "Delete contact" ? "Keep contact" : "Go back")
+                        onConfirm={(method, reference, amount) =>
+                          recordPayment(paymentAppointment, method, reference, amount)
                         }
-                        secondary
-                        disabled={busy}
-                        onPress={() => setConfirm(null)}
                       />
-                    </View>
-                  )}
-                </ScrollView>
-              </SafeAreaView>
-            </View>
-          </OwnerEditorPortal>
-        </Modal>
+                    )}
+                    {confirm && (
+                      <View style={{ gap: 22 }}>
+                        <OT>{confirm.text}</OT>
+                        {!!confirm.detail && <OT muted>{confirm.detail}</OT>}
+                        {confirm.actionLabel === "Delete Client" ? (
+                          <ContactRemovalConfirmation
+                            busy={busy}
+                            onCancel={() => setConfirm(null)}
+                            onConfirm={() => void runConfirmedAction()}
+                          />
+                        ) : (
+                          <>
+                            <OA
+                              label={busy ? "Confirming" : confirm.actionLabel || "Confirm"}
+                              destructive={confirm.actionLabel?.startsWith("Delete")}
+                              disabled={busy}
+                              onPress={() => void runConfirmedAction()}
+                            />
+                            <OA
+                              label={confirm.cancelLabel || "Go back"}
+                              secondary
+                              disabled={busy}
+                              onPress={() => setConfirm(null)}
+                            />
+                          </>
+                        )}
+                      </View>
+                    )}
+                  </ScrollView>
+                </SafeAreaView>
+              </View>
+            </OwnerEditorPortal>
+          </Modal>
+        )}
+      {contactActions && (
+        <MessageClientMenu
+          {...contactActions}
+          demo={demo}
+          onClose={() => setContactActions(null)}
+        />
+      )}
+      {feedback && <OwnerFeedback value={feedback} onDismiss={() => setFeedback(null)} />}
+      {celebration && (
+        <CompletionCelebration
+          key={celebration.id}
+          onStart={() => {
+            setBusy(true);
+            void complete(celebration, "completed")
+              .catch((e) => {
+                setCelebration(null);
+                setError(e instanceof Error ? e.message : "Unable to complete service.");
+              })
+              .finally(() => setBusy(false));
+          }}
+          onDone={() => setCelebration(null)}
+        />
+      )}
+      {!!paymentCelebration && (
+        <MoneyCelebration key={paymentCelebration} onDone={() => setPaymentCelebration(0)} />
       )}
     </OwnerWorkspace>
   );

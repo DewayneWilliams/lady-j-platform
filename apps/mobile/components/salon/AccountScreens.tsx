@@ -195,7 +195,7 @@ export function AuthScreen({
                   ? "Awaiting secure provider setup"
                   : providerError
                     ? "Provider status unavailable"
-                    : "Checking availability…"}
+                    : "Checking availability"}
               </Txt>
             )}
           </View>
@@ -230,7 +230,7 @@ export function AuthScreen({
         <Txt size={17} color={c.mutedForeground}>
           {owner
             ? "Business management is exclusively for the verified salon owner."
-            : "See prices, choose your time and keep your bookings together. Your account is always free."}
+            : "Choose your time and keep your bookings together. Your account is always free."}
         </Txt>
         {!!error && <ErrorBox message={error} />}
         {!!success && (
@@ -325,12 +325,9 @@ export function AuthScreen({
         )}
         {owner && (
           <Card style={{ gap: 13, backgroundColor: c.secondary }}>
-            <Txt size={15}>
-              Explore the owner experience with fictional records. The demo does not provide
-              administrative access.
-            </Txt>
+            <Txt size={15}>View appointments, clients and business details.</Txt>
             <Action
-              label="Explore demo workspace"
+              label="View workspace"
               secondary
               onPress={() => {
                 s.setDemoOwner(true);
@@ -363,12 +360,12 @@ export function AccountScreen() {
         <Txt serif size={28}>
           Owner
         </Txt>
-        {!s.owner && <Tag>Design preview · Demo data</Tag>}
+        {!s.owner && <Tag>Sample data</Tag>}
       </View>
       <Txt color={c.mutedForeground}>
         {s.owner
           ? "Your private workspace for your calendar, clients and business."
-          : "Explore your dashboard design with fictional appointments, clients and business records."}
+          : "Appointments, clients and business details in one place."}
       </Txt>
       <Action
         label="View dashboard"
@@ -385,7 +382,7 @@ export function AccountScreen() {
       <Shell>
         <View style={{ maxWidth: 720, alignSelf: "center", width: "100%", paddingVertical: 30 }}>
           <Empty
-            title="Your own little sanctuary"
+            title="Your own private space"
             body="Sign in to privately manage your appointments, workshop purchases, orders and personal details."
             action={
               <View style={[shared.row, { flexWrap: "wrap", justifyContent: "center" }]}>
@@ -399,6 +396,12 @@ export function AccountScreen() {
       </Shell>
     );
   const tiles = [
+    [
+      "Gem",
+      "Premium checkout",
+      "A polished shortcut to your bag and secure checkout",
+      "checkout",
+    ],
     ["CalendarDays", "My appointments", "Your upcoming moments of care", "appointments"],
     [
       "GraduationCap",
@@ -408,6 +411,7 @@ export function AccountScreen() {
     ],
     ["ShoppingBag", "My orders", "Follow your boutique purchases", "orders"],
     ["Wallet", "Payments & credits", "Deposits, transactions & balances", "payments"],
+    ["Images", "My media", "Photos and videos shared privately by Lady J", "my-media"],
     ["FileText", "Service agreements", "Your signed, dated consent PDFs", "agreements"],
     ["UserRound", "My profile", "Your preferences and personal details", "profile"],
     ["ShieldCheck", "Booking policies", "Carefully considered, clearly explained", "policies"],
@@ -429,7 +433,15 @@ export function AccountScreen() {
             onPress={() => go(page)}
             style={{ width: width > 800 ? "31%" : "100%", flexGrow: 1 }}
           >
-            <Card style={{ minHeight: 170, gap: 12 }}>
+            <Card
+              style={{
+                minHeight: 170,
+                gap: 12,
+                ...(page === "checkout"
+                  ? { borderColor: c.goldBorder, backgroundColor: c.goldSurface }
+                  : {}),
+              }}
+            >
               <Icon name={icon} size={25} color={c.secondaryForeground} />
               <Txt serif size={25}>
                 {title}
@@ -468,6 +480,7 @@ export function ProfileScreen() {
     [phone, setPhone] = useState(s.profile?.phone || ""),
     [birthday, setBirthday] = useState(s.profile?.birthday || ""),
     [preferences, setPreferences] = useState(s.profile?.preferences || ""),
+    [medicalConditions, setMedicalConditions] = useState(s.profile?.medical_conditions || ""),
     [consent, setConsent] = useState(s.profile?.marketing_consent || false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -497,6 +510,7 @@ export function ProfileScreen() {
             phone,
             birthday: birthday || null,
             preferences,
+            medical_conditions: medicalConditions.trim(),
             marketing_consent: consent,
           }),
       );
@@ -543,6 +557,12 @@ export function ProfileScreen() {
             label="Preferences or relevant sensitivities (optional)"
             value={preferences}
             onChangeText={setPreferences}
+            multiline
+          />
+          <Field
+            label="Medical Conditions"
+            value={medicalConditions}
+            onChangeText={setMedicalConditions}
             multiline
           />
           <Check

@@ -1,3 +1,4 @@
+import { displayDateTime } from "@/lib/salon/dates";
 import React, { useEffect, useState } from "react";
 import { View, ScrollView, Linking } from "react-native";
 import { useSalon } from "@/lib/salon/SalonProvider";
@@ -11,6 +12,13 @@ import {
 import SignaturePad from "./SignaturePad";
 import { Action, Card, Check, ErrorBox, Field, LinkText, Txt, useColors } from "./ui";
 
+export type GuestAgreementDraft = {
+  signerName: string;
+  signature: SignatureStroke[];
+  version: string;
+  agreed: true;
+};
+
 export async function openAgreementPdf(path: string) {
   const result = check(
     await db()
@@ -23,15 +31,24 @@ export async function openAgreementPdf(path: string) {
 export default function ServiceAgreement({
   services,
   onReady,
+  noPaymentRequired = false,
+  guest = false,
+  guestName = "",
+  onGuestReady,
 }: {
+  noPaymentRequired?: boolean;
   services: string[];
   onReady: (id: string) => void;
+  guest?: boolean;
+  guestName?: string;
+  onGuestReady?: (draft: GuestAgreementDraft | null) => void;
 }) {
   const s = useSalon(),
     c = useColors();
   const [name, setName] = useState(s.profile?.full_name || "");
   const [accepted, setAccepted] = useState(false);
   const [signature, setSignature] = useState<SignatureStroke[]>([]);
+  const [guestSaved, setGuestSaved] = useState(false);
   const [saved, setSaved] = useState<Pick<
     SignedAgreement,
     "id" | "signed_at" | "object_path" | "signer_name"
@@ -41,8 +58,13 @@ export default function ServiceAgreement({
   const key = [...services].sort().join(",");
   useEffect(() => {
     setSaved(null);
+    setGuestSaved(false);
     onReady("");
-  }, [key, name, signature, accepted, onReady]);
+    onGuestReady?.(null);
+  }, [key, name, signature, accepted, onReady, onGuestReady]);
+  useEffect(() => {
+    if (guest && guestName && !name) setName(guestName);
+  }, [guest, guestName, name]);
   const valid =
     accepted && name.trim().length >= 3 && signature.reduce((n, v) => n + v.length, 0) >= 6;
   async function save() {
@@ -50,6 +72,17 @@ export default function ServiceAgreement({
     setBusy(true);
     setError("");
     try {
+      if (guest) {
+        onGuestReady?.({
+          signerName: name.trim(),
+          signature,
+          version: agreementVersion,
+          agreed: true,
+        });
+        onReady("guest-signed");
+        setGuestSaved(true);
+        return;
+      }
       const response = await db().functions.invoke("lj-sign-agreement", {
         body: {
           name: name.trim(),
@@ -86,8 +119,12 @@ export default function ServiceAgreement({
         Client service agreement
       </Txt>
       <Txt color={c.mutedForeground}>
-        Review, agree and sign before payment. A dated PDF is saved privately to your account and
-        Lady J’s owner records.
+        {noPaymentRequired
+          ? "Review, agree and sign to confirm your appointment."
+          : "Review, agree and sign before payment."}{" "}
+        {guest
+          ? "Your signed details are saved securely with this appointment in Lady J’s owner records."
+          : "A dated PDF is saved privately to your account and Lady J’s owner records."}
       </Txt>
       <ScrollView
         nestedScrollEnabled
@@ -112,13 +149,15 @@ export default function ServiceAgreement({
       />
       <SignaturePad onChange={setSignature} disabled={busy} />
       {!!error && <ErrorBox message={error} />}
-      {saved ? (
+      {guest && guestSaved ? (
+        <View style={{ gap: 8 }}>
+          <Txt bold color={c.success}>Signed and ready</Txt>
+          <Txt size={13}>You can now continue to booking.</Txt>
+        </View>
+      ) : saved ? (
         <View style={{ gap: 8 }}>
           <Txt bold color={c.success}>
-            Signed and saved ·{" "}
-            {new Date(saved.signed_at).toLocaleString("en-TT", {
-              timeZone: "America/Port_of_Spain",
-            })}
+            Signed and saved · {displayDateTime(saved.signed_at)}
           </Txt>
           <LinkText
             onPress={() => {
@@ -127,7 +166,11 @@ export default function ServiceAgreement({
           >
             Download signed PDF
           </LinkText>
-          <Txt size={13}>You can now continue to payment.</Txt>
+          <Txt size={13}>
+            {noPaymentRequired
+              ? "You can now confirm your appointment."
+              : "You can now continue to payment."}
+          </Txt>
         </View>
       ) : (
         <Action
@@ -144,9 +187,11 @@ export default function ServiceAgreement({
 export function AgreementList({
   customerId,
   demo = false,
+  title,
 }: {
   customerId?: string;
   demo?: boolean;
+  title?: string;
 }) {
   const c = useColors();
   const [rows, setRows] = useState<SignedAgreement[]>([]),
@@ -187,19 +232,21 @@ export function AgreementList({
     return (
       <Card>
         <Txt size={18} bold>
-          Service agreements
+          {title || "Service agreements"}
         </Txt>
-        <Txt>
-          Demo workspace · Signed PDFs appear here for real account-linked bookings. No fictional
-          signatures are created.
-        </Txt>
+        <Txt>No signed agreements yet.</Txt>
       </Card>
     );
   return (
     <View style={{ gap: 16 }}>
+      {!!title && (
+        <Txt size={20} bold>
+          {title}
+        </Txt>
+      )}
       {!!error && <ErrorBox message={error} retry={() => setVersion((v) => v + 1)} />}
       {busy ? (
-        <Txt>Loading signed agreements…</Txt>
+        <Txt>Loading signed agreements</Txt>
       ) : !rows.length ? (
         <Card>
           <Txt>No signed agreements yet.</Txt>
@@ -213,12 +260,7 @@ export function AgreementList({
             <Txt size={20} bold>
               {row.signer_name}
             </Txt>
-            <Txt>
-              Signed{" "}
-              {new Date(row.signed_at).toLocaleString("en-TT", {
-                timeZone: "America/Port_of_Spain",
-              })}
-            </Txt>
+            <Txt>Signed {displayDateTime(row.signed_at)}</Txt>
             <Txt size={13} color={c.mutedForeground}>
               Client service agreement ·{" "}
               {row.appointment_id ? "Linked to appointment" : "Ready for booking"}

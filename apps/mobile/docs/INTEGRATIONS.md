@@ -26,7 +26,7 @@ Use the Supabase panel environment selector to configure the intended developmen
 
 The sign-in screen checks Supabase's public Auth settings and automatically enables configured provider buttons. Web uses a separate browser popup, which must be allowed; the callback completes on the same origin and the parent exchanges the one-time code with its PKCE verifier. Native uses Expo WebBrowser and the app deep link. Sessions survive reload/closing; signing out removes the stored session. Browser environments that deny storage use an in-memory fallback. A cancelled or failed provider flow never claims success. The social flow never grants owner access.
 
-Price-free `lj_public_*` views intentionally expose only active catalog descriptions/imagery and public contact settings. They have an explicit column allowlist and active filters; base priced table SELECT and availability execution are denied to anonymous roles. Public client-model zero prices are sentinels and must never be rendered as actual prices. Marketing is separate from authentication; profiles default false and the database timestamps changes. No marketing messages are sent until communication providers are configured.
+The `lj_public_*` views expose active catalog descriptions, imagery and prices plus public contact settings. They retain explicit column allowlists and active filters; base catalog table SELECT and availability execution remain denied to anonymous roles. Marketing is separate from authentication; profiles default false and the database timestamps changes. No marketing messages are sent until communication providers are configured.
 
 ## Card processor
 

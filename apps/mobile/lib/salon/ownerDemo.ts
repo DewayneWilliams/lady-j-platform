@@ -9,7 +9,7 @@ export function createOwnerDemoCommerce(products: Product[], workshops: Workshop
   if (first)
     purchases.push({
       id: "demo-order-1",
-      customer_id: "demo-1",
+      customer_id: "demo-client-0",
       kind: "product",
       items: [{ id: first.id, name: first.name, price: Number(first.price), quantity: 1 }],
       total: Number(first.price),
@@ -20,19 +20,19 @@ export function createOwnerDemoCommerce(products: Product[], workshops: Workshop
   if (second)
     purchases.push({
       id: "demo-order-2",
-      customer_id: "demo-2",
+      customer_id: "demo-client-1",
       kind: "product",
       items: [{ id: second.id, name: second.name, price: Number(second.price), quantity: 1 }],
       total: Number(second.price),
       status: "ready",
       fulfillment: "delivery",
-      delivery_address: "Fictional demo address, Petit Valley",
+      delivery_address: "Petit Valley",
       created_at,
     });
   if (workshop)
     purchases.push({
       id: "demo-enrollment-1",
-      customer_id: "demo-3",
+      customer_id: "demo-client-2",
       kind: "workshop",
       items: [{ id: workshop.id, name: workshop.name, price: Number(workshop.price), quantity: 1 }],
       total: Number(workshop.price),
@@ -47,7 +47,7 @@ export function createOwnerDemoCommerce(products: Product[], workshops: Workshop
     purchase_id: p.id,
     amount: p.total,
     method: "bank",
-    reference: "DEMO-ORDER-" + (i + 1),
+    reference: "LJ-ORDER-" + (i + 1),
     status: "verified",
     received_at: created_at,
     created_at,

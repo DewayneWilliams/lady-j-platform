@@ -6,8 +6,8 @@ import { whatsappContactUrl } from "@/lib/salon/whatsapp";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { Client } from "@/lib/salon/types";
 import { fonts } from "@/lib/salon/design";
-import { Card, Txt, useColors, ErrorBox } from "../ui";
-import { OwnerButton, OwnerEmpty, OwnerText, OwnerTitle } from "./OwnerUI";
+import { Card, Txt, ButtonLabel, useColors, ErrorBox } from "../ui";
+import { OwnerButton, OwnerEmpty, OwnerText } from "./OwnerUI";
 type Profile = Record<string, unknown>;
 export default function ClientsPanel({
   clients,
@@ -39,7 +39,7 @@ export default function ClientsPanel({
           id: v.id,
           name: v.full_name,
           detail: v.phone || v.email,
-          notes: v.preferences,
+          notes: "",
           client: v,
           profile: undefined as Profile | undefined,
         }))
@@ -47,7 +47,7 @@ export default function ClientsPanel({
           id: String(v.id),
           name: String(v.full_name || "Profile not completed"),
           detail: String(v.phone || "Phone not supplied"),
-          notes: String(v.preferences || ""),
+          notes: "",
           client: undefined as Client | undefined,
           profile: v,
         }));
@@ -76,12 +76,18 @@ export default function ClientsPanel({
       ListHeaderComponent={
         <View>
           {!!error && <ErrorBox message={error} retry={onRetry} />}
-          <OwnerTitle
-            title="Clients"
-            action={<OwnerButton label="Add client" icon="UserPlus" onPress={onAdd} />}
-          />
+          <View
+            style={{
+              width: "100%",
+              alignSelf: "stretch",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 22,
+            }}
+          >
+            <OwnerButton label="Add client" icon="UserPlus" accent onPress={onAdd} />
+          </View>
 
-          <OwnerText muted>A–Z · New app clients appear automatically.</OwnerText>
           <View
             style={{
               flexDirection: "row",
@@ -101,15 +107,18 @@ export default function ClientsPanel({
                 style={{
                   flex: 1,
                   minHeight: 54,
+                  paddingVertical: 12,
+                  paddingHorizontal: 10,
+                  minWidth: 0,
                   alignItems: "center",
                   justifyContent: "center",
                   borderRadius: 10,
                   backgroundColor: mode === v ? c.card : "transparent",
                 }}
               >
-                <OwnerText bold={mode === v}>
+                <ButtonLabel size={20}>
                   {v === "Client records" ? "Clients" : "Accounts"}
-                </OwnerText>
+                </ButtonLabel>
               </Pressable>
             ))}
           </View>
@@ -129,7 +138,7 @@ export default function ClientsPanel({
             <Icon name="Search" size={22} color={c.mutedForeground} />
             <TextInput
               accessibilityLabel="Find a client"
-              placeholder="Search name, phone or preferences"
+              placeholder="Search name or phone"
               placeholderTextColor={c.mutedForeground}
               value={query}
               onChangeText={setQuery}
@@ -202,9 +211,9 @@ export default function ClientsPanel({
                 <OwnerText size={24} bold>
                   {item.name}
                 </OwnerText>
-                <OwnerText muted>{item.detail || "Contact details not supplied"}</OwnerText>
+                <OwnerText muted>{item.detail || "Client details not supplied"}</OwnerText>
                 {!!item.notes && (
-                  <Txt size={18} color={c.mutedForeground} lines={1}>
+                  <Txt size={18} color={c.mutedForeground}>
                     {item.notes}
                   </Txt>
                 )}
@@ -236,18 +245,22 @@ export default function ClientsPanel({
                 height: 44,
                 alignItems: "center",
                 justifyContent: "center",
-                opacity:
+              }}
+            >
+              <Icon
+                name="MessageCircle"
+                size={24}
+                color={
                   demo ||
                   !whatsappContactUrl(
                     item.client?.whatsapp_phone ||
                       item.client?.phone ||
                       String(item.profile?.phone || ""),
                   )
-                    ? 0.4
-                    : 1,
-              }}
-            >
-              <Icon name="MessageCircle" size={24} color={c.primary} />
+                    ? c.mutedForeground
+                    : c.brandAccent
+                }
+              />
             </Pressable>
             <Icon name="ChevronRight" size={23} color={c.warning} />
           </Card>

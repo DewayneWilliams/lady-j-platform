@@ -1,8 +1,18 @@
+import { displayDate } from "./dates";
 export type Service = {
+  duration_label?: string | null;
+  price_label?: string | null;
+  price_kind?: "fixed" | "from" | "per_item" | null;
+  price_unit?: "nail" | "toe" | "couple" | null;
+  is_add_on?: boolean;
+  bookable?: boolean;
+  catalog_visible?: boolean;
+  catalog_sort_order?: number | null;
   photos?: string[];
   is_special?: boolean;
   included_service_ids?: string[];
   promote_on_home?: boolean;
+  homepage_expires_at?: string | null;
   id: string;
   name: string;
   category: string;
@@ -52,7 +62,8 @@ export type Appointment = {
   block_weekdays?: number[];
   updated_at?: string;
   id: string;
-  customer_id: string;
+  customer_id: string | null;
+  client_id?: string | null;
   starts_at: string;
   ends_at: string;
   status: string;
@@ -94,6 +105,7 @@ export type Purchase = {
 export type Transaction = {
   id: string;
   customer_id: string | null;
+  client_id?: string | null;
   amount: number;
   method: string;
   reference: string;
@@ -106,6 +118,7 @@ export type Transaction = {
   created_at: string;
 };
 export type Profile = {
+  medical_conditions?: string;
   email?: string;
   id: string;
   full_name: string;
@@ -117,6 +130,7 @@ export type Profile = {
   marketing_consent: boolean;
 };
 export type Client = {
+  medical_conditions?: string;
   deleted_at?: string | null;
   is_minor?: boolean;
   guardian_name?: string;
@@ -157,15 +171,10 @@ export type Promotion = {
   photos?: string[];
 };
 export const money = (value: number) =>
-  `TT$${Number(value).toLocaleString("en-TT", { maximumFractionDigits: 2 })}`;
-export const dateLabel = (date: string, options?: Intl.DateTimeFormatOptions) =>
-  new Date(date).toLocaleDateString("en-TT", {
-    timeZone: "America/Port_of_Spain",
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    ...options,
-  });
+  `$${Number(value).toLocaleString("en-TT", { maximumFractionDigits: 2 })}`;
+export const servicePriceLabel = (service: Pick<Service, "price" | "price_label">) =>
+  service.price_label?.trim() || money(service.price);
+export const dateLabel = (date: string, _options?: Intl.DateTimeFormatOptions) => displayDate(date);
 export const timeLabel = (date: string) =>
   new Date(date).toLocaleTimeString("en-TT", {
     timeZone: "America/Port_of_Spain",

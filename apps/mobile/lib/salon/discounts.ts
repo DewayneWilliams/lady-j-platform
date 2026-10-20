@@ -38,7 +38,7 @@ export function useDiscountQuote(kind: "service" | "product" | "workshop", items
     error?: string;
   } | null>(null);
   const itemsJson = JSON.stringify(items);
-  const enabled = !!s.session && s.authReady && !s.loading && items.length > 0;
+  const enabled = s.authReady && !s.loading && items.length > 0;
   const key = JSON.stringify([s.session?.user?.id, kind, itemsJson, code]);
   const [retry, setRetry] = useState(0);
   useEffect(() => {

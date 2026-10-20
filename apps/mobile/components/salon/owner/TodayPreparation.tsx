@@ -46,41 +46,14 @@ export default function TodayPreparation({
           <OwnerText bold>Scheduled now</OwnerText>
           <OwnerText muted>
             {plan.current.services?.map((item) => item.name).join(" + ") || "Salon appointment"} ·{" "}
-            {nameFor(plan.current.customer_id)}
-          </OwnerText>
-        </View>
-      )}
-      {plan.target && (
-        <View style={{ borderTopWidth: 1, borderColor: c.border, paddingTop: 18, gap: 10 }}>
-          <OwnerText size={23} bold>
-            {plan.next ? "Prepare for your next client" : "For your current client"}
-          </OwnerText>
-          <OwnerText>
-            {nameFor(plan.target.customer_id)} · {timeLabel(plan.target.starts_at)}
-          </OwnerText>
-          <OwnerText muted>
-            {plan.target.services?.map((item) => item.name).join(" + ") || "Salon appointment"}
-          </OwnerText>
-          {plan.target.status === "pending" && (
-            <OwnerText muted>
-              Payment pending. Verify the request before starting the service.
-            </OwnerText>
-          )}
-          {plan.prep.map((item) => (
-            <View key={item.area} style={{ gap: 4 }}>
-              <OwnerText bold>{item.area}</OwnerText>
-              <OwnerText muted>{item.detail}</OwnerText>
-            </View>
-          ))}
-          <OwnerText size={16} muted>
-            Suggested prep follows the booked service categories. Follow your salon’s service
-            checklist.
+            {nameFor(plan.current.client_id || plan.current.customer_id)}
           </OwnerText>
         </View>
       )}
       <View style={{ borderTopWidth: 1, borderColor: c.border, paddingTop: 16, gap: 8 }}>
         <OwnerText muted>
-          {today.length} appointments today · {money(projected)} projected
+          {today.length} appointments today{"\n"}
+          {money(projected)} projected
         </OwnerText>
         <OwnerText size={16} muted>
           Updated {timeLabel(now.toISOString())} · Trinidad & Tobago

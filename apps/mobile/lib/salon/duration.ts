@@ -11,3 +11,10 @@ export function formatDuration(value: number) {
     .filter(Boolean)
     .join(" ");
 }
+
+export function serviceDurationLabel(service: {
+  duration: number;
+  duration_label?: string | null;
+}) {
+  return service.duration_label?.trim() || formatDuration(service.duration);
+}

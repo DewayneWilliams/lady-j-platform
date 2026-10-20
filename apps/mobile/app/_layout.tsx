@@ -115,8 +115,7 @@ function RootContent() {
           <SalonProvider>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" options={{ title: "Lady J" }} />
-              <Stack.Screen name="home" options={{ title: "Lady J Salon & Day Spa" }} />
-              <Stack.Screen name="[page]" options={{ title: "Lady J" }} />
+              <Stack.Screen name="(client)" options={{ title: "Lady J Salon & Day Spa" }} />
               <Stack.Screen name="owner" options={{ title: "Owner workspace" }} />
             </Stack>
           </SalonProvider>

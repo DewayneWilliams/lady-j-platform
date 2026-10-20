@@ -24,3 +24,21 @@ Owner catalog tools support public photo galleries, combined service specials wi
 - Catalog editors use category dropdowns, shared hours/minutes durations in quarter-hour choices and confirmed history-preserving removal; Business attention pulses more prominently and Maria focuses on voice with centered languages.
 - Calendar uses live-only five-color activity dots and a tap-to-open agenda; reasoned, all-day and recurring blocks reuse existing reservation protection and synchronize through privacy-safe Realtime invalidation.
 - Calendar legend wraps above the month without scrolling; Block time opens its reason dropdown directly, Today includes activity dots and blocks, and the labeled owner demo includes Bible-inspired examples for every dot color.
+- Active service, product and workshop prices are public; accounts remain required for private availability, booking, shopping bags and checkout.
+Owner workspace uses wrapping text, solid-gold native tab navigation, inline combo packages, CSV downloads and separate service/payment celebrations.
+
+- Business prioritizes Create Special below attention warnings; compact Sample data markers replace verbose preview notices, and payment cards reconcile verified receipts.
+- Contacts combine services, products and workshops under Purchase History and require typed confirmation for removal; bottom navigation uses only bold white icons and a faceted diamond.
+- Contacts prioritize editable email/mobile and service history, with a paired Edit/Save row; Block Time starts with a legend-colored Reason dropdown.
+- Specials expose homepage promotion explicitly; a 100-item sample catalog supports fuller testing, with paged browsing, clearer feedback and reduced-motion celebrations.
+- Discounted appointment receipts can be recorded independently of service completion; contacts open with full wrapping text and require explicit Edit, Save or Cancel.
+- Buttons and pills use bold 18–22px wrapping labels and compact padding; narrow-screen headers and navigator-backed gold menus wrap into rows to preserve full-size text.
+- Bottom menus retain one row with the original icons and labels; Home places contact and a real, zero-deposit consultation booking below the hero.
+
+- Client media uses private per-item permissions and separately recorded consent; albums never grant access, owner notes remain private, and capture never saves to the device gallery.
+
+- Owner custom discounts include 100% with confirmation above 25%; receipt references are automatic, and Google review cards display only authorized provider data.
+
+- The supplied 129-entry service catalog is live without duplicate regular rows; a separate zero-cost consultation supports the homepage CTA, incomplete Makeup stays unpublished, and add-ons/N/A-duration services remain non-bookable.
+
+- Calendar marks the current salon-local date with a fast outline-only pulse; Reduce Motion keeps it steady and background/unmount stops animation.

@@ -10,7 +10,7 @@ import {
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { clientNavigationCopy } from "@/lib/salon/clientLanguage";
-import { Txt, useColors } from "./ui";
+import { Txt, ButtonLabel, useColors } from "./ui";
 
 export default function HeaderLanguageSelector({ compact }: { compact: boolean }) {
   const c = useColors();
@@ -25,7 +25,9 @@ export default function HeaderLanguageSelector({ compact }: { compact: boolean }
         className="web:focus-visible:outline-none web:focus-visible:ring-2 web:focus-visible:ring-ring"
         style={{
           minWidth: 44,
-          height: 44,
+          minHeight: 48,
+          paddingVertical: 12,
+          paddingHorizontal: compact ? 0 : 10,
           flexShrink: 0,
           flexDirection: "row",
           alignItems: "center",
@@ -33,9 +35,9 @@ export default function HeaderLanguageSelector({ compact }: { compact: boolean }
           gap: 3,
         }}
       >
-        <Txt size={compact ? 12 : 14} bold color={c.headerInk} lines={1}>
+        <ButtonLabel size={compact ? 13 : 18} color={c.headerInk}>
           {compact ? clientLanguage.toUpperCase() : clientLanguage === "en" ? "English" : "Español"}
-        </Txt>
+        </ButtonLabel>
         <Icon name="ChevronDown" size={12} color={c.headerInk} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} style={{ width: 248 }}>
@@ -51,10 +53,10 @@ export default function HeaderLanguageSelector({ compact }: { compact: boolean }
           }}
         >
           <DropdownMenuRadioItem value="en" style={{ minHeight: 48 }}>
-            <Txt size={16}>English</Txt>
+            <ButtonLabel style={{ paddingHorizontal: 18 }}>English</ButtonLabel>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="es" style={{ minHeight: 48 }}>
-            <Txt size={16}>Español</Txt>
+            <ButtonLabel style={{ paddingHorizontal: 18 }}>Español</ButtonLabel>
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>

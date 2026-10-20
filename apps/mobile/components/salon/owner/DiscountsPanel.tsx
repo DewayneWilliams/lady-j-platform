@@ -1,3 +1,4 @@
+import { displayDate } from "@/lib/salon/dates";
 import { DateField } from "../DateFields";
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
@@ -143,9 +144,7 @@ export default function DiscountsPanel({
       setPage(0);
       setVersion((v) => v + 1);
       s.notify(
-        demo
-          ? "Demo discount saved. Customer checkout is unchanged."
-          : "Discount saved. Eligible customers can use it before payment.",
+        demo ? "Discount saved." : "Discount saved. Eligible customers can use it before payment.",
       );
     } catch (e) {
       const message = e instanceof Error ? e.message : "Unable to save this discount.";
@@ -201,7 +200,7 @@ export default function DiscountsPanel({
               placeholder="LADYJ10"
             />
           )}
-          <OwnerText bold>Applies to</OwnerText>
+          <OwnerText bold>Applies To</OwnerText>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {scopes.map((v) => (
               <Chip
@@ -268,7 +267,7 @@ export default function DiscountsPanel({
           </OwnerText>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
             <OwnerButton
-              label={busy ? "Saving…" : "Save discount"}
+              label={busy ? "Saving" : "Save discount"}
               disabled={busy}
               onPress={() => void save()}
             />
@@ -284,7 +283,7 @@ export default function DiscountsPanel({
           </View>
         </Card>
       )}
-      {loading && <OwnerText muted>Loading discounts…</OwnerText>}
+      {loading && <OwnerText muted>Loading discounts</OwnerText>}
       {!loading && !visible.length && !form && (
         <Card>
           <OwnerText>No discounts yet. Create your first offer above.</OwnerText>
@@ -310,14 +309,7 @@ export default function DiscountsPanel({
                   ? "Expired"
                   : "Active"}
             </OwnerText>
-            {v.expires_at && (
-              <OwnerText muted>
-                Expires{" "}
-                {new Date(v.expires_at).toLocaleDateString("en-TT", {
-                  timeZone: "America/Port_of_Spain",
-                })}
-              </OwnerText>
-            )}
+            {v.expires_at && <OwnerText muted>Expires {displayDate(v.expires_at)}</OwnerText>}
             <OwnerButton label="Edit discount" secondary onPress={() => open(v)} />
           </Card>
         ))}

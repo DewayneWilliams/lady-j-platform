@@ -1,12 +1,37 @@
-import React, { useState } from "react";
-import { View, Pressable } from "react-native";
+import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreference";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Pressable, Animated, Platform, StyleSheet } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { Card, useColors } from "../ui";
 import { OwnerButton, OwnerText } from "./OwnerUI";
-export default function MariaPanel({ demo }: { demo: boolean }) {
+export default function MariaPanel(_: { demo: boolean }) {
   const c = useColors();
   const [voiceHint, setVoiceHint] = useState(false);
   const [spanish, setSpanish] = useState(false);
+  const reducedMotion = useReducedMotionPreference();
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (reducedMotion !== false) return;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 240,
+          useNativeDriver: Platform.OS !== "web",
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 240,
+          useNativeDriver: Platform.OS !== "web",
+        }),
+      ]),
+    );
+    animation.start();
+    return () => {
+      animation.stop();
+      pulse.setValue(0);
+    };
+  }, [pulse, reducedMotion]);
   return (
     <View style={{ gap: 20, maxWidth: 760, width: "100%", alignSelf: "center" }}>
       <View style={{ flexDirection: "row", justifyContent: "center", gap: 10 }}>
@@ -25,8 +50,23 @@ export default function MariaPanel({ demo }: { demo: boolean }) {
           }}
         />
       </View>
-      <Card style={{ gap: 18, alignItems: "center", paddingVertical: 30 }}>
-        <View style={{ borderWidth: 2, borderColor: c.goldBorder, borderRadius: 104, padding: 12 }}>
+      <Card style={{ gap: 18, alignItems: "center", paddingVertical: 30, width: "100%" }}>
+        <View style={{ padding: 14 }}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                borderWidth: 2,
+                borderColor: c.tertiary,
+                borderRadius: 104,
+                opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }),
+                transform: [
+                  { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) },
+                ],
+              },
+            ]}
+          />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={spanish ? "Hablar con Maria" : "Talk to Maria"}
@@ -52,11 +92,6 @@ export default function MariaPanel({ demo }: { demo: boolean }) {
         <OwnerText size={28} bold>
           {spanish ? "Habla con Maria" : "Talk to Maria"}
         </OwnerText>
-        <OwnerText>
-          {spanish
-            ? "La conexión de voz estará disponible más adelante."
-            : "Your voice connection is coming later."}
-        </OwnerText>
         {voiceHint && (
           <OwnerText size={17} muted>
             {spanish
@@ -64,15 +99,6 @@ export default function MariaPanel({ demo }: { demo: boolean }) {
               : "OpenAI Realtime is not connected yet. No audio is being recorded."}
           </OwnerText>
         )}
-        <OwnerText size={17} muted>
-          {demo
-            ? spanish
-              ? "Datos ficticios de demostración."
-              : "Demo workspace · Fictional records."
-            : spanish
-              ? "Usa los registros cargados de tu salón."
-              : "Uses the loaded records from your private workspace."}
-        </OwnerText>
       </Card>
     </View>
   );

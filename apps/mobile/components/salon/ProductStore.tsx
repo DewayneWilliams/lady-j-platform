@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, ScrollView, Pressable, TextInput, useWindowDimensions } from "react-native";
+import { View, Pressable, TextInput, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { productBrands } from "@/lib/salon/categories";
@@ -39,7 +39,7 @@ export default function ProductStore() {
   const currentPage = Math.min(page, pages - 1);
   const bagCount = Object.values(s.cart).reduce((total, quantity) => total + quantity, 0);
   return (
-    <Shell wide>
+    <Shell wide scrollRevision={currentPage}>
       <View
         style={{
           flexDirection: "row",
@@ -55,7 +55,7 @@ export default function ProductStore() {
             The Lady J beauty store
           </Txt>
           <Txt color={c.mutedForeground} style={{ marginTop: 8 }}>
-            Professional care for your everyday ritual.
+            Professional care for your everyday routine.
           </Txt>
         </View>
         <Action
@@ -74,17 +74,16 @@ export default function ProductStore() {
           marginBottom: 28,
         }}
       >
-        <Tag gold>Demo beauty store</Tag>
+        <Tag gold>Sample data</Tag>
         <Txt serif size={width > 800 ? 38 : 28}>
           Your salon shelf, at home.
         </Txt>
         <Txt color={c.mutedForeground} style={{ maxWidth: 620 }}>
-          Shop by brand and find your daily essentials. Demo prices, stock and photos are
-          illustrative; final listings await salon confirmation.
+          Shop by brand and find your daily essentials.
         </Txt>
         {!s.session && (
           <LinkText onPress={() => go("register", { next: "boutique" })}>
-            Create a free account to view prices
+            Create a free account to shop
           </LinkText>
         )}
       </Card>
@@ -104,7 +103,7 @@ export default function ProductStore() {
         <Icon name="Search" size={22} color={c.mutedForeground} />
         <TextInput
           accessibilityLabel="Search beauty products or brands"
-          placeholder="Search products, brands or your next ritual"
+          placeholder="Search products, brands or your next essential"
           placeholderTextColor={c.mutedForeground}
           value={query}
           onChangeText={(value) => {
@@ -124,11 +123,7 @@ export default function ProductStore() {
       <Txt size={18} bold style={{ marginBottom: 12 }}>
         Shop by brand
       </Txt>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 10, paddingBottom: 24 }}
-      >
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, paddingBottom: 24 }}>
         {[
           "All brands",
           ...new Set([...productBrands, ...s.products.map((v) => v.brand || "").filter(Boolean)]),
@@ -143,12 +138,8 @@ export default function ProductStore() {
             }}
           />
         ))}
-      </ScrollView>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 10, paddingBottom: 24 }}
-      >
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, paddingBottom: 24 }}>
         {[
           "All products",
           ...new Set([
@@ -169,7 +160,7 @@ export default function ProductStore() {
             }}
           />
         ))}
-      </ScrollView>
+      </View>
       <View
         style={{
           flexDirection: "row",
@@ -182,19 +173,17 @@ export default function ProductStore() {
       >
         <Txt color={c.mutedForeground}>{filtered.length} products</Txt>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {(s.session ? ["Name A–Z", "Price low–high", "Price high–low"] : ["Name A–Z"]).map(
-            (value) => (
-              <Chip
-                key={value}
-                label={value}
-                selected={sort === value}
-                onPress={() => {
-                  setSort(value);
-                  setPage(0);
-                }}
-              />
-            ),
-          )}
+          {["Name A–Z", "Price low–high", "Price high–low"].map((value) => (
+            <Chip
+              key={value}
+              label={value}
+              selected={sort === value}
+              onPress={() => {
+                setSort(value);
+                setPage(0);
+              }}
+            />
+          ))}
         </View>
       </View>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 20 }}>
@@ -218,13 +207,9 @@ export default function ProductStore() {
                 {v.name}
               </Txt>
             </Pressable>
-            {v.is_demo && (
-              <Txt size={12} color={c.mutedForeground}>
-                Demo product · Illustrative photo
-              </Txt>
-            )}
+
             <Txt size={20} bold>
-              {s.session ? money(v.price) : "Sign in for price"}
+              {money(v.price)}
             </Txt>
             <Txt size={13} color={c.mutedForeground}>
               {v.stock > 0 ? "Available for pickup or delivery" : "Currently out of stock"}

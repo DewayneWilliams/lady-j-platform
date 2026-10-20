@@ -1,8 +1,8 @@
 import React from "react";
-import { View, ViewStyle } from "react-native";
+import { View, ViewStyle, ActivityIndicator } from "react-native";
 import { Button } from "@/components/ui/button";
 import Icon, { IconName } from "@/lib/icons/LucideIcon";
-import { Txt, Card, useColors } from "../ui";
+import { Txt, ButtonLabel, Card, useColors } from "../ui";
 export function OwnerText({
   children,
   size = 20,
@@ -28,6 +28,11 @@ export function OwnerButton({
   secondary = false,
   destructive = false,
   disabled = false,
+  accent = false,
+  compact = false,
+  fill = false,
+  busy = false,
+  payment = false,
 }: {
   label: string;
   onPress: () => void;
@@ -35,34 +40,79 @@ export function OwnerButton({
   secondary?: boolean;
   destructive?: boolean;
   disabled?: boolean;
+  accent?: boolean;
+  compact?: boolean;
+  fill?: boolean;
+  busy?: boolean;
+  payment?: boolean;
 }) {
   const c = useColors();
-  const color = destructive ? c.attentionBorder : secondary ? c.foreground : c.tertiaryForeground;
+  const color = payment
+    ? c.paymentPaidBadgeForeground
+    : disabled || busy
+      ? c.mutedForeground
+      : destructive
+        ? c.attentionBorder
+        : secondary
+          ? c.foreground
+          : c.tertiaryForeground;
   return (
     <Button
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || busy}
       variant={secondary || destructive ? "outline" : "default"}
       style={{
         minHeight: 58,
-        alignSelf: "flex-start",
+        alignSelf: fill ? "stretch" : "flex-start",
+        width: fill ? "100%" : undefined,
         maxWidth: "100%",
+        minWidth: 0,
+        flexShrink: 1,
+        flexGrow: fill ? 1 : undefined,
+        alignItems: "center",
+        justifyContent: "center",
         height: "auto",
         borderRadius: 12,
-        paddingHorizontal: 18,
+        paddingHorizontal: compact ? 10 : 12,
         paddingVertical: 12,
         gap: 10,
         flexDirection: "row",
-        backgroundColor: secondary || destructive ? c.card : c.tertiary,
+        backgroundColor: payment
+          ? c.paymentPaidBadge
+          : disabled || busy
+            ? c.muted
+            : secondary || destructive
+              ? c.card
+              : accent
+                ? c.brandAccentFill
+                : c.tertiary,
         borderWidth: 1,
-        borderColor: destructive ? c.attentionBorder : secondary ? c.border : c.tertiary,
-        opacity: disabled ? 0.5 : 1,
+        borderColor: payment
+          ? c.paymentPaidBadge
+          : disabled || busy
+            ? c.border
+            : destructive
+              ? c.attentionBorder
+              : secondary
+                ? c.border
+                : accent
+                  ? c.brandAccentFill
+                  : c.tertiary,
       }}
     >
-      {icon && <Icon name={icon} size={21} color={color} />}
-      <Txt size={20} bold color={color} style={{ flexShrink: 1, textAlign: "center" }}>
+      {busy ? (
+        <ActivityIndicator color={color} />
+      ) : (
+        icon && <Icon name={icon} size={21} color={color} />
+      )}
+      <ButtonLabel
+        singleLine
+        size={compact && (secondary || destructive) ? 18 : 20}
+        color={color}
+        style={{ flexShrink: 1, textAlign: "center" }}
+      >
         {label}
-      </Txt>
+      </ButtonLabel>
     </Button>
   );
 }
@@ -71,18 +121,18 @@ export function OwnerStatus({ status }: { status: string }) {
   const good = ["confirmed", "verified", "paid", "completed", "fulfilled"].includes(status),
     bad = ["cancelled", "no_show", "refunded"].includes(status);
   const label: Record<string, string> = {
-    pending: "Payment pending",
+    pending: "Payment Pending",
     confirmed: "Confirmed",
     verified: "Verified",
     paid: "Paid",
-    completed: "Service complete",
-    no_show: "No-show",
+    completed: "Service Complete",
+    no_show: "No-Show",
     processing: "Processing",
-    ready: "Ready for pickup",
+    ready: "Ready for Pickup",
     fulfilled: "Fulfilled",
     cancelled: "Cancelled",
-    block: "Time blocked",
-    refund_due: "Refund due",
+    block: "Time Blocked",
+    refund_due: "Refund Due",
     refunded: "Refunded",
     retained: "Retained",
   };
@@ -90,19 +140,28 @@ export function OwnerStatus({ status }: { status: string }) {
     <View
       style={{
         alignSelf: "flex-start",
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        backgroundColor: good ? c.muted : bad ? c.secondary : c.goldSurface,
+        maxWidth: "100%",
+        minWidth: 0,
+        flexShrink: 1,
+        borderRadius: status === "pending" ? 999 : 8,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        backgroundColor:
+          status === "pending"
+            ? c.paymentPendingBadge
+            : good
+              ? c.muted
+              : bad
+                ? c.secondary
+                : c.goldSurface,
       }}
     >
-      <Txt
-        size={18}
+      <ButtonLabel
         color={
           status === "confirmed"
             ? c.paymentDepositForeground
             : status === "pending"
-              ? c.paymentPending
+              ? c.primaryForeground
               : status === "paid"
                 ? c.paymentPaid
                 : good
@@ -113,7 +172,7 @@ export function OwnerStatus({ status }: { status: string }) {
         }
       >
         {label[status] || status}
-      </Txt>
+      </ButtonLabel>
     </View>
   );
 }

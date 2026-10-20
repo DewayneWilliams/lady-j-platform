@@ -1,6 +1,6 @@
 import { DateField } from "../DateFields";
 import React, { useMemo, useState } from "react";
-import { View, TextInput, ScrollView, useWindowDimensions } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import { Transaction, Appointment, Product, Purchase, money, dateLabel } from "@/lib/salon/types";
 import {
   revenueLines,
@@ -11,7 +11,6 @@ import {
   RevenueCategory,
 } from "@/lib/salon/revenueReport";
 import { exportCsv } from "@/lib/salon/csvExport";
-import { fonts } from "@/lib/salon/design";
 import { Card, ErrorBox, useColors } from "../ui";
 import { OwnerButton, OwnerStat, OwnerText, OwnerTitle } from "./OwnerUI";
 export default function RevenuePanel({
@@ -65,7 +64,7 @@ export default function RevenuePanel({
     setError("");
     try {
       await exportCsv(
-        `lady-j-${demo ? "demo-" : ""}revenue-${category.toLowerCase()}-${range.from}-to-${range.to}.csv`,
+        `lady-j-${demo ? "sample-" : ""}revenue-${category.toLowerCase()}-${range.from}-to-${range.to}.csv`,
         revenueCsv(rows, range.from, range.to, demo),
       );
     } catch (e) {
@@ -78,9 +77,7 @@ export default function RevenuePanel({
     <View style={{ gap: 24 }}>
       <OwnerTitle
         title="Revenue received"
-        description={
-          demo ? "Demo report · Fictional transactions" : "Cash received, clearly accounted for."
-        }
+        description={demo ? "Receipts and refunds" : "Cash received, clearly accounted for."}
       />
       <Card style={{ gap: 18 }}>
         <OwnerText size={24} bold>
@@ -112,11 +109,7 @@ export default function RevenuePanel({
             {formatDate(range.from)} – {formatDate(range.to)} · TTD
           </OwnerText>
         )}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 10 }}
-        >
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {(
             [
               "All",
@@ -133,9 +126,9 @@ export default function RevenuePanel({
               onPress={() => setCategory(v)}
             />
           ))}
-        </ScrollView>
+        </View>
         <OwnerButton
-          label={exporting ? "Preparing CSV…" : "Download CSV"}
+          label={exporting ? "Preparing CSV" : "Download CSV"}
           icon="Download"
           disabled={exporting || invalid}
           onPress={() => void download()}

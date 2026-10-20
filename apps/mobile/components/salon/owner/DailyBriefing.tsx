@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Pressable, View } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { AttentionItem } from "@/lib/salon/ownerAssistant";
-import { Card, useColors } from "../ui";
+import { Card, Txt, ButtonLabel, useColors } from "../ui";
 import AttentionCard from "./AttentionCard";
 import { OwnerText } from "./OwnerUI";
 export default function DailyBriefing({
@@ -36,7 +36,7 @@ export default function DailyBriefing({
             gap: 14,
             minHeight: 68,
             paddingVertical: 12,
-            opacity: pressed ? 0.6 : 1,
+            opacity: pressed ? 0.98 : 1,
             borderBottomWidth: 1,
             borderColor: c.border,
           })}
@@ -48,10 +48,12 @@ export default function DailyBriefing({
               borderRadius: 12,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: c.goldSurface,
+              backgroundColor: c.brandAccentSurface,
             }}
           >
-            <OwnerText bold>{item.count}</OwnerText>
+            <Txt size={20} bold color={c.brandAccent}>
+              {item.count}
+            </Txt>
           </View>
           <View style={{ flex: 1, gap: 4 }}>
             <OwnerText bold>{item.title}</OwnerText>
@@ -66,11 +68,17 @@ export default function DailyBriefing({
         <Pressable
           accessibilityRole="button"
           onPress={() => setExpanded(!expanded)}
-          style={{ minHeight: 58, justifyContent: "center" }}
+          style={{
+            minHeight: 48,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 12,
+            paddingVertical: 12,
+          }}
         >
-          <OwnerText bold>
+          <ButtonLabel size={20}>
             {expanded ? "Show less" : "Show " + (items.length - 3) + " more"}
-          </OwnerText>
+          </ButtonLabel>
         </Pressable>
       )}
     </View>

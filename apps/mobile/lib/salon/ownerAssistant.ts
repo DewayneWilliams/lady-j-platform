@@ -53,8 +53,10 @@ export function ownerAttention(
   return [
     {
       key: "payments",
-      title: "Verify bank payments",
-      detail: "Check money received before confirming these requests.",
+      title: "Outstanding payments",
+      detail:
+        payments.length +
+        (payments.length === 1 ? " payment needs verification." : " payments need verification."),
       section: "Payments",
       count: payments.length,
     },
@@ -83,8 +85,8 @@ export function ownerAttention(
     },
     {
       key: "stock",
-      title: "Restock the boutique",
-      detail: "Products at or below their individual stock alert level.",
+      title: "Product inventory low",
+      detail: low.map((product) => product.name + " · " + product.stock + " left").join(", "),
       section: "Products",
       count: low.length,
     },

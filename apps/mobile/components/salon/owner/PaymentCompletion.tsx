@@ -1,14 +1,12 @@
-import React, { useState } from "react";
-import { View, TextInput, Pressable } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Pressable } from "react-native";
 import { Appointment, Transaction, money } from "@/lib/salon/types";
 import { appointmentPayment } from "@/lib/salon/appointmentPayment";
-import { fonts } from "@/lib/salon/design";
-import { Card, ErrorBox, useColors } from "../ui";
+import { Card, ErrorBox, Txt, ButtonLabel, useColors } from "../ui";
 import { OwnerButton, OwnerText } from "./OwnerUI";
 export default function PaymentCompletion({
   appointment,
   transactions,
-  demo,
   onConfirm,
 }: {
   appointment: Appointment;
@@ -19,13 +17,15 @@ export default function PaymentCompletion({
   const c = useColors(),
     payment = appointmentPayment(appointment, transactions);
   const [method, setMethod] = useState<"cash" | "bank">("cash"),
-    [reference, setReference] = useState(""),
     [accepted, setAccepted] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  useEffect(() => {
+    setAccepted(false);
+    setError("");
+  }, [appointment.id, payment.remaining]);
   return (
     <View style={{ gap: 20 }}>
-      {demo && <OwnerText muted>Demo payment · No real funds are processed.</OwnerText>}
       <Card style={{ backgroundColor: c.goldSurface, borderColor: c.goldBorder, gap: 12 }}>
         <OwnerText>
           {appointment.services?.map((v) => v.name).join(" + ") || "Salon services"}
@@ -47,7 +47,7 @@ export default function PaymentCompletion({
           }}
         />
         <OwnerButton
-          label="Bank transfer"
+          label="Bank Transfer"
           secondary={method !== "bank"}
           onPress={() => {
             setMethod("bank");
@@ -55,26 +55,6 @@ export default function PaymentCompletion({
           }}
         />
       </View>
-      <OwnerText>
-        {method === "bank" ? "Bank receipt reference" : "Receipt reference (optional)"}
-      </OwnerText>
-      <TextInput
-        accessibilityLabel="Payment receipt reference"
-        value={reference}
-        onChangeText={setReference}
-        maxLength={150}
-        style={{
-          fontFamily: fonts.body,
-          fontSize: 20,
-          minHeight: 58,
-          padding: 15,
-          borderWidth: 1,
-          borderColor: c.border,
-          borderRadius: 12,
-          color: c.foreground,
-          backgroundColor: c.background,
-        }}
-      />
       <OwnerText muted>
         Record money already received. This action does not charge a card or transfer funds. Any
         unpaid deposit request will be closed.
@@ -98,33 +78,43 @@ export default function PaymentCompletion({
             justifyContent: "center",
           }}
         >
-          <OwnerText bold>{accepted ? "✓" : ""}</OwnerText>
+          <Txt bold color={c.tertiaryForeground}>
+            {accepted ? "✓" : ""}
+          </Txt>
         </View>
         <View style={{ flex: 1 }}>
-          <OwnerText>
+          <ButtonLabel size={20} style={{ textAlign: "left" }}>
             I confirm {money(payment.remaining)} was received{" "}
             {method === "cash" ? "in cash" : "in the bank account"}.
-          </OwnerText>
+          </ButtonLabel>
         </View>
       </Pressable>
       {!!error && <ErrorBox message={error} />}
-      <OwnerButton
-        label={busy ? "Recording…" : "Record payment complete"}
-        disabled={
-          busy || !accepted || (method === "bank" && !reference.trim()) || payment.remaining <= 0
-        }
-        onPress={() => {
-          setBusy(true);
-          setError("");
-          void onConfirm(method, reference, payment.remaining)
-            .catch((e) =>
-              setError(
-                e instanceof Error ? e.message : "Payment could not be recorded. Try again.",
-              ),
-            )
-            .finally(() => setBusy(false));
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
+          width: "100%",
         }}
-      />
+      >
+        <OwnerButton
+          payment
+          label={busy ? "Recording" : "Record Payment"}
+          disabled={busy || !accepted || payment.remaining <= 0}
+          onPress={() => {
+            setBusy(true);
+            setError("");
+            void onConfirm(method, "", payment.remaining)
+              .catch((e) =>
+                setError(
+                  e instanceof Error ? e.message : "Payment could not be recorded. Try again.",
+                ),
+              )
+              .finally(() => setBusy(false));
+          }}
+        />
+      </View>
     </View>
   );
 }

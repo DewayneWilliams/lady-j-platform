@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { AppState, Platform } from "react-native";
 import { useForegroundRefresh } from "./useForegroundRefresh";
+import { orderServicesByCategory } from "./categories";
 import type { Session } from "@supabase/supabase-js";
 import type { ClientLanguage } from "./clientLanguage";
 import { supabase, db, check } from "./client";
@@ -20,6 +21,7 @@ interface SalonState {
   clientLanguage: ClientLanguage;
   setClientLanguage: (language: ClientLanguage) => void;
   services: Service[];
+  homeSpecials: Service[];
   products: Product[];
   workshops: Workshop[];
   promotions: Promotion[];
@@ -48,6 +50,7 @@ interface SalonState {
 const Context = createContext<SalonState | null>(null);
 export function SalonProvider({ children }: { children: React.ReactNode }) {
   const [services, setServices] = useState<Service[]>([]),
+    [homeSpecials, setHomeSpecials] = useState<Service[]>([]),
     [products, setProducts] = useState<Product[]>([]),
     [workshops, setWorkshops] = useState<Workshop[]>([]),
     [promotions, setPromotions] = useState<Promotion[]>([]),
@@ -85,11 +88,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
     try {
       const client = db();
       const results = await Promise.all([
-        client
-          .from(signedIn ? "lj_services" : "lj_public_services")
-          .select("*")
-          .eq("active", true)
-          .order("name"),
+        client.from("lj_public_services").select("*").order("catalog_sort_order"),
         client
           .from(signedIn ? "lj_products" : "lj_public_products")
           .select("*")
@@ -105,18 +104,18 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
           .select("*")
           .single(),
         client.from("lj_promotions").select("*").eq("active", true),
+        client.from("lj_public_home_specials").select("*").order("name").limit(2),
       ]);
       if (generation !== catalogGeneration.current) return;
-      setServices((check(results[0]) as Service[]).map((v) => (signedIn ? v : { ...v, price: 0 })));
-      setProducts((check(results[1]) as Product[]).map((v) => (signedIn ? v : { ...v, price: 0 })));
-      setWorkshops(
-        (check(results[2]) as Workshop[]).map((v) => (signedIn ? v : { ...v, price: 0 })),
-      );
+      setServices(orderServicesByCategory(check(results[0]) as Service[]));
+      setProducts(check(results[1]) as Product[]);
+      setWorkshops(check(results[2]) as Workshop[]);
       const currentSettings = check(results[3]) as Settings;
       setSettings(
         signedIn ? currentSettings : { ...currentSettings, bank_instructions: "", delivery_fee: 0 },
       );
       setPromotions(check(results[4]) as Promotion[]);
+      setHomeSpecials(check(results[5]) as Service[]);
     } catch (e) {
       if (generation === catalogGeneration.current)
         setError(e instanceof Error ? e.message : "Unable to connect. Please try again.");
@@ -245,6 +244,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         clientLanguage,
         setClientLanguage,
         services,
+        homeSpecials,
         products,
         workshops,
         promotions,

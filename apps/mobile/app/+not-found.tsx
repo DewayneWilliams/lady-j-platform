@@ -1,7 +1,7 @@
-import { router } from 'expo-router';
-import { View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text } from '@/components/ui/text';
+import { router } from "expo-router";
+import { View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Text } from "@/components/ui/text";
 import {
   Card,
   CardContent,
@@ -9,8 +9,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function NotFoundScreen() {
   return (
@@ -29,10 +29,14 @@ export default function NotFoundScreen() {
             </Text>
           </CardContent>
           <CardFooter className="gap-3">
-            <Button onPress={() => router.replace('/')} className="flex-1">
+            <Button onPress={() => router.replace("/")} className="flex-1">
               <Text className="text-button text-primary-foreground">Go to Home</Text>
             </Button>
-            <Button variant="outline" onPress={() => router.back()} className="flex-1">
+            <Button
+              variant="outline"
+              onPress={() => (router.canGoBack() ? router.back() : router.replace("/home"))}
+              className="flex-1"
+            >
               <Text className="text-button text-foreground">Go Back</Text>
             </Button>
           </CardFooter>

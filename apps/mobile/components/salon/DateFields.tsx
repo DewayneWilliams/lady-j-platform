@@ -1,3 +1,6 @@
+import { displayDate, monthNames } from "@/lib/salon/dates";
+import CalendarPicker from "./CalendarPicker";
+import { fieldLabel } from "@/lib/salon/design";
 import { formatDuration } from "@/lib/salon/duration";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -7,11 +10,11 @@ import {
   Modal,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Txt, Action, useColors } from "./ui";
+import { Txt, ButtonLabel, Action, useColors } from "./ui";
 
-const rowHeight = 44;
 type Choice = { value: string; label: string };
 function Wheel({
   label,
@@ -25,6 +28,13 @@ function Wheel({
   onChange: (value: string) => void;
 }) {
   const c = useColors();
+  const { fontScale } = useWindowDimensions();
+  const [labelHeight, setLabelHeight] = useState(0);
+  const rowHeight = Math.max(
+    56,
+    Math.ceil(20 * 1.25 * fontScale) + 24,
+    Math.ceil(labelHeight) + 24,
+  );
   const list = useRef<FlatList<Choice>>(null);
   const index = Math.max(
     0,
@@ -46,6 +56,9 @@ function Wheel({
     },
     [],
   );
+  useEffect(() => {
+    list.current?.scrollToOffset({ offset: position.current * rowHeight, animated: false });
+  }, [rowHeight]);
   const choose = (next: number) => {
     const i = Math.max(0, Math.min(options.length - 1, next));
     position.current = i;
@@ -70,7 +83,7 @@ function Wheel({
     <View
       style={{ flex: 1, minWidth: 0, gap: 8 }}
       accessibilityRole="adjustable"
-      accessibilityLabel={label}
+      accessibilityLabel={fieldLabel(label)}
       accessibilityValue={{ text: options[selected]?.label }}
       accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
       onAccessibilityAction={(e) =>
@@ -78,7 +91,7 @@ function Wheel({
       }
     >
       <Txt bold size={14} style={{ textAlign: "center" }}>
-        {label}
+        {fieldLabel(label)}
       </Txt>
       <View style={{ height: rowHeight * 5, overflow: "hidden" }}>
         <View
@@ -111,17 +124,30 @@ function Wheel({
           renderItem={({ item, index: i }) => (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`${label}: ${item.label}`}
+              accessibilityLabel={`${fieldLabel(label)}: ${item.label}`}
               onPress={() => choose(i)}
-              style={{ height: rowHeight, alignItems: "center", justifyContent: "center" }}
+              style={{
+                height: rowHeight,
+                paddingHorizontal: 10,
+                paddingVertical: 12,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              <Txt
-                size={19}
-                bold={i === selected}
+              <ButtonLabel
+                size={20}
+                style={{ flexShrink: 0, maxWidth: "100%" }}
+                onTextLayout={(event) => {
+                  const height = event.nativeEvent.lines.reduce(
+                    (sum, line) => sum + line.height,
+                    0,
+                  );
+                  setLabelHeight((current) => Math.max(current, height));
+                }}
                 color={i === selected ? c.foreground : c.mutedForeground}
               >
                 {item.label}
-              </Txt>
+              </ButtonLabel>
             </Pressable>
           )}
         />
@@ -155,7 +181,7 @@ function PickerFrame({
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }}>
         <SafeAreaView
-          edges={["bottom", "left", "right"]}
+          edges={{ top: "off", bottom: "additive", left: "additive", right: "additive" }}
           style={{
             backgroundColor: c.card,
             borderTopLeftRadius: 24,
@@ -171,7 +197,14 @@ function PickerFrame({
             {title}
           </Txt>
           {children}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+              gap: 8,
+            }}
+          >
             <Action label="Cancel" secondary onPress={onClose} />
             {clear && <Action label="Clear" secondary onPress={clear} />}
             <Action label="Done" onPress={onDone} style={{ backgroundColor: c.primary }} />
@@ -194,23 +227,26 @@ function PickerButton({
   return (
     <View style={{ marginBottom: 18, gap: 8 }}>
       <Txt size={18} bold>
-        {label}
+        {fieldLabel(label)}
       </Txt>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={label}
+        accessibilityLabel={fieldLabel(label)}
         onPress={onPress}
         style={{
           borderWidth: 1,
           borderColor: c.border,
           backgroundColor: c.background,
           borderRadius: 12,
-          padding: 16,
+          paddingHorizontal: 12,
+          paddingVertical: 12,
+          alignItems: "center",
+          justifyContent: "center",
           minHeight: 58,
         }}
       >
-        <Txt size={19}>{display}</Txt>
-        <Txt size={12} color={c.mutedForeground}>
+        <ButtonLabel size={20}>{display}</ButtonLabel>
+        <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
           Tap to scroll and select
         </Txt>
       </Pressable>
@@ -223,12 +259,14 @@ export function DateField({
   onChange,
   birthday = false,
   optional = false,
+  calendar = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   birthday?: boolean;
   optional?: boolean;
+  calendar?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value || (birthday ? "1990-01-01" : localToday()));
@@ -242,17 +280,8 @@ export function DateField({
   return (
     <>
       <PickerButton
-        label={label}
-        display={
-          value
-            ? new Date(`${value}T12:00:00Z`).toLocaleDateString("en-TT", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-                timeZone: "UTC",
-              })
-            : "Select date"
-        }
+        label={fieldLabel(label)}
+        display={value ? displayDate(value) : "Select date"}
         onPress={() => {
           setDraft(value || (birthday ? "1990-01-01" : localToday()));
           setOpen(true);
@@ -260,7 +289,7 @@ export function DateField({
       />
       {open && (
         <PickerFrame
-          title={label}
+          title={fieldLabel(label)}
           onClose={() => setOpen(false)}
           onDone={() => {
             onChange(birthday && draft > localToday() ? localToday() : draft);
@@ -275,32 +304,36 @@ export function DateField({
               : undefined
           }
         >
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Wheel
-              label="Day"
-              value={String(day)}
-              options={Array.from(
-                { length: new Date(Date.UTC(year, month, 0)).getUTCDate() },
-                (_, i) => ({ value: String(i + 1), label: String(i + 1) }),
-              )}
-              onChange={(v) => change(year, month, +v)}
-            />
-            <Wheel
-              label="Month"
-              value={String(month)}
-              options={Array.from({ length: 12 }, (_, i) => ({
-                value: String(i + 1),
-                label: new Date(2000, i, 1).toLocaleDateString("en", { month: "short" }),
-              }))}
-              onChange={(v) => change(year, +v, day)}
-            />
-            <Wheel
-              label="Year"
-              value={String(year)}
-              options={years.map((v) => ({ value: String(v), label: String(v) }))}
-              onChange={(v) => change(+v, month, day)}
-            />
-          </View>
+          {calendar ? (
+            <CalendarPicker unrestricted value={draft} onChange={setDraft} />
+          ) : (
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Wheel
+                label="Day"
+                value={String(day)}
+                options={Array.from(
+                  { length: new Date(Date.UTC(year, month, 0)).getUTCDate() },
+                  (_, i) => ({ value: String(i + 1), label: String(i + 1) }),
+                )}
+                onChange={(v) => change(year, month, +v)}
+              />
+              <Wheel
+                label="Month"
+                value={String(month)}
+                options={Array.from({ length: 12 }, (_, i) => ({
+                  value: String(i + 1),
+                  label: monthNames[i],
+                }))}
+                onChange={(v) => change(year, +v, day)}
+              />
+              <Wheel
+                label="Year"
+                value={String(year)}
+                options={years.map((v) => ({ value: String(v), label: String(v) }))}
+                onChange={(v) => change(+v, month, day)}
+              />
+            </View>
+          )}
         </PickerFrame>
       )}
     </>
@@ -323,7 +356,7 @@ export function TimeField({
   return (
     <>
       <PickerButton
-        label={label}
+        label={fieldLabel(label)}
         display={`${displayHour % 12 || 12}:${pad(displayMinute)} ${displayHour >= 12 ? "PM" : "AM"}`}
         onPress={() => {
           setDraft(value || "10:00");
@@ -332,7 +365,7 @@ export function TimeField({
       />
       {open && (
         <PickerFrame
-          title={label}
+          title={fieldLabel(label)}
           onClose={() => setOpen(false)}
           onDone={() => {
             onChange(draft);
@@ -387,12 +420,12 @@ export function DateTimeField({
   return (
     <View>
       <DateField
-        label={`${label} · Date`}
+        label={label === "Date" ? "Date" : `${fieldLabel(label)} · Date`}
         value={local.slice(0, 10)}
         onChange={(v) => onChange(`${v}T${local.slice(11, 16)}`)}
       />
       <TimeField
-        label={`${label} · Time`}
+        label={label === "Date" ? "Time" : `${fieldLabel(label)} · Time`}
         value={local.slice(11, 16)}
         onChange={(v) => onChange(`${local.slice(0, 10)}T${v}`)}
       />
@@ -417,11 +450,54 @@ export function DurationField({
   return (
     <>
       <PickerButton
-        label={label}
+        label={fieldLabel(label)}
         display={formatDuration(Number(value || 60))}
         onPress={() => {
           setDraft(String(Math.min(480, Math.max(15, Math.round(Number(value || 60) / 15) * 15))));
           setOpen(true);
+        }}
+      />
+      {open && (
+        <PickerFrame
+          title={fieldLabel(label)}
+          onClose={() => setOpen(false)}
+          onDone={() => {
+            onChange(draft);
+            setOpen(false);
+          }}
+        >
+          <Wheel label="Duration" options={choices} value={draft} onChange={setDraft} />
+        </PickerFrame>
+      )}
+    </>
+  );
+}
+
+export function ChoiceWheelField({
+  label,
+  value,
+  options,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+  return (
+    <>
+      <PickerButton
+        label={label}
+        display={options.find((v) => v.value === value)?.label || "Choose"}
+        onPress={() => {
+          if (!disabled) {
+            setDraft(value);
+            setOpen(true);
+          }
         }}
       />
       {open && (
@@ -433,7 +509,7 @@ export function DurationField({
             setOpen(false);
           }}
         >
-          <Wheel label="Duration" options={choices} value={draft} onChange={setDraft} />
+          <Wheel label={label} options={options} value={draft} onChange={setDraft} />
         </PickerFrame>
       )}
     </>

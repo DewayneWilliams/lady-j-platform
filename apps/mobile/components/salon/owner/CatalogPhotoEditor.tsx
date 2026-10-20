@@ -4,7 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import { db, check } from "@/lib/salon/client";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import Icon from "@/lib/icons/LucideIcon";
-import { Photo, ErrorBox, useColors } from "../ui";
+import { Photo, ButtonLabel, ErrorBox, useColors } from "../ui";
 import { OwnerText, OwnerButton } from "./OwnerUI";
 
 export default function CatalogPhotoEditor({
@@ -121,32 +121,29 @@ export default function CatalogPhotoEditor({
                 disabled={busy || disabled}
                 onPress={() => onChange(value.filter((_, i) => i !== index))}
                 style={{
-                  minHeight: 44,
+                  minHeight: 48,
+                  paddingHorizontal: 10,
+                  paddingVertical: 12,
                   flexDirection: "row",
                   justifyContent: "center",
                   alignItems: "center",
                   gap: 6,
                 }}
               >
-                <Icon name="X" size={18} color={c.primary} />
-                <OwnerText size={16}>Remove</OwnerText>
+                <Icon name="X" size={18} color={c.brandAccent} />
+                <ButtonLabel>Remove</ButtonLabel>
               </Pressable>
             </View>
           ))}
         </ScrollView>
       )}
       <OwnerButton
-        label={busy ? "Uploading…" : value.length ? "Add more photos" : "Upload photos"}
+        label={busy ? "Uploading" : value.length ? "Add more photos" : "Upload photos"}
         icon="ImagePlus"
         secondary
         disabled={busy || disabled || value.length >= 10}
         onPress={() => void choose()}
       />
-      {demo && (
-        <OwnerText size={16} muted>
-          Demo photos stay in this visit only.
-        </OwnerText>
-      )}
     </View>
   );
 }

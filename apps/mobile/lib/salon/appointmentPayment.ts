@@ -19,10 +19,10 @@ export function appointmentPayment(appointment: Appointment, transactions: Trans
       Math.min(received, Math.max(0, Math.round(Number(appointment.deposit) * 100))) / 100,
     label:
       state === "paid"
-        ? "Paid in full"
+        ? "Paid in Full"
         : state === "deposit"
-          ? "Deposit received"
-          : "Payment pending",
+          ? "Deposit Received"
+          : "Payment Pending",
     remaining: Math.max(total - received, 0) / 100,
   } as const;
 }

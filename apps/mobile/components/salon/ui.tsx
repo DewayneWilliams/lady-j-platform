@@ -6,6 +6,8 @@ import {
   TextInput,
   ViewStyle,
   TextStyle,
+  type TextProps,
+  type ViewProps,
   ActivityIndicator,
   Image,
   ImageStyle,
@@ -13,10 +15,14 @@ import {
 import { useTheme } from "@/theming/ThemeProvider";
 import { Button } from "@/components/ui/button";
 import Icon, { IconName } from "@/lib/icons/LucideIcon";
-import { fonts } from "@/lib/salon/design";
+import { fonts, fieldLabel } from "@/lib/salon/design";
 import { catalogPhotoSource } from "@/lib/salon/images";
 export function useColors() {
   return useTheme().theme.colors;
+}
+function visibleText(value: React.ReactNode): React.ReactNode {
+  if (typeof value === "string") return value.replace(/\s*·\s*Demo\b/gi, "");
+  return Array.isArray(value) ? value.map(visibleText) : value;
 }
 export function Txt({
   children,
@@ -25,15 +31,16 @@ export function Txt({
   style,
   serif = false,
   bold = false,
-  lines,
-}: {
+  onTextLayout,
+  ...textProps
+}: Omit<TextProps, "style"> & {
   children: React.ReactNode;
   size?: number;
   color?: string;
   style?: TextStyle;
   serif?: boolean;
   bold?: boolean;
-  lines?: number;
+  onTextLayout?: TextProps["onTextLayout"];
 }) {
   const { theme } = useTheme();
   const c = theme.colors;
@@ -42,11 +49,12 @@ export function Txt({
   const fontFamily = serif
     ? typography?.fontFamily || fonts.display
     : bold
-      ? theme.typography.button?.fontFamily || fonts.bold
+      ? fonts.bold
       : typography?.fontFamily || fonts.body;
   return (
     <Text
-      numberOfLines={lines}
+      {...textProps}
+      onTextLayout={onTextLayout}
       style={[
         {
           fontFamily,
@@ -54,12 +62,53 @@ export function Txt({
           lineHeight: fontSize * (serif ? 1.25 : 1.5),
           letterSpacing: serif ? -0.6 : 0,
           color: color || c.foreground,
+          flexShrink: 1,
+          minWidth: 0,
         },
         style,
       ]}
     >
-      {children}
+      {visibleText(children)}
     </Text>
+  );
+}
+/** Shared action typography: wraps at the available width without shrinking the font. */
+export function ButtonLabel({
+  children,
+  size = 18,
+  color,
+  style,
+  onTextLayout,
+  singleLine = false,
+}: {
+  children: React.ReactNode;
+  size?: number;
+  color?: string;
+  style?: TextStyle;
+  onTextLayout?: TextProps["onTextLayout"];
+  singleLine?: boolean;
+}) {
+  const { theme } = useTheme();
+  return (
+    <Txt
+      size={size}
+      bold
+      color={color}
+      onTextLayout={onTextLayout}
+      numberOfLines={singleLine ? 1 : undefined}
+      ellipsizeMode={singleLine ? "clip" : undefined}
+      adjustsFontSizeToFit={singleLine}
+      minimumFontScale={singleLine ? 0.72 : undefined}
+      style={{
+        fontFamily: theme.typography.button?.fontFamily || fonts.action,
+        lineHeight: size * 1.25,
+        textAlign: "center",
+        includeFontPadding: true,
+        ...style,
+      }}
+    >
+      {children}
+    </Txt>
   );
 }
 export function Heading({
@@ -115,7 +164,14 @@ export function Action({
   style?: ViewStyle;
 }) {
   const c = useColors();
-  const contentColor = secondary ? c.foreground : gold ? c.tertiaryForeground : c.primaryForeground;
+  const contentColor =
+    disabled || busy
+      ? c.mutedForeground
+      : secondary
+        ? c.foreground
+        : gold
+          ? c.tertiaryForeground
+          : c.primaryForeground;
   return (
     <Button
       variant={secondary ? "outline" : "default"}
@@ -123,32 +179,33 @@ export function Action({
       onPress={onPress}
       style={[
         {
-          minHeight: prominent ? 60 : 50,
+          minHeight: prominent ? 56 : 52,
           borderRadius: 11,
-          paddingHorizontal: 22,
+          paddingHorizontal: 12,
+          paddingVertical: prominent ? 14 : 12,
+          height: "auto",
+          maxWidth: "100%",
+          minWidth: 0,
+          flexShrink: 1,
           flexDirection: "row",
           gap: 10,
           alignItems: "center",
           justifyContent: "center",
           alignSelf: "flex-start",
-          opacity: disabled ? 0.5 : 1,
+          opacity: 1,
         },
         gold && !secondary
           ? { backgroundColor: c.tertiary, borderColor: c.tertiary, borderWidth: 1 }
           : undefined,
         style,
+        (disabled || busy) && { backgroundColor: c.muted, borderColor: c.border, borderWidth: 1 },
       ]}
     >
-      {busy ? (
-        <ActivityIndicator color={contentColor} />
-      ) : (
-        <>
-          <Txt size={prominent ? 16 : 14} bold color={contentColor}>
-            {label}
-          </Txt>
-          {icon && <Icon name={icon} size={prominent ? 20 : 17} color={contentColor} />}
-        </>
-      )}
+      {busy && <ActivityIndicator color={contentColor} />}
+      <ButtonLabel size={prominent ? 22 : secondary ? 18 : 20} color={contentColor}>
+        {label}
+      </ButtonLabel>
+      {!busy && icon && <Icon name={icon} size={22} color={contentColor} />}
     </Button>
   );
 }
@@ -172,7 +229,7 @@ export function IconButton({
         height: 48,
         alignItems: "center",
         justifyContent: "center",
-        opacity: pressed ? 0.5 : 1,
+        opacity: pressed ? 0.85 : 1,
       })}
     >
       <Icon name={name} color={c.foreground} size={21} />
@@ -191,18 +248,30 @@ export function LinkText({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={{ minHeight: 44, justifyContent: "center" }}
+      style={{
+        minHeight: 48,
+        maxWidth: "100%",
+        minWidth: 0,
+        flexShrink: 1,
+        paddingHorizontal: 10,
+        paddingVertical: 12,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
-      <Txt size={14} bold color={c.secondaryForeground}>
-        {children}
-      </Txt>
+      <ButtonLabel color={c.secondaryForeground}>{children}</ButtonLabel>
     </Pressable>
   );
 }
-export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
+export function Card({
+  children,
+  style,
+  ...viewProps
+}: Omit<ViewProps, "children" | "style"> & { children: React.ReactNode; style?: ViewStyle }) {
   const c = useColors();
   return (
     <View
+      {...viewProps}
       style={[
         {
           backgroundColor: c.card,
@@ -224,15 +293,18 @@ export function Tag({ children, gold = false }: { children: React.ReactNode; gol
     <View
       style={{
         alignSelf: "flex-start",
-        paddingVertical: 5,
-        paddingHorizontal: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
         borderRadius: 6,
+        maxWidth: "100%",
+        minWidth: 0,
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 1,
         backgroundColor: gold ? c.muted : c.secondary,
       }}
     >
-      <Txt size={11} bold color={gold ? c.warning : c.secondaryForeground}>
-        {children}
-      </Txt>
+      <ButtonLabel color={gold ? c.warning : c.secondaryForeground}>{children}</ButtonLabel>
     </View>
   );
 }
@@ -259,10 +331,10 @@ export function Field({
   return (
     <View style={{ gap: 8, marginBottom: 17 }}>
       <Txt size={large ? 20 : 14} bold>
-        {label}
+        {fieldLabel(label)}
       </Txt>
       <TextInput
-        accessibilityLabel={label}
+        accessibilityLabel={fieldLabel(label)}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -303,18 +375,21 @@ export function Chip({
       accessibilityState={{ selected }}
       onPress={onPress}
       style={{
-        paddingHorizontal: 19,
-        minHeight: 44,
-        paddingVertical: 11,
+        paddingHorizontal: 12,
+        minHeight: 48,
+        maxWidth: "100%",
+        minWidth: 0,
+        flexShrink: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 12,
         borderRadius: 24,
         backgroundColor: selected ? c.foreground : c.card,
         borderWidth: 1,
         borderColor: selected ? c.foreground : c.border,
       }}
     >
-      <Txt size={13} color={selected ? c.background : c.foreground}>
-        {label}
-      </Txt>
+      <ButtonLabel color={selected ? c.background : c.foreground}>{label}</ButtonLabel>
     </Pressable>
   );
 }
@@ -339,7 +414,7 @@ export function Check({
         gap: 12,
         alignItems: "center",
         minHeight: 48,
-        paddingVertical: 9,
+        paddingVertical: 12,
       }}
     >
       <View
@@ -356,9 +431,7 @@ export function Check({
       >
         {checked && <Icon name="Check" size={16} color={c.primaryForeground} />}
       </View>
-      <Txt size={14} style={{ flex: 1 }}>
-        {label}
-      </Txt>
+      <ButtonLabel style={{ flex: 1, textAlign: "left" }}>{label}</ButtonLabel>
     </Pressable>
   );
 }

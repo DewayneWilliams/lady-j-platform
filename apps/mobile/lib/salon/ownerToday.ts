@@ -1,3 +1,4 @@
+import { displayDate } from "./dates";
 import { Appointment } from "./types";
 
 export function salonDayKey(date: string | Date = new Date()) {
@@ -9,6 +10,10 @@ export function salonDayKey(date: string | Date = new Date()) {
   }).format(new Date(date));
 }
 
+export function headerDate(date: string | Date) {
+  return displayDate(date);
+}
+
 export function appointmentsForToday(appointments: Appointment[], day: string) {
   return appointments
     .filter(
@@ -18,7 +23,7 @@ export function appointmentsForToday(appointments: Appointment[], day: string) {
     .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at));
 }
 
-// Short New World Translation quotations, verified against the linked publisher chapters.
+// Owner-only verses and references are preserved exactly as supplied.
 const verses = [
   {
     text: "This is the day that Jehovah has made; We will be joyful and rejoice in it.",

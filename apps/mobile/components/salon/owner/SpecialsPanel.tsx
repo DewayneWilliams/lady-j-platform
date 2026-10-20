@@ -1,3 +1,6 @@
+import { DateField } from "../DateFields";
+import { validReportDate } from "@/lib/salon/revenueReport";
+import { addCalendarDays } from "@/lib/salon/calendarActivity";
 import { formatDuration } from "@/lib/salon/duration";
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -5,9 +8,8 @@ import { db, check } from "@/lib/salon/client";
 import { Service, money } from "@/lib/salon/types";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { Card, Field, Check, Chip, ErrorBox } from "../ui";
-import { OwnerButton, OwnerText, OwnerTitle } from "./OwnerUI";
+import { OwnerButton, OwnerText } from "./OwnerUI";
 import CatalogGallery from "../CatalogGallery";
-import CatalogPhotoEditor from "./CatalogPhotoEditor";
 
 type Form = {
   id?: string;
@@ -18,27 +20,36 @@ type Form = {
   photos: string[];
   featured: boolean;
   active: boolean;
+  expiry: string;
 };
 export default function SpecialsPanel({
   services,
   demo,
   onDemoSave,
   onSaved,
+  onDemoDelete,
 }: {
   services: Service[];
   demo: boolean;
   onDemoSave: (service: Service) => void;
   onSaved: () => Promise<void>;
+  onDemoDelete: (id: string) => void;
 }) {
   const s = useSalon();
   const [form, setForm] = useState<Form | null>(null);
+  const [remove, setRemove] = useState<Service | null>(null);
   const [query, setQuery] = useState("");
+  const [choicePage, setChoicePage] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const choices = services.filter((v) => !v.is_special && v.active);
+  const filteredChoices = choices.filter((v) => v.name.toLowerCase().includes(query.toLowerCase()));
+  const choicePages = Math.max(1, Math.ceil(filteredChoices.length / 12));
+  const currentChoicePage = Math.min(choicePage, choicePages - 1);
   function open(item?: Service) {
     setError("");
     setQuery("");
+    setChoicePage(0);
     setForm({
       id: item?.id,
       name: item?.name || "",
@@ -48,6 +59,11 @@ export default function SpecialsPanel({
       photos: item?.photos || [],
       featured: item?.promote_on_home || false,
       active: item?.active ?? true,
+      expiry: item?.homepage_expires_at
+        ? new Date(Date.parse(item.homepage_expires_at) - 1).toLocaleDateString("en-CA", {
+            timeZone: "America/Port_of_Spain",
+          })
+        : "",
     });
   }
   async function save() {
@@ -56,20 +72,23 @@ export default function SpecialsPanel({
     const price = Number(form.price);
     const duration = selected.reduce((sum, v) => sum + v.duration, 0);
     if (
+      (form.expiry !== "" && !validReportDate(form.expiry)) ||
       !form.name.trim() ||
-      !form.description.trim() ||
       !form.price.trim() ||
       !Number.isFinite(price) ||
       price < 0 ||
       selected.length !== form.selected.length ||
-      !selected.length ||
+      selected.length < 2 ||
       duration > 480
     ) {
       setError(
-        "Enter a name, description and price. Choose active services totaling up to eight hours.",
+        "Enter a package name and price. Pick at least two active services, up to eight hours.",
       );
       return;
     }
+    const expiresAt = form.expiry
+      ? new Date(addCalendarDays(form.expiry, 1) + "T00:00:00-04:00").toISOString()
+      : null;
     setBusy(true);
     setError("");
     try {
@@ -77,7 +96,7 @@ export default function SpecialsPanel({
         onDemoSave({
           id: form.id || "demo-special-" + Date.now(),
           name: form.name.trim(),
-          description: form.description.trim(),
+          description: form.description.trim() || selected.map((v) => v.name).join(" + "),
           price: Math.round(price * 100) / 100,
           duration,
           category: "Specials",
@@ -88,6 +107,7 @@ export default function SpecialsPanel({
           is_special: true,
           included_service_ids: form.selected,
           promote_on_home: form.featured,
+          homepage_expires_at: expiresAt,
         });
       else {
         check(
@@ -95,11 +115,12 @@ export default function SpecialsPanel({
             p_id: form.id || null,
             p_services: form.selected,
             p_name: form.name,
-            p_description: form.description,
+            p_description: form.description.trim() || selected.map((v) => v.name).join(" + "),
             p_price: price,
             p_featured: form.featured,
             p_photos: form.photos,
             p_active: form.active,
+            p_homepage_expires_at: expiresAt,
           }),
         );
         await onSaved();
@@ -107,8 +128,10 @@ export default function SpecialsPanel({
       }
       s.notify(
         demo
-          ? "Demo special saved for this visit. It is not published to clients."
-          : "Special saved. Clients can book it as one combined service.",
+          ? "Special saved."
+          : form.featured
+            ? "Special saved. Also shown on Home."
+            : "Special saved in Services → Specials.",
       );
       setForm(null);
     } catch (e) {
@@ -119,55 +142,127 @@ export default function SpecialsPanel({
   }
   return (
     <View style={{ gap: 24 }}>
-      <OwnerTitle
-        title="Specials & packages"
-        description="Combine your services into one thoughtful experience."
-        action={
-          !form ? (
-            <OwnerButton label="Create special" icon="Plus" onPress={() => open()} />
-          ) : undefined
-        }
-      />
-      {demo && <OwnerText muted>Demo workspace · Specials stay in this visit only.</OwnerText>}
+      {!form ? (
+        <View style={{ alignItems: "center" }}>
+          <View>
+            <OwnerButton label="Create Special" icon="Plus" accent onPress={() => open()} />
+          </View>
+        </View>
+      ) : (
+        <OwnerText size={26} bold>
+          Specials
+        </OwnerText>
+      )}
       {!!error && <ErrorBox message={error} />}
+      {remove && (
+        <Card style={{ gap: 18 }}>
+          <OwnerText bold>Delete {remove.name}?</OwnerText>
+          <OwnerText>Saved appointments keep their details.</OwnerText>
+          <OwnerButton
+            label={busy ? "Deleting" : "Confirm delete special"}
+            destructive
+            disabled={busy}
+            onPress={() => {
+              setBusy(true);
+              setError("");
+              void (async () => {
+                if (demo) onDemoDelete(remove.id);
+                else {
+                  check(
+                    await db().rpc("lj_delete_catalog_item", {
+                      p_kind: "service",
+                      p_id: remove.id,
+                    }),
+                  );
+                  await onSaved();
+                  await s.refresh();
+                }
+                setRemove(null);
+                s.notify(demo ? "Special deleted." : "Special deleted.");
+              })()
+                .catch((e) =>
+                  setError(e instanceof Error ? e.message : "Unable to delete special."),
+                )
+                .finally(() => setBusy(false));
+            }}
+          />
+          <OwnerButton
+            label="Keep special"
+            secondary
+            disabled={busy}
+            onPress={() => setRemove(null)}
+          />
+        </Card>
+      )}
       {form ? (
         <Card style={{ gap: 20 }}>
           <Field
-            label="Special name"
+            label="Package name"
             value={form.name}
             onChangeText={(name) => setForm({ ...form, name })}
           />
+          <OwnerText bold>Included Services</OwnerText>
           <Field
-            label="Combined description"
-            multiline
-            value={form.description}
-            onChangeText={(description) => setForm({ ...form, description })}
+            label="Find a service"
+            value={query}
+            onChangeText={(value) => {
+              setQuery(value);
+              setChoicePage(0);
+            }}
           />
-          <OwnerText bold>Included services</OwnerText>
-          <Field label="Find a service" value={query} onChangeText={setQuery} />
           <View style={{ gap: 10 }}>
-            {choices
-              .filter((v) => v.name.toLowerCase().includes(query.toLowerCase()))
-              .map((v) => (
-                <Check
-                  key={v.id}
-                  label={v.name + " · " + formatDuration(v.duration)}
-                  checked={form.selected.includes(v.id)}
-                  onPress={() =>
-                    setForm((current) =>
-                      current
-                        ? {
-                            ...current,
-                            selected: current.selected.includes(v.id)
-                              ? current.selected.filter((id) => id !== v.id)
-                              : [...current.selected, v.id],
-                          }
-                        : null,
-                    )
-                  }
-                />
-              ))}
+            {filteredChoices.slice(currentChoicePage * 12, currentChoicePage * 12 + 12).map((v) => (
+              <Check
+                key={v.id}
+                label={v.name + " · " + formatDuration(v.duration)}
+                checked={form.selected.includes(v.id)}
+                onPress={() =>
+                  setForm((current) =>
+                    current
+                      ? {
+                          ...current,
+                          selected: current.selected.includes(v.id)
+                            ? current.selected.filter((id) => id !== v.id)
+                            : [...current.selected, v.id],
+                        }
+                      : null,
+                  )
+                }
+              />
+            ))}
           </View>
+          {filteredChoices.length === 0 && (
+            <OwnerText muted>No matching services. Try another name.</OwnerText>
+          )}
+          {choicePages > 1 && (
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <OwnerButton
+                label="Previous"
+                compact
+                secondary
+                disabled={currentChoicePage === 0}
+                onPress={() => setChoicePage(currentChoicePage - 1)}
+              />
+              <OwnerText size={16}>
+                {currentChoicePage + 1} / {choicePages}
+              </OwnerText>
+              <OwnerButton
+                label="Next"
+                compact
+                secondary
+                disabled={currentChoicePage === choicePages - 1}
+                onPress={() => setChoicePage(currentChoicePage + 1)}
+              />
+            </View>
+          )}
           <OwnerText muted>
             {form.selected.length} services ·{" "}
             {formatDuration(
@@ -177,31 +272,33 @@ export default function SpecialsPanel({
             )}
           </OwnerText>
           <Field
-            label="Combined package price (TTD)"
+            label="Combined Package Price"
             keyboardType="numeric"
             value={form.price}
             onChangeText={(price) => setForm({ ...form, price })}
           />
-          <CatalogPhotoEditor
-            value={form.photos}
-            demo={demo}
-            disabled={busy}
-            onBusyChange={setBusy}
-            onChange={(photos) => setForm((current) => (current ? { ...current, photos } : null))}
-          />
           <Check
-            label="Promote this special on the home page"
+            label="Promote on the homepage"
             checked={form.featured}
-            onPress={() => setForm({ ...form, featured: !form.featured })}
+            onPress={() => {
+              if (!busy) setForm({ ...form, featured: !form.featured });
+            }}
           />
-          <Check
-            label="Available for booking"
-            checked={form.active}
-            onPress={() => setForm({ ...form, active: !form.active })}
+          <DateField
+            calendar
+            optional
+            label="Homepage Promotion Ends"
+            value={form.expiry}
+            onChange={(expiry) => setForm({ ...form, expiry })}
           />
+          <OwnerText size={16} muted>
+            Always listed in Services → Specials.
+          </OwnerText>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
             <OwnerButton
-              label={busy ? "Saving…" : "Save special"}
+              accent
+              busy={busy}
+              label={busy ? "Saving" : "Save special"}
               disabled={busy}
               onPress={() => void save()}
             />
@@ -210,14 +307,6 @@ export default function SpecialsPanel({
         </Card>
       ) : (
         <>
-          {!services.some((v) => v.is_special) && (
-            <Card>
-              <OwnerText muted>
-                Create your first special by selecting existing services, then set its own name,
-                description and price. Home-page promotion is optional.
-              </OwnerText>
-            </Card>
-          )}
           {services
             .filter((v) => v.is_special)
             .map((v) => (
@@ -243,7 +332,10 @@ export default function SpecialsPanel({
                     onPress={() => open(v)}
                   />
                 </View>
-                <OwnerButton label="Edit special" secondary onPress={() => open(v)} />
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                  <OwnerButton label="Edit special" secondary onPress={() => open(v)} />
+                  <OwnerButton label="Delete special" destructive onPress={() => setRemove(v)} />
+                </View>
               </Card>
             ))}
         </>

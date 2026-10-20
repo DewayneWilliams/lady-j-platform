@@ -43,13 +43,13 @@ export function BagScreen() {
       <Heading sub="A little Lady J, for your everyday.">Your shopping bag</Heading>
       {!items.length ? (
         <Empty
-          title="Make your ritual a little more beautiful"
+          title="Make your routine a little more beautiful"
           body="Explore our thoughtful collection of hair, skin and body essentials."
           action={<Action label="Explore the boutique" onPress={() => go("boutique")} />}
         />
       ) : (
         <View style={{ maxWidth: 850, gap: 16 }}>
-          <Tag>Demo products · Sample TTD prices</Tag>
+          <Tag>Sample data</Tag>
           {items.map((v) => (
             <Card key={v.id} style={{ flexDirection: "row", gap: 18, padding: 17 }}>
               <Photo name={v.image} style={{ width: 85, height: 105, borderRadius: 10 }} />
@@ -179,12 +179,12 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
       </Heading>
       {done ? (
         <Card style={{ maxWidth: 650, gap: 20, alignSelf: "center", alignItems: "center" }}>
-          <Icon name={done === "demo" ? "Sparkles" : "CircleCheck"} size={40} color={c.primary} />
-          <Tag>
-            {done === "demo"
-              ? "Simulation · No purchase created"
-              : "Request saved · Payment pending"}
-          </Tag>
+          <Icon
+            name={done === "demo" ? "Sparkles" : "CircleCheck"}
+            size={40}
+            color={c.brandAccent}
+          />
+          <Tag>{done === "demo" ? "No purchase created" : "Request saved · Payment pending"}</Tag>
           <Txt serif size={31}>
             {done === "demo"
               ? "Your checkout preview is complete."
@@ -220,7 +220,7 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
         <View style={{ flexDirection: width > 800 ? "row" : "column", gap: 28 }}>
           <View style={{ flex: 1, gap: 20 }}>
             {!!error && <ErrorBox message={error} />}
-            <Tag>Demo catalog · Prices are placeholders</Tag>
+            <Tag>Sample data</Tag>
             {!s.session && (
               <Card style={{ gap: 14 }}>
                 <Txt>
@@ -274,7 +274,7 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
             <Check
               checked={accepted}
               onPress={() => setAccepted(!accepted)}
-              label="I accept the purchase terms and understand this catalog uses demonstration prices."
+              label="I accept the purchase terms."
             />
             <LinkText onPress={() => go("terms")}>Read purchase terms</LinkText>
             <Action

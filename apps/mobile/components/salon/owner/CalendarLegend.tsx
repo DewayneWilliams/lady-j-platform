@@ -12,6 +12,8 @@ export default function CalendarLegend() {
         flexDirection: "row",
         flexWrap: "wrap",
         alignItems: "center",
+        justifyContent: "center",
+        width: "100%",
         columnGap: 14,
         rowGap: 10,
       }}
@@ -23,9 +25,7 @@ export default function CalendarLegend() {
           style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
         >
           <CalendarActivityDot type={item.key} size={8} />
-          <Txt size={14} lines={1}>
-            {item.short}
-          </Txt>
+          <Txt size={14}>{item.short}</Txt>
         </View>
       ))}
     </View>

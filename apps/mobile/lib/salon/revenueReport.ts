@@ -164,7 +164,7 @@ export function revenueCsv(lines: RevenueLine[], from: string, to: string, demo:
     [
       header,
       ...lines.map((v) => [
-        demo ? "Demo data" : "Live records",
+        demo ? "Sample data" : "Live records",
         from,
         to,
         v.date,

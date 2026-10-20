@@ -1,6 +1,6 @@
-import { BlurTargetView } from "expo-blur";
-import { BottomNavigation, useBottomNavigationSpacing } from "./BottomNavigation";
-import React, { useRef, useState } from "react";
+import StatusNotice from "./StatusNotice";
+import { useBottomNavigationSpacing } from "./BottomNavigation";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   ScrollView,
@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, usePathname } from "expo-router";
+import { useRouter } from "expo-router";
 import { salonIdentity } from "@/lib/salon/identity";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,22 @@ import { clientNavigationCopy } from "@/lib/salon/clientLanguage";
 import { useTheme } from "@/theming/ThemeProvider";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
-import { Txt, useColors, shared, LinkText, ErrorBox } from "./ui";
+import { Txt, ButtonLabel, useColors, shared, LinkText, ErrorBox } from "./ui";
 export function useNav() {
   const router = useRouter();
   return (page: string, params: Record<string, string> = {}) => {
-    if (page === "home") router.push("/home");
+    const tabs: Record<
+      string,
+      "/home" | "/services" | "/boutique" | "/workshops" | "/contact" | "/account"
+    > = {
+      home: "/home",
+      services: "/services",
+      boutique: "/boutique",
+      workshops: "/workshops",
+      contact: "/contact",
+      account: "/account",
+    };
+    if (tabs[page]) router.navigate({ pathname: tabs[page], params });
     else if (page === "owner") router.push("/owner");
     else router.push({ pathname: "/[page]", params: { page, ...params } });
   };
@@ -50,8 +61,7 @@ export function Brand({
         size={
           compact ? Number.parseFloat(theme.typography.headerBrand?.fontSize || "24") : undefined
         }
-        lines={1}
-        color={onGold ? c.headerInk : c.primary}
+        color={onGold ? c.headerInk : c.brandAccent}
         style={{
           fontFamily: theme.typography.headerBrand?.fontFamily,
           lineHeight: compact ? 32 : 40,
@@ -66,7 +76,6 @@ export function Brand({
             ? theme.typography.headerCaption?.fontSize
             : theme.typography.caption?.fontSize) || "14",
         )}
-        lines={1}
         color={onGold ? c.headerInk : c.mutedForeground}
         style={{ letterSpacing: 0.1, marginTop: 2 }}
       >
@@ -79,19 +88,21 @@ export default function Shell({
   children,
   wide = false,
   footer = true,
+  scrollRevision,
 }: {
   children: React.ReactNode;
   wide?: boolean;
   footer?: boolean;
+  scrollRevision?: string | number;
 }) {
   const c = useColors(),
     { width } = useWindowDimensions(),
-    go = useNav(),
-    path = usePathname();
+    go = useNav();
   const s = useSalon();
-  const router = useRouter();
   const scroll = useRef<ScrollView>(null);
-  const blurTarget = useRef<View>(null);
+  useEffect(() => {
+    if (scrollRevision !== undefined) scroll.current?.scrollTo({ y: 0, animated: false });
+  }, [scrollRevision]);
   const navigationSpacing = useBottomNavigationSpacing();
   const [refreshing, setRefreshing] = useState(false);
   const reload = async () => {
@@ -104,16 +115,7 @@ export default function Shell({
   };
   const desktop = width >= 1100;
   const compact = width < 760;
-  const { theme } = useTheme();
   const copy = clientNavigationCopy[s.clientLanguage];
-  const nav = [
-    { name: copy.home, page: "home", icon: "HouseHeart" as const },
-    { name: copy.services, page: "services", icon: "Scissors" as const },
-    { name: copy.products, page: "boutique", icon: "ShoppingBasket" as const },
-    { name: copy.workshops, page: "workshops", icon: "BookOpenCheck" as const },
-    { name: copy.contact, page: "contact", icon: "MessagesSquare" as const },
-    { name: copy.account, page: "account", icon: "CircleUserRound" as const },
-  ];
 
   return (
     <SafeAreaView
@@ -137,12 +139,12 @@ export default function Shell({
               flexDirection: "row",
               flexWrap: "nowrap",
               alignItems: "center",
-              gap: compact ? 4 : 20,
+              gap: compact ? 3 : 20,
               minWidth: 0,
             },
           ]}
         >
-          <View style={{ marginRight: compact ? 0 : "auto", flexShrink: 0 }}>
+          <View style={{ marginRight: "auto", flexShrink: 0 }}>
             <Brand onGold compact={compact} />
           </View>
           <HeaderLanguageSelector compact={compact} />
@@ -155,33 +157,24 @@ export default function Shell({
             style={{
               backgroundColor: c.primary,
               borderRadius: 14,
-              minHeight: compact ? 52 : 56,
+              minHeight: 48,
               height: "auto",
-              paddingHorizontal: compact ? 8 : 20,
-              paddingVertical: 8,
+              paddingHorizontal: compact ? 7 : 12,
+              paddingVertical: 12,
               flexGrow: compact ? 1 : 0,
               flexShrink: compact ? 1 : 0,
-              flexBasis: compact ? 0 : "auto",
+              flexBasis: "auto",
               minWidth: 0,
-              maxWidth: compact ? 248 : undefined,
+              maxWidth: "100%",
             }}
           >
-            <Txt
-              size={Number.parseFloat(
-                (compact
-                  ? theme.typography.headerButton?.fontSize
-                  : theme.typography.button?.fontSize) || "16",
-              )}
-              bold
-              color={c.primaryForeground}
-              style={{ flexShrink: 1, textAlign: "center", lineHeight: compact ? 18 : 24 }}
-            >
+            <ButtonLabel size={compact ? 11 : 20} color={c.primaryForeground}>
               {copy.booking}
-            </Txt>
+            </ButtonLabel>
           </Button>
         </View>
       </View>
-      <BlurTargetView ref={blurTarget} style={{ flex: 1, minHeight: 0 }}>
+      <View style={{ flex: 1, minHeight: 0 }}>
         <ScrollView
           ref={scroll}
           keyboardShouldPersistTaps="handled"
@@ -189,7 +182,7 @@ export default function Shell({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => void reload()}
-              tintColor={c.primary}
+              tintColor={c.brandAccent}
             />
           }
           style={{
@@ -220,9 +213,9 @@ export default function Shell({
             )}
             {s.loading && s.services.length === 0 ? (
               <View style={{ padding: 60 }}>
-                <ActivityIndicator color={c.primary} />
+                <ActivityIndicator color={c.brandAccent} />
                 <Txt style={{ textAlign: "center", marginTop: 15 }}>
-                  Preparing your Lady J experience…
+                  Preparing your Lady J experience
                 </Txt>
               </View>
             ) : (
@@ -251,7 +244,7 @@ export default function Shell({
               >
                 <View>
                   <Brand />
-                  <Txt size={12} style={{ opacity: 0.6, marginTop: 15 }}>
+                  <Txt size={12} color={c.mutedForeground} style={{ marginTop: 15 }}>
                     Exceptional care. Effortless beauty.
                   </Txt>
                   <View style={{ flexDirection: "row", gap: 9, maxWidth: 320, marginTop: 16 }}>
@@ -288,8 +281,8 @@ export default function Shell({
                       Your appearance
                     </Txt>
                     <ThemeToggle />
-                    <Txt size={11} style={{ opacity: 0.6, marginTop: 12 }}>
-                      Catalog & prices: demo data
+                    <Txt size={11} color={c.mutedForeground} style={{ marginTop: 12 }}>
+                      Sample data
                     </Txt>
                   </View>
                 </View>
@@ -297,61 +290,8 @@ export default function Shell({
             </View>
           )}
         </ScrollView>
-      </BlurTargetView>
-      <BottomNavigation
-        blurTarget={blurTarget}
-        accessibilityLabel="Customer navigation"
-        items={nav.map((n) => ({ key: n.page, label: n.name, icon: n.icon }))}
-        selectedKey={(() => {
-          const page = path.slice(1);
-          if (["product", "bag", "checkout"].includes(page)) return "boutique";
-          if (page === "workshop") return "workshops";
-          if (
-            [
-              "login",
-              "register",
-              "profile",
-              "appointments",
-              "orders",
-              "payments",
-              "agreements",
-              "my-workshops",
-            ].includes(page)
-          )
-            return "account";
-          return page;
-        })()}
-        onSelect={(page) => {
-          if (path === "/" + page) {
-            scroll.current?.scrollTo({ y: 0, animated: true });
-            void reload();
-          } else if (page === "home") router.navigate("/home");
-          else router.navigate({ pathname: "/[page]", params: { page } });
-        }}
-      />
-      {!!s.notice && (
-        <Pressable
-          onPress={() => s.notify("")}
-          accessibilityLiveRegion="polite"
-          style={{
-            position: "absolute",
-            bottom: navigationSpacing + 8,
-            left: 20,
-            right: 20,
-            maxWidth: 600,
-            alignSelf: "center",
-            backgroundColor: c.foreground,
-            padding: 18,
-            borderRadius: 12,
-            shadowOpacity: 0.12,
-            shadowRadius: 16,
-          }}
-        >
-          <Txt color={c.background} size={14}>
-            {s.notice}
-          </Txt>
-        </Pressable>
-      )}
+      </View>
+      {!!s.notice && <StatusNotice message={s.notice} onDismiss={() => s.notify("")} />}
     </SafeAreaView>
   );
 }

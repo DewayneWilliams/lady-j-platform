@@ -25,6 +25,16 @@ module.exports = {
 
   "expo-asset",
   "expo-video",
+  "react-native-compressor",
+  [
+  "expo-image-picker",
+  {
+    photosPermission: "Choose photos and videos for private client galleries.",
+    cameraPermission: "Capture photos and videos for private client galleries.",
+    microphonePermission: "Record audio with appointment videos."
+  }],
+
+
   "expo-web-browser",
   "expo-image",
   "expo-secure-store",

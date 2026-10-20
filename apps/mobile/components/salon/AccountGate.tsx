@@ -53,7 +53,7 @@ export default function AccountGate({ next = "booking" }: { next?: string }) {
           Your next moment starts here.
         </Txt>
         <Txt size={18} color={c.mutedForeground}>
-          Create a free account to see prices, choose your time and book with Lady J.
+          Create a free account to choose your time, book and manage your visits with Lady J.
         </Txt>
         <Card style={{ gap: 16, borderColor: c.goldBorder }}>
           <Action

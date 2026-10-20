@@ -105,7 +105,7 @@ export default function ExpensesPanel({
         amount: Number(amount),
         reference: reference.trim().slice(0, 150),
       };
-      if (demo) setExpenses((old) => [{ ...entry, id: "demo-" + Date.now() }, ...old]);
+      if (demo) setExpenses((old) => [{ ...entry, id: "sample-" + Date.now() }, ...old]);
       else {
         check(await db().from("lj_expenses").insert(entry));
         await load();
@@ -134,7 +134,7 @@ export default function ExpensesPanel({
         title="Expenses & cash overview"
         description={
           demo
-            ? "Demo data · Expense entries stay in this preview."
+            ? "Monthly expenses"
             : "Keep everyday salon spending alongside your recorded receipts."
         }
         action={
@@ -177,7 +177,7 @@ export default function ExpensesPanel({
           </View>
           <Field label="What did you pay for?" value={description} onChangeText={setDescription} />
           <Field
-            label="Amount paid (TTD)"
+            label="Amount Paid"
             value={amount}
             onChangeText={setAmount}
             keyboardType="decimal-pad"
@@ -188,7 +188,7 @@ export default function ExpensesPanel({
             onChangeText={setReference}
           />
           <OwnerButton
-            label={busy ? "Saving…" : "Save expense"}
+            label={busy ? "Saving" : "Save expense"}
             disabled={busy}
             onPress={() => void save()}
           />
@@ -238,7 +238,7 @@ export default function ExpensesPanel({
                 "Entry ID",
               ],
               ...rows.map((e) => [
-                demo ? "Demo data" : "Live records",
+                demo ? "Sample data" : "Live records",
                 e.spent_on,
                 e.category,
                 e.description,
@@ -249,13 +249,13 @@ export default function ExpensesPanel({
             ]
               .map((row) => row.map(csvCell).join(","))
               .join("\r\n");
-          void exportCsv("lady-j-" + (demo ? "demo-" : "") + "expenses-" + month + ".csv", csv)
+          void exportCsv("lady-j-" + (demo ? "sample-" : "") + "expenses-" + month + ".csv", csv)
             .catch(() => setError("Unable to export the expenses. Please try again."))
             .finally(() => setBusy(false));
         }}
       />
       {loading ? (
-        <OwnerText muted>Loading expenses…</OwnerText>
+        <OwnerText muted>Loading expenses</OwnerText>
       ) : !rows.length ? (
         <Card>
           <OwnerText muted>

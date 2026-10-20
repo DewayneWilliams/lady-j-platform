@@ -1,0 +1,27 @@
+# Launch review
+
+The calendar's current salon-local date has a fast 480 ms outline pulse. Date text, activity dots and touch targets stay still. Reduce Motion keeps a steady outline; backgrounding, changing months and unmounting stop the animation. Shared text and card components now forward their accessibility and test properties, fixing the three app-source TypeScript errors and restoring alert semantics.
+
+## Verified in the development environment
+
+- 27 web routes rendered at 390px without browser errors or horizontal overflow, including all customer pages, legal pages, sign-in screens and account gates. Product and workshop details were also opened from their catalog cards.
+- 16 interaction checks passed: six customer tabs, footer links, service search/filter recovery, registration destinations preserving consultation/product IDs, empty sign-in validation, owner tabs/modules, calendar month/day selection, block-time dialog, pulse behavior, Reduce Motion, dark mode and guarded owner deep-link reloads.
+- The six customer tabs passed additional dark-mode layout checks at 375px and 1440px. Owner calendar screenshots were reviewed in mobile light/dark and desktop layouts.
+- All seven owner report types downloaded as both CSV and PDF: 14 valid files from the explicitly labeled owner demo. Client edit cancellation restored the original values and locked fields; the four-option contact menu opened correctly. No client messages were sent.
+- All 10 Supabase test suites passed: calendar activity, signed agreements, owner catalog/packages, owner refinements/payments, discounts, owner care, catalog removal, daily assistant/reminders, private client media and catalog intake. Test fixtures and financial writes were rolled back.
+- App source has zero TypeScript errors and lint has zero errors. The five diagnostics in the generated, ephemeral component-preview route are excluded as required by project instructions. Metro remains healthy.
+- All 10 checked publisher, Google profile/review and Google legal URLs were reachable. Phone/SMS/WhatsApp handoff still requires a target-device check.
+- The signed-agreement, reminder and Google-review Edge Functions are active on the connected development backend. Email authentication is enabled; Google, Facebook and Apple are disabled.
+
+## Required launch setup
+
+These observations describe the connected **development environment**. Production settings and release builds require separate verification.
+
+1. **Owner access:** no owner account or client account exists in the checked environment. Register and confirm the salon's real owner. In **Supabase → Users**, obtain that user's ID; in **Database → lj_owners**, assign that exact ID to `user_id`. Ownership must be verified rather than inferred from editable profile metadata. The public owner demo grants no live access.
+2. **Business and payments:** contact phone, email, WhatsApp and bank instructions are blank. After owner setup, fill the existing **Business → Settings** form. The underlying values are in **Supabase → Database → lj_settings**. Confirm actual bank information before accepting paid bank-transfer requests and verify receipt confirmation with a real owner/customer pair.
+3. **Real catalog:** the development catalog contains the 129 unique supplied entries plus a dedicated free consultation: 111 primary services and 19 add-ons. Clients see 125; five N/A-priced Makeup drafts remain unpublished. Full Head Single Color and add-ons are visible but not standalone-bookable. Licensed photo coverage, the Full Head duration, Makeup prices/durations and compatible add-on/quantity rules remain launch work. Product inventory remains labeled sample data; see [Service catalog](SERVICE_CATALOG_IMPORT.md).
+4. **Production connection and authentication:** verify the published environment's `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` against the selected production environment in the Supabase panel. In **Authentication → Redirect URLs / URL Configuration**, set the published Site URL and allow its `/auth/callback`. Enable social providers only after their real credentials are configured. Use the panel's **Deploy to Production** for pending database/functions; this calendar animation itself adds no migration.
+5. **Provider-dependent features:** card processing and Maria's conversational/voice service remain unconnected. Card payment is disabled; Maria does not record audio or provide live AI. Email reminders are paused in development. If reminders are included at launch, configure the existing sender and secrets in **Supabase → Secrets** and activate through **Business → Communication**, then verify actual delivery. Google reviews showed their honest unavailable state during testing.
+6. **Release validation:** use Draftbit **Publishing** for the release build. Verify real email registration/confirmation, persisted sessions, a signed booking, bank verification/receipt, cancellation/refund reconciliation, owner uploads and private media on staging with the intended owner/customer accounts. Verify native call/SMS/WhatsApp, file sharing and native video behavior on the target devices. No production environment or native release binary was exercised in this review.
+
+Browser owner checks and report exports used the labeled, isolated demo. Protected backend behavior used rolled-back test fixtures. Those checks do not establish live owner credentials, external provider delivery or native-device behavior.

@@ -32,6 +32,12 @@ export interface Theme {
     paymentDeposit?: string;
     paymentDepositForeground?: string;
     paymentPending?: string;
+    paymentPendingBadge?: string;
+    brandAccent?: string;
+    brandAccentFill?: string;
+    brandAccentSurface?: string;
+    balanceDueInk?: string;
+    balanceDueSurface?: string;
     attentionBorder?: string;
     calendarConfirmed?: string;
     calendarBlocked?: string;

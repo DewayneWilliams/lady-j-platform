@@ -1,26 +1,26 @@
 import { Appointment, Client, Transaction, Purchase } from "./types";
 // All names, health notes, appointments and prices below are fictional demo scenarios.
 const people = [
-  ["Ruth", "Boaz"],
-  ["Naomi", "Elimelech"],
-  ["Esther", "Mordecai"],
-  ["Deborah", "Barak"],
-  ["Miriam", "Aaron"],
-  ["Hannah", "Samuel"],
-  ["Abigail", "David"],
-  ["Sarah", "Abraham"],
-  ["Rachel", "Jacob"],
-  ["Leah", "Judah"],
-  ["Mary", "Joseph"],
-  ["Martha", "Lazarus"],
-  ["Elizabeth", "Zachariah"],
-  ["Priscilla", "Aquila"],
-  ["Lydia", "Paul"],
-  ["Phoebe", "Silas"],
-  ["Tabitha", "Peter"],
-  ["Joanna", "Chuza"],
-  ["Susanna", "Daniel"],
-  ["Rebecca", "Isaac"],
+  ["Ruth", "Williams"],
+  ["Esther", "James"],
+  ["David", "Brown"],
+  ["Martha", "Thomas"],
+  ["Daniel", "Clarke"],
+  ["Miriam", "Lewis"],
+  ["Naomi", "Adams"],
+  ["Deborah", "Wilson"],
+  ["Hannah", "Taylor"],
+  ["Mary", "Martin"],
+  ["Lydia", "Walker"],
+  ["Sarah", "Roberts"],
+  ["Daenerys", "Targaryen"],
+  ["Arya", "Stark"],
+  ["Sansa", "Stark"],
+  ["Rhaenyra", "Targaryen"],
+  ["Alicent", "Hightower"],
+  ["Cersei", "Lannister"],
+  ["Jon", "Snow"],
+  ["Brienne", "Tarth"],
 ];
 const treatments = [
   ["Silk press", 90, 350],
@@ -63,12 +63,6 @@ const today = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 }).format(new Date());
 const base = new Date(today + "T10:00:00-04:00");
-const upcoming: Date[] = [];
-for (let day = 1; upcoming.length < 5; day++) {
-  const next = new Date(base);
-  next.setUTCDate(next.getUTCDate() + day);
-  if ([2, 3, 4, 5, 6].includes(next.getUTCDay())) upcoming.push(next);
-}
 export const demoClients: Client[] = people.map(([first_name, last_name], i) => ({
   id: "demo-client-" + i,
   first_name,
@@ -76,43 +70,69 @@ export const demoClients: Client[] = people.map(([first_name, last_name], i) => 
   full_name: first_name + " " + last_name,
   email: first_name.toLowerCase() + "@example.invalid",
   phone: "+1 868 555 " + String(100 + i).padStart(4, "0"),
-  birthday: 1975 + i + "-" + String((i % 12) + 1).padStart(2, "0") + "-15",
-  preferences: "Fictional client · prefers a calm appointment and clear aftercare guidance.",
-  sensitivities: "Fictional health note: " + conditions[i % conditions.length],
-  private_notes:
-    "Bible-inspired name for demonstration only. This is not a real person or a biblical medical record.",
+  birthday:
+    (i === 13 ? new Date().getUTCFullYear() - 15 : 1975 + i) +
+    "-" +
+    String((i % 12) + 1).padStart(2, "0") +
+    "-15",
+  is_minor: i === 13,
+  guardian_name: i === 13 ? "Ned Stark" : "",
+  medical_conditions: conditions[i % conditions.length],
+  preferences: "Prefers a calm appointment and clear aftercare guidance.",
+  sensitivities: conditions[i % conditions.length],
+  private_notes: "Confirm aftercare preferences.",
   photo_consent: false,
 }));
-export const demoAppointments: Appointment[] = people.map((_, i) => {
-  const day = i < 5 ? new Date(base) : new Date(upcoming[Math.floor((i - 5) / 3)]);
-  const slot = i < 5 ? i : (i - 5) % 3;
-  day.setUTCMinutes(day.getUTCMinutes() + slot * 90);
-  const [name, duration, price] = treatments[i];
-  const end = new Date(day.getTime() + duration * 60000);
-  return {
-    id: "demo-appointment-" + i,
-    customer_id: demoClients[i].id,
-    starts_at: day.toISOString(),
-    ends_at: end.toISOString(),
-    kind: "appointment",
-    status: i % 3 === 2 ? "pending" : "confirmed",
-    services: [{ name, price }],
-    total: price,
-    deposit: price / 2,
-    deposit_paid: i % 3 !== 2,
-    note: demoClients[i].full_name,
+export const demoAppointments: Appointment[] = Array.from({ length: 14 }, (_, dayOffset) =>
+  Array.from({ length: 2 + (dayOffset % 3) }, (_, slot) => {
+    const i = dayOffset * 4 + slot;
+    const client = demoClients[i % demoClients.length];
+    const day = new Date(base);
+    day.setUTCDate(day.getUTCDate() + dayOffset);
+    day.setUTCMinutes(day.getUTCMinutes() + slot * 120);
+    const consult = slot === 0;
+    const [name, duration, price] = consult
+      ? (["Consult", 30, 100] as const)
+      : treatments[i % treatments.length];
+    return {
+      id: "demo-appointment-" + i,
+      customer_id: client.id,
+      starts_at: day.toISOString(),
+      ends_at: new Date(day.getTime() + duration * 60000).toISOString(),
+      kind: "appointment",
+      status: slot === 1 && [0, 1, 3].includes(dayOffset) ? "pending" : "confirmed",
+      services: [{ name, price }],
+      total: price,
+      deposit: price / 2,
+      deposit_paid: !(slot === 1 && [0, 1, 3].includes(dayOffset)),
+      note: client.full_name,
+    };
+  }),
+).flat();
+const paymentDate = new Date().toISOString();
+export const demoTransactions: Transaction[] = demoAppointments.flatMap((a, i) => {
+  const pending = a.status === "pending";
+  const deposit: Transaction = {
+    id: "demo-transaction-" + i,
+    customer_id: a.customer_id,
+    appointment_id: a.id,
+    purchase_id: null,
+    amount: a.deposit,
+    method: "bank",
+    reference: "LJ-" + (1000 + i),
+    status: pending ? "pending" : "verified",
+    created_at: paymentDate,
+    received_at: pending ? null : paymentDate,
   };
+  if (pending || i % 4 !== 1) return [deposit];
+  return [
+    deposit,
+    {
+      ...deposit,
+      id: deposit.id + "-balance",
+      amount: a.total - a.deposit,
+      reference: "LJ-BAL-" + (1000 + i),
+    },
+  ];
 });
-export const demoTransactions: Transaction[] = demoAppointments.map((a, i) => ({
-  id: "demo-transaction-" + i,
-  customer_id: a.customer_id,
-  appointment_id: a.id,
-  purchase_id: null,
-  amount: i % 3 === 1 ? a.total : a.deposit,
-  method: "bank",
-  reference: "DEMO-" + (1000 + i),
-  status: i % 3 === 2 ? "pending" : "verified",
-  created_at: a.starts_at,
-  received_at: i % 3 === 2 ? null : a.starts_at,
-}));
 export const demoPurchases: Purchase[] = [];

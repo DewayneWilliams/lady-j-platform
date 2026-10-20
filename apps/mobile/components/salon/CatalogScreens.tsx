@@ -1,11 +1,11 @@
-import { formatDuration } from "@/lib/salon/duration";
+import { serviceDurationLabel } from "@/lib/salon/duration";
 import CatalogGallery from "./CatalogGallery";
-import { serviceCategories } from "@/lib/salon/categories";
+import ServiceCategories from "./ServiceCategories";
 import React, { useState } from "react";
-import { View, Pressable, ScrollView, TextInput, useWindowDimensions } from "react-native";
+import { View, Pressable, TextInput, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
-import { money, dateLabel, timeLabel } from "@/lib/salon/types";
+import { money, servicePriceLabel, dateLabel, timeLabel } from "@/lib/salon/types";
 import { salonIdentity } from "@/lib/salon/identity";
 import Shell, { useNav } from "./Shell";
 import {
@@ -79,16 +79,19 @@ export function ServicesScreen() {
     c = useColors(),
     { width } = useWindowDimensions();
   const [query, setQuery] = useState(""),
-    [category, setCategory] = useState("All");
+    [category, setCategory] = useState("Hair");
+  const [page, setPage] = useState(0);
   const desktop = width > 850;
   const filtered = s.services.filter(
     (v) =>
-      (category === "All" || v.category === category) &&
+      v.category === category &&
       `${v.name} ${v.description}`.toLowerCase().includes(query.toLowerCase()),
   );
+  const pages = Math.max(1, Math.ceil(filtered.length / 12));
+  const currentPage = Math.min(page, pages - 1);
   return (
-    <Shell>
-      <Heading sub="Expert hands. Thoughtful rituals. Care that feels like you.">
+    <Shell scrollRevision={currentPage}>
+      <Heading sub="Expert hands. Thoughtful treatments. Care that feels like you.">
         Find your kind of beautiful
       </Heading>
       {!s.session && (
@@ -101,10 +104,11 @@ export function ServicesScreen() {
           }}
         >
           <Txt size={20} bold>
-            Your free account unlocks prices & booking
+            Prices are open to everyone
           </Txt>
           <Txt size={16} color={c.mutedForeground}>
-            Browse our care menu. Create a free account to see prices and choose an appointment.
+            Browse every price now. Create a free account when you are ready to choose a time and
+            book.
           </Txt>
           <Action
             label="Create free account"
@@ -116,20 +120,30 @@ export function ServicesScreen() {
           </LinkText>
         </Card>
       )}
-      <Tag>Demonstration catalog · Sample TTD pricing</Tag>
-      <View style={{ height: 22 }} />
-      <Search value={query} onChange={setQuery} placeholder="Search services or treatments" />
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 9, paddingBottom: 24 }}
-      >
-        {serviceCategories(s.services.map((v) => v.category)).map((v) => (
-          <Chip key={v} label={v} selected={category === v} onPress={() => setCategory(v)} />
-        ))}
-      </ScrollView>
+      <View style={{ height: 6 }} />
+      <Search
+        value={query}
+        onChange={(value) => {
+          setQuery(value);
+          setPage(0);
+        }}
+        placeholder="Search services or treatments"
+      />
+      <ServiceCategories
+        includeAll={false}
+        value={category}
+        onChange={(value) => {
+          setCategory(value);
+          setPage(0);
+        }}
+      />
+      <View accessibilityLiveRegion="polite" style={{ marginBottom: 18 }}>
+        <Txt color={c.mutedForeground}>
+          {filtered.length} {filtered.length === 1 ? "service" : "services"} found
+        </Txt>
+      </View>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 20 }}>
-        {filtered.map((v) => (
+        {filtered.slice(currentPage * 12, currentPage * 12 + 12).map((v) => (
           <Card
             key={v.id}
             style={{
@@ -142,25 +156,38 @@ export function ServicesScreen() {
           >
             <CatalogGallery photos={v.photos} cover={v.image} height={220} />
             <View style={{ padding: 21, gap: 10 }}>
-              <Tag>{v.category}</Tag>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                <Tag>{v.category}</Tag>
+                {v.is_add_on && <Tag>Add-on</Tag>}
+              </View>
               <Txt serif size={25}>
                 {v.name}
               </Txt>
               <Txt size={13} color={c.mutedForeground} style={{ minHeight: 60 }}>
-                {v.description}
+                {v.is_demo &&
+                /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
+                  ? "Ask the salon for details."
+                  : v.description}
               </Txt>
               <View
                 style={{ flexDirection: "row", justifyContent: "space-between", marginVertical: 8 }}
               >
                 <Txt size={13} color={c.mutedForeground}>
-                  {formatDuration(v.duration)}
+                  {serviceDurationLabel(v)}
                 </Txt>
                 <Txt bold size={16}>
-                  {s.session ? money(v.price) : "Price after sign-in"}
+                  {servicePriceLabel(v)}
                 </Txt>
               </View>
               <Action
-                label="Book this service"
+                label={
+                  v.bookable !== false
+                    ? "Book this service"
+                    : v.is_add_on
+                      ? "Available as an add-on"
+                      : "Contact salon to book"
+                }
+                disabled={v.bookable === false}
                 onPress={() => {
                   s.setSelected([v.id]);
                   go("booking");
@@ -173,9 +200,48 @@ export function ServicesScreen() {
       </View>
       {!filtered.length && (
         <Empty
-          title="A little more specific?"
-          body="Try a different service name or choose another category."
+          title="No matching services"
+          body="Try another name or clear your filters."
+          action={
+            <Action
+              label="Clear filters"
+              secondary
+              onPress={() => {
+                setQuery("");
+                setCategory("Hair");
+                setPage(0);
+              }}
+            />
+          }
         />
+      )}
+      {pages > 1 && (
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 18,
+            marginTop: 28,
+          }}
+        >
+          <Action
+            label="Previous"
+            secondary
+            disabled={currentPage === 0}
+            onPress={() => setPage(currentPage - 1)}
+          />
+          <Txt>
+            {currentPage + 1} / {pages}
+          </Txt>
+          <Action
+            label="Next"
+            secondary
+            disabled={currentPage === pages - 1}
+            onPress={() => setPage(currentPage + 1)}
+          />
+        </View>
       )}
       <View style={{ height: 24 }} />
       <Card style={{ backgroundColor: c.secondary }}>
@@ -252,7 +318,7 @@ export function WorkshopsScreen() {
           <Chip label={v} key={v} selected={filter === v} onPress={() => setFilter(v)} />
         ))}
       </View>
-      <Tag>Demonstration workshops · Sample dates and prices</Tag>
+      <Tag>Sample data</Tag>
       <View style={{ height: 22 }} />
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 24 }}>
         {s.workshops
@@ -266,7 +332,10 @@ export function WorkshopsScreen() {
                   {v.name}
                 </Txt>
                 <Txt color={c.mutedForeground} size={14}>
-                  {v.description}
+                  {v.is_demo &&
+                  /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
+                    ? "Ask the salon for details."
+                    : v.description}
                 </Txt>
                 <Txt size={13}>
                   {v.starts_at
@@ -281,7 +350,7 @@ export function WorkshopsScreen() {
                   }}
                 >
                   <Txt bold size={19}>
-                    {s.session ? money(v.price) : "Free account to view price"}
+                    {money(v.price)}
                   </Txt>
                   <LinkText onPress={() => go("workshop", { id: v.id })}>View workshop ↗</LinkText>
                 </View>
@@ -325,12 +394,16 @@ export function DetailScreen({ kind, id }: { kind: "product" | "workshop"; id: s
           <CatalogGallery photos={v.photos} cover={v.image} height={450} />
         </View>
         <View style={{ flex: 1, gap: 19, paddingTop: 10 }}>
-          {v.is_demo && <Tag>Demo {kind} · Sample pricing and illustrative imagery</Tag>}
+          {v.is_demo && <Tag>Sample data</Tag>}
           <Txt serif size={39} style={{ lineHeight: 47 }}>
             {v.name}
           </Txt>
-          <Txt size={24}>{s.session ? money(v.price) : "Free account to view price"}</Txt>
-          <Txt color={c.mutedForeground}>{v.description}</Txt>
+          <Txt size={24}>{money(v.price)}</Txt>
+          <Txt color={c.mutedForeground}>
+            {v.is_demo && /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
+              ? "Ask the salon for details."
+              : v.description}
+          </Txt>
           {kind === "product" ? (
             <>
               <Txt size={13}>{"stock" in v ? v.stock : 0} available · Pickup or delivery</Txt>
@@ -371,9 +444,7 @@ export function DetailScreen({ kind, id }: { kind: "product" | "workshop"; id: s
           )}
           <Card>
             <Txt size={13} color={c.mutedForeground}>
-              Your payment is never marked complete without verification. Bank transfers are
-              reviewed personally by the salon owner. Card checkout is currently a labeled
-              simulation.
+              Bank transfers are verified by the salon owner. Card payments are not connected.
             </Txt>
           </Card>
         </View>

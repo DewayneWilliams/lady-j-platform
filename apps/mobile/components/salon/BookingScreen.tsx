@@ -1,13 +1,15 @@
+import CalendarPicker from "./CalendarPicker";
+export { default as CalendarPicker } from "./CalendarPicker";
 import { useCalendarRealtime } from "@/lib/salon/useCalendarRealtime";
-import { formatDuration } from "@/lib/salon/duration";
+import { formatDuration, serviceDurationLabel } from "@/lib/salon/duration";
 import { useLocalSearchParams } from "expo-router";
 import { validReportDate } from "@/lib/salon/revenueReport";
 import { useForegroundRefresh } from "@/lib/salon/useForegroundRefresh";
 import { JoinWaitlist } from "./Waitlist";
-import ServiceAgreement from "./ServiceAgreement";
-import { serviceCategories } from "@/lib/salon/categories";
+import ServiceAgreement, { type GuestAgreementDraft } from "./ServiceAgreement";
+import ServiceCategories from "./ServiceCategories";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { View, Pressable, ScrollView, useWindowDimensions, ActivityIndicator } from "react-native";
+import { View, Pressable, useWindowDimensions, ActivityIndicator } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
@@ -15,11 +17,12 @@ import { useSalon } from "@/lib/salon/SalonProvider";
 import PromoCode from "./PromoCode";
 import { useDiscountQuote } from "@/lib/salon/discounts";
 import { db, check } from "@/lib/salon/client";
-import { money, dateLabel, timeLabel } from "@/lib/salon/types";
+import { money, servicePriceLabel, dateLabel, timeLabel } from "@/lib/salon/types";
 import Shell, { useNav } from "./Shell";
 import { Search } from "./CatalogScreens";
 import {
   Txt,
+  ButtonLabel,
   Action,
   Heading,
   Photo,
@@ -28,7 +31,6 @@ import {
   Card,
   Chip,
   Check,
-  Empty,
   Field,
   ErrorBox,
   useColors,
@@ -41,110 +43,6 @@ export const todayKey = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-export function CalendarPicker({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (d: string) => void;
-}) {
-  const c = useColors();
-  const [month, setMonth] = useState(() => new Date(`${value || todayKey()}T12:00:00Z`));
-  const year = month.getUTCFullYear(),
-    m = month.getUTCMonth(),
-    days = new Date(Date.UTC(year, m + 1, 0)).getUTCDate(),
-    offset = new Date(Date.UTC(year, m, 1)).getUTCDay();
-  return (
-    <View>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
-      >
-        <Pressable
-          accessibilityLabel="Previous month"
-          onPress={() => setMonth(new Date(Date.UTC(year, m - 1, 1)))}
-          style={{ padding: 14 }}
-        >
-          <Icon name="ChevronLeft" color={c.foreground} size={20} />
-        </Pressable>
-        <Txt bold size={18}>
-          {month.toLocaleDateString("en-TT", { month: "long", year: "numeric", timeZone: "UTC" })}
-        </Txt>
-        <Pressable
-          accessibilityLabel="Next month"
-          onPress={() => setMonth(new Date(Date.UTC(year, m + 1, 1)))}
-          style={{ padding: 14 }}
-        >
-          <Icon name="ChevronRight" color={c.foreground} size={20} />
-        </Pressable>
-      </View>
-      <View style={{ flexDirection: "row" }}>
-        {["S", "M", "T", "W", "T", "F", "S"].map((v, i) => (
-          <View key={i} style={{ width: "14.285%", alignItems: "center", paddingBottom: 12 }}>
-            <Txt size={13} color={c.mutedForeground}>
-              {v}
-            </Txt>
-          </View>
-        ))}
-      </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-        {Array.from({ length: offset + days }, (_, i) => {
-          const n = i - offset + 1;
-          const key = `${year}-${String(m + 1).padStart(2, "0")}-${String(n).padStart(2, "0")}`;
-          const day = i % 7,
-            disabled = n < 1 || key < todayKey() || day === 0 || day === 1;
-          return (
-            <Pressable
-              key={i}
-              disabled={disabled}
-              accessibilityLabel={key}
-              accessibilityState={{ selected: value === key, disabled }}
-              onPress={() => onChange(key)}
-              style={{
-                width: "14.285%",
-                height: 49,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {n > 0 && (
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 20,
-                    backgroundColor: value === key ? c.primary : "transparent",
-                  }}
-                >
-                  <Txt
-                    size={15}
-                    bold={value === key}
-                    color={
-                      value === key
-                        ? c.primaryForeground
-                        : disabled
-                          ? c.mutedForeground
-                          : c.foreground
-                    }
-                    style={{ opacity: disabled ? 0.35 : 1 }}
-                  >
-                    {n}
-                  </Txt>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
 export function PaymentChoice({
   method,
   setMethod,
@@ -177,8 +75,9 @@ export function PaymentChoice({
           disabled={v.id === "simulation"}
           onPress={() => setMethod(v.id)}
           style={{
-            padding: 18,
-            opacity: v.id === "simulation" ? 0.55 : 1,
+            paddingHorizontal: 12,
+            paddingVertical: 12,
+            backgroundColor: v.id === "simulation" ? c.muted : c.card,
             borderWidth: method === v.id ? 2 : 1,
             borderColor: method === v.id ? c.primary : c.border,
             borderRadius: 12,
@@ -189,9 +88,7 @@ export function PaymentChoice({
         >
           <Icon name={v.icon} size={23} color={c.secondaryForeground} />
           <View style={{ flex: 1 }}>
-            <Txt bold size={15}>
-              {v.title}
-            </Txt>
+            <ButtonLabel>{v.title}</ButtonLabel>
             <Txt size={12} color={c.mutedForeground} style={{ marginTop: 3 }}>
               {v.desc}
             </Txt>
@@ -199,7 +96,7 @@ export function PaymentChoice({
           <Icon
             name={method === v.id ? "CircleCheck" : "Circle"}
             size={21}
-            color={method === v.id ? c.primary : c.border}
+            color={method === v.id ? c.brandAccent : c.mutedForeground}
           />
         </Pressable>
       ))}
@@ -226,7 +123,10 @@ export default function BookingScreen() {
     c = useColors(),
     go = useNav(),
     { width } = useWindowDimensions();
-  const { date: requestedDate } = useLocalSearchParams<{ date?: string }>();
+  const { date: requestedDate, id: requestedServiceId } = useLocalSearchParams<{
+    date?: string;
+    id?: string;
+  }>();
   const initialDate =
     typeof requestedDate === "string" &&
     validReportDate(requestedDate) &&
@@ -247,7 +147,27 @@ export default function BookingScreen() {
     [agreementId, setAgreementId] = useState(""),
     [busy, setBusy] = useState(false),
     [done, setDone] = useState(""),
-    [photo, setPhoto] = useState("");
+    [photo, setPhoto] = useState(""),
+    [guestName, setGuestName] = useState(""),
+    [guestEmail, setGuestEmail] = useState(""),
+    [guestPhone, setGuestPhone] = useState(""),
+    [guestAgreement, setGuestAgreement] = useState<GuestAgreementDraft | null>(null);
+  const appliedServiceId = useRef("");
+  useEffect(() => {
+    if (
+      typeof requestedServiceId !== "string" ||
+      s.loading ||
+      appliedServiceId.current === requestedServiceId
+    )
+      return;
+    const requested = s.services.find(
+      (service) =>
+        service.id === requestedServiceId && service.active && service.bookable !== false,
+    );
+    appliedServiceId.current = requestedServiceId;
+    if (requested) s.setSelected([requested.id]);
+    else setError("This service is unavailable. Choose another service.");
+  }, [requestedServiceId, s.loading, s.services, s.setSelected]);
   const selected = s.services.filter((v) => s.selected.includes(v.id));
   const pricing = useDiscountQuote(
     "service",
@@ -258,10 +178,11 @@ export default function BookingScreen() {
     ),
     duration = selected.reduce((n, v) => n + v.duration, 0),
     deposit = Math.round(total * 50) / 100;
+  const noPaymentRequired = selected.length > 0 && pricing.ready && total === 0;
   const slotGeneration = useRef(0);
   const customerId = s.session?.user.id;
   const refreshSlots = useCallback(async () => {
-    if (!customerId || !s.authReady || step !== 2 || !duration) return;
+    if (!s.authReady || step !== 2 || !duration) return;
     const generation = ++slotGeneration.current;
     setSlotLoading(true);
     setError("");
@@ -284,7 +205,7 @@ export default function BookingScreen() {
     } finally {
       if (generation === slotGeneration.current) setSlotLoading(false);
     }
-  }, [customerId, s.authReady, step, duration, date]);
+  }, [s.authReady, step, duration, date]);
   useEffect(() => {
     setTime("");
     setSlots([]);
@@ -293,8 +214,8 @@ export default function BookingScreen() {
       slotGeneration.current += 1;
     };
   }, [refreshSlots]);
-  useForegroundRefresh(refreshSlots, step === 2 && !!customerId && s.authReady);
-  useCalendarRealtime(refreshSlots, step === 2 && !!customerId && s.authReady);
+  useForegroundRefresh(refreshSlots, step === 2 && s.authReady);
+  useCalendarRealtime(refreshSlots, step === 2 && s.authReady);
   async function choosePhoto() {
     try {
       const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
@@ -305,28 +226,39 @@ export default function BookingScreen() {
   }
   async function submit() {
     setError("");
-    if (!policy || !time || !agreementId || (s.session && !pricing.ready)) return;
+    if (!policy || !time || !agreementId || !pricing.ready) return;
     if (method === "simulation") {
       setDone("demo");
       return;
     }
-    if (!s.session) {
-      go("login", { next: "booking" });
-      return;
-    }
     setBusy(true);
     try {
-      const id = check(
-        await db().rpc("lj_book", {
-          p_services: selected.map((v) => v.id),
-          p_start: time,
-          p_reference: reference,
-          p_policy: policy,
-          p_code: pricing.code,
-        }),
-      );
+      const id = s.session
+        ? check(
+            await db().rpc("lj_book", {
+              p_services: selected.map((v) => v.id),
+              p_start: time,
+              p_reference: reference,
+              p_policy: policy,
+              p_code: pricing.code,
+            }),
+          )
+        : check(
+            await db().rpc("lj_guest_book", {
+              p_name: guestName.trim(),
+              p_email: guestEmail.trim(),
+              p_phone: guestPhone.trim(),
+              p_services: selected.map((v) => v.id),
+              p_start: time,
+              p_reference: reference,
+              p_policy: policy,
+              p_code: pricing.code,
+              p_signature: guestAgreement?.signature || [],
+              p_version: guestAgreement?.version || "",
+            }),
+          );
       setDone(String(id));
-      await s.refreshPrivate();
+      if (s.session) await s.refreshPrivate();
     } catch (e) {
       setError(e instanceof Error ? e.message : "We couldn’t save your request. Try again.");
     } finally {
@@ -341,15 +273,21 @@ export default function BookingScreen() {
             <Icon
               name={done === "demo" ? "Sparkles" : "CalendarCheck"}
               size={42}
-              color={c.primary}
+              color={c.brandAccent}
             />
             <Tag>
               {done === "demo"
-                ? "Payment simulation · No booking created"
-                : "Request saved · Payment pending"}
+                ? "No booking created"
+                : noPaymentRequired
+                  ? "Appointment confirmed"
+                  : "Request saved · Payment pending"}
             </Tag>
             <Txt serif size={34} style={{ textAlign: "center" }}>
-              {done === "demo" ? "A preview of your next moment." : "Your moment is on its way."}
+              {done === "demo"
+                ? "A preview of your next moment."
+                : noPaymentRequired
+                  ? "Your consultation is booked."
+                  : "Your moment is on its way."}
             </Txt>
             <Txt style={{ textAlign: "center" }}>
               {selected.map((v) => v.name).join(" + ")}
@@ -358,8 +296,10 @@ export default function BookingScreen() {
             </Txt>
             <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
               {done === "demo"
-                ? "This was a demonstration. No card was charged, no time was reserved, and no appointment was created. Choose bank transfer to submit a real unpaid request."
-                : "Your appointment is reserved pending owner verification of your bank deposit. This is not a payment receipt or a confirmed appointment."}
+                ? "No card was charged and no appointment was created. Choose bank transfer to submit a request."
+                : noPaymentRequired
+                  ? "Your appointment is confirmed. No payment or deposit is required."
+                  : "Your appointment is reserved pending owner verification of your bank deposit. This is not a payment receipt or a confirmed appointment."}
             </Txt>
             {done === "demo" ? (
               <Action
@@ -369,8 +309,10 @@ export default function BookingScreen() {
                   setMethod("bank");
                 }}
               />
-            ) : (
+            ) : s.session ? (
               <Action label="View my appointments" onPress={() => go("appointments")} />
+            ) : (
+              <Action label="Return home" onPress={() => go("home")} />
             )}
             <LinkText onPress={() => go("home")}>Return home</LinkText>
           </Card>
@@ -379,7 +321,18 @@ export default function BookingScreen() {
     );
   return (
     <Shell footer={false}>
-      <Heading sub="A little time for you, in three simple steps.">Book your moment</Heading>
+      <View
+        accessibilityLiveRegion="polite"
+        accessibilityRole="progressbar"
+        accessibilityValue={{ min: 1, max: 3, now: step }}
+        accessibilityLabel={`Step ${step} of 3 — ${["Choose Your Service", "Choose Your Date & Time", "Payment"][step - 1]}`}
+      >
+        <Heading
+          sub={`Step ${step} of 3 — ${["Choose Your Service", "Choose Your Date & Time", "Payment"][step - 1]}`}
+        >
+          Book your moment
+        </Heading>
+      </View>
       <View
         style={{
           flexDirection: "row",
@@ -398,31 +351,32 @@ export default function BookingScreen() {
             }}
             style={{
               flex: 1,
-              flexDirection: "row",
+              flexDirection: "column",
+              minWidth: 0,
               alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: 10,
+              paddingVertical: 12,
               gap: 9,
-              paddingBottom: 18,
               borderBottomWidth: 2,
               borderColor: step === i + 1 ? c.primary : c.border,
             }}
           >
             <View
               style={{
-                width: 27,
-                height: 27,
+                minWidth: 32,
+                minHeight: 32,
                 borderRadius: 14,
                 backgroundColor: step === i + 1 ? c.primary : c.muted,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Txt size={12} color={step === i + 1 ? c.primaryForeground : c.mutedForeground}>
+              <ButtonLabel color={step === i + 1 ? c.primaryForeground : c.mutedForeground}>
                 {i + 1}
-              </Txt>
+              </ButtonLabel>
             </View>
-            <Txt size={width > 600 ? 14 : 11} bold={step === i + 1}>
-              {v}
-            </Txt>
+            <ButtonLabel>{v}</ButtonLabel>
           </Pressable>
         ))}
       </View>
@@ -431,20 +385,13 @@ export default function BookingScreen() {
         <View style={{ flexDirection: width > 900 ? "row" : "column", gap: 28 }}>
           <View style={{ flex: 1 }}>
             <Search value={query} onChange={setQuery} placeholder="Find your service" />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingBottom: 18 }}
-            >
-              {serviceCategories(s.services.map((v) => v.category)).map((v) => (
-                <Chip key={v} label={v} selected={category === v} onPress={() => setCategory(v)} />
-              ))}
-            </ScrollView>
-            <Tag>Demo catalog · Professional confirmation required</Tag>
+            <ServiceCategories booking value={category} onChange={setCategory} />
+            <Tag>Confirm your service with the salon</Tag>
             <View style={{ height: 16 }} />
             {s.services
               .filter(
                 (v) =>
+                  v.bookable !== false &&
                   (category === "All" || v.category === category) &&
                   v.name.toLowerCase().includes(query.toLowerCase()),
               )
@@ -472,20 +419,18 @@ export default function BookingScreen() {
                 >
                   <Photo name={v.image} style={{ width: 72, height: 82, borderRadius: 10 }} />
                   <View style={{ flex: 1, gap: 5 }}>
-                    <Txt bold size={15}>
-                      {v.name}
-                    </Txt>
-                    <Txt size={12} color={c.mutedForeground} lines={2}>
+                    <ButtonLabel size={20}>{v.name}</ButtonLabel>
+                    <Txt size={12} color={c.mutedForeground}>
                       {v.description}
                     </Txt>
                     <Txt size={13}>
-                      {formatDuration(v.duration)} {s.session ? ` · ${money(v.price)}` : ""}
+                      {serviceDurationLabel(v)} · {servicePriceLabel(v)}
                     </Txt>
                   </View>
                   <Icon
                     name={s.selected.includes(v.id) ? "CircleCheck" : "CirclePlus"}
                     size={24}
-                    color={s.selected.includes(v.id) ? c.primary : c.mutedForeground}
+                    color={s.selected.includes(v.id) ? c.brandAccent : c.mutedForeground}
                   />
                 </Pressable>
               ))}
@@ -512,7 +457,7 @@ export default function BookingScreen() {
               />
               {!!photo && (
                 <View style={{ gap: 10, marginTop: 15 }}>
-                  <Tag>AI simulation</Tag>
+                  <Tag>Photo suggestions are not connected</Tag>
                   <Txt size={13}>
                     This photo stays on your device. AI analysis is not connected. Our sample
                     suggestion is a signature silk press; your stylist must confirm suitability and
@@ -534,8 +479,7 @@ export default function BookingScreen() {
                 {selected.length} service{selected.length === 1 ? "" : "s"} selected
               </Txt>
               <Txt size={13} style={{ marginTop: 8, marginBottom: 18 }}>
-                {formatDuration(duration)}{" "}
-                {s.session ? `· ${money(total)}` : "· Sign in for pricing"}
+                {formatDuration(duration)} · {money(total)}
               </Txt>
               <Action
                 label="Choose date & time"
@@ -571,7 +515,7 @@ export default function BookingScreen() {
               {dateLabel(`${date}T12:00:00Z`)} · {formatDuration(duration)}
             </Txt>
             {slotLoading ? (
-              <ActivityIndicator color={c.primary} style={{ margin: 35 }} />
+              <ActivityIndicator color={c.brandAccent} style={{ margin: 35 }} />
             ) : (
               <View style={shared.wrap}>
                 {slots.map((slot) => (
@@ -584,10 +528,15 @@ export default function BookingScreen() {
                 ))}
               </View>
             )}
-            {!slotLoading && !slots.length && <JoinWaitlist date={date} services={s.selected} />}
+            {!slotLoading && !slots.length && (
+              <>
+                <Txt>Unavailable</Txt>
+                <JoinWaitlist date={date} services={s.selected} />
+              </>
+            )}
             <View style={{ marginTop: 28 }}>
               <Action
-                label="Continue to deposit"
+                label={noPaymentRequired ? "Continue to confirmation" : "Continue to deposit"}
                 icon="ArrowRight"
                 disabled={!time || slotLoading}
                 onPress={() => setStep(3)}
@@ -601,29 +550,49 @@ export default function BookingScreen() {
         <View style={{ flexDirection: width > 800 ? "row" : "column", gap: 27 }}>
           <View style={{ flex: 1 }}>
             <Txt serif size={28} style={{ marginBottom: 20 }}>
-              Secure your appointment
+              {noPaymentRequired ? "Confirm your appointment" : "Secure your appointment"}
             </Txt>
-            {!s.session ? (
+            {!s.session && (
               <Card style={{ gap: 15, marginBottom: 20 }}>
-                <Txt>
-                  Your account keeps your bookings private. Sign in to see your prices and submit a
-                  real request.
+                <Txt size={20} bold>Guest contact details</Txt>
+                <Txt color={c.mutedForeground}>
+                  We use these details to save your private client record and keep this appointment
+                  linked correctly.
                 </Txt>
-                <Action
-                  label="Sign in to continue"
-                  onPress={() => go("login", { next: "booking" })}
+                <Field label="Full Name" value={guestName} onChangeText={setGuestName} />
+                <Field
+                  label="Email"
+                  value={guestEmail}
+                  onChangeText={setGuestEmail}
+                  keyboardType="email-address"
                 />
-                <LinkText onPress={() => go("register", { next: "booking" })}>
-                  Create your private account
-                </LinkText>
+                <Field
+                  label="Mobile Number"
+                  value={guestPhone}
+                  onChangeText={setGuestPhone}
+                  keyboardType="phone-pad"
+                />
               </Card>
-            ) : null}
-            {s.session && (
-              <ServiceAgreement services={selected.map((v) => v.id)} onReady={setAgreementId} />
             )}
-            {s.session && <PromoCode pricing={pricing} />}
-            <PaymentChoice method={method} setMethod={setMethod} />
-            {method === "bank" && (
+            {(s.session || (guestName.trim() && guestEmail.trim() && guestPhone.trim())) && (
+              <ServiceAgreement
+                services={selected.map((v) => v.id)}
+                onReady={setAgreementId}
+                noPaymentRequired={noPaymentRequired}
+                guest={!s.session}
+                guestName={guestName}
+                onGuestReady={setGuestAgreement}
+              />
+            )}
+            {s.session && !noPaymentRequired && <PromoCode pricing={pricing} />}
+            {noPaymentRequired ? (
+              <Card>
+                <Txt bold>No payment or deposit required.</Txt>
+              </Card>
+            ) : (
+              <PaymentChoice method={method} setMethod={setMethod} />
+            )}
+            {!noPaymentRequired && method === "bank" && (
               <View style={{ marginTop: 18 }}>
                 <Field
                   label="Bank transfer reference (if available)"
@@ -636,25 +605,31 @@ export default function BookingScreen() {
             <Check
               checked={policy}
               onPress={() => setPolicy(!policy)}
-              label="I understand the 50% deposit and cancellation terms in my signed agreement."
+              label={
+                noPaymentRequired
+                  ? "I agree to the booking terms. No payment is required."
+                  : "I understand the 50% deposit and cancellation terms in my signed agreement."
+              }
             />
             <LinkText onPress={() => go("policies")}>Read the cancellation policy</LinkText>
             <Txt size={12} color={c.mutedForeground} style={{ marginBottom: 22 }}>
-              24+ hours: full deposit refund or one complimentary rescheduling. Under 24 hours: the
-              deposit is non-refundable; management may offer 50% as future credit. No-shows forfeit
-              the deposit.
+              {noPaymentRequired
+                ? "Please cancel or reschedule if you cannot attend."
+                : "24+ hours: full deposit refund or one complimentary rescheduling. Under 24 hours: the deposit is non-refundable; management may offer 50% as future credit. No-shows forfeit the deposit."}
             </Txt>
             <Action
               label={
-                method === "simulation"
-                  ? "Try simulated card checkout"
-                  : "Submit bank transfer request"
+                noPaymentRequired
+                  ? "Confirm free consultation"
+                  : method === "simulation"
+                    ? "Try simulated card checkout"
+                    : "Submit bank transfer request"
               }
               disabled={
                 !agreementId ||
                 !policy ||
-                (method === "bank" && !s.session) ||
-                (!!s.session && !pricing.ready)
+                !pricing.ready ||
+                (!s.session && (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()))
               }
               busy={busy}
               onPress={() => void submit()}
@@ -690,7 +665,7 @@ export default function BookingScreen() {
                 <Txt size={14} style={{ flex: 1 }}>
                   {v.name}
                 </Txt>
-                <Txt size={14}>{s.session ? money(v.price) : "Sign in"}</Txt>
+                <Txt size={14}>{money(v.price)}</Txt>
               </View>
             ))}
             {[
@@ -701,8 +676,12 @@ export default function BookingScreen() {
                   ]
                 : []),
               ["Total", total],
-              ["50% deposit", deposit],
-              ["Remaining at your visit", total - deposit],
+              ...(!noPaymentRequired
+                ? [
+                    ["50% deposit", deposit],
+                    ["Remaining at your visit", total - deposit],
+                  ]
+                : []),
             ].map(([label, amount]) => (
               <View
                 key={label}
@@ -717,7 +696,7 @@ export default function BookingScreen() {
                   {label}
                 </Txt>
                 <Txt size={17} bold={label === "50% deposit"}>
-                  {s.session ? money(Number(amount)) : "—"}
+                  {money(Number(amount))}
                 </Txt>
               </View>
             ))}

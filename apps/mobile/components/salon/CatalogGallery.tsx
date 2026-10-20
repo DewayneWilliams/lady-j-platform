@@ -67,14 +67,19 @@ export default function CatalogGallery({
                 borderRadius: 22,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: c.card,
-                opacity: (direction < 0 ? index === 0 : index === items.length - 1) ? 0.45 : 1,
+                backgroundColor: (direction < 0 ? index === 0 : index === items.length - 1)
+                  ? c.muted
+                  : c.card,
               }}
             >
               <Icon
                 name={direction < 0 ? "ChevronLeft" : "ChevronRight"}
                 size={22}
-                color={c.foreground}
+                color={
+                  (direction < 0 ? index === 0 : index === items.length - 1)
+                    ? c.mutedForeground
+                    : c.foreground
+                }
               />
             </Pressable>
           ))}

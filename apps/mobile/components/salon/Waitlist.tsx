@@ -130,7 +130,7 @@ export function MyWaitlist() {
               })();
             }}
           >
-            {busy === entry.id ? "Leaving…" : "Leave waitlist"}
+            {busy === entry.id ? "Leaving" : "Leave waitlist"}
           </LinkText>
         </Card>
       ))}

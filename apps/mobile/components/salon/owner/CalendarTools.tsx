@@ -4,11 +4,12 @@ import Icon from "@/lib/icons/LucideIcon";
 import { Appointment } from "@/lib/salon/types";
 import { activityLegend, dotsOnDate } from "@/lib/salon/calendarActivity";
 import { salonDayKey } from "@/lib/salon/ownerToday";
-import { Card, Txt, useColors } from "../ui";
+import { Card, Txt, ButtonLabel, useColors } from "../ui";
 import { OwnerButton, OwnerText } from "./OwnerUI";
 import CalendarActivityDot from "./CalendarActivityDot";
 import CalendarLegend from "./CalendarLegend";
 import BlockTimeMenu from "./BlockTimeMenu";
+import CurrentDateOutline from "./CurrentDateOutline";
 export default function CalendarTools({
   date,
   selected,
@@ -59,7 +60,7 @@ export default function CalendarTools({
   );
   const today = salonDayKey();
   return (
-    <View style={{ gap: 18, marginBottom: 26 }}>
+    <View style={{ gap: 18, marginBottom: selected ? 18 : 0 }}>
       <View style={{ gap: 6 }}>
         <OwnerText size={30} bold>
           Calendar
@@ -68,8 +69,8 @@ export default function CalendarTools({
           {live
             ? status === "live"
               ? "Live calendar · Trinidad & Tobago"
-              : "Reconnecting to live calendar… Pull to refresh."
-            : "Demo data · Bible-inspired fictional activities"}
+              : "Reconnecting to live calendar Pull to refresh."
+            : "Trinidad & Tobago"}
         </OwnerText>
       </View>
       <CalendarLegend />
@@ -159,18 +160,27 @@ export default function CalendarTools({
                           borderRadius: 14,
                           alignItems: "center",
                           justifyContent: "center",
-                          borderWidth: key === today && !active ? 1 : 0,
-                          borderColor: c.goldBorder,
-                          backgroundColor: active ? c.muted : "transparent",
+                          borderWidth: active ? 1 : 0,
+                          borderColor: c.brandAccent,
+                          backgroundColor: active ? c.brandAccentSurface : "transparent",
                           gap: 5,
                         }}
                       >
-                        <Txt size={21} bold={active || key === today}>
-                          {n}
-                        </Txt>
-                        <View style={{ flexDirection: "row", gap: 2, height: 7 }}>
+                        {key === today && <CurrentDateOutline />}
+                        <ButtonLabel size={21}>{n}</ButtonLabel>
+                        <View
+                          testID={"calendar-dots-" + key}
+                          style={{
+                            flexDirection: "row",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            gap: 2,
+                            height: 7,
+                            width: "100%",
+                          }}
+                        >
                           {types.map((type) => (
-                            <CalendarActivityDot key={type} type={type} size={6} />
+                            <CalendarActivityDot key={type} type={type} size={5} />
                           ))}
                         </View>
                       </View>
@@ -199,24 +209,43 @@ export default function CalendarTools({
             }}
           >
             <Txt size={14} color={c.mutedForeground}>
-              Tap a date to see its activity.
+              Filled dots show activity. Tap a date.
             </Txt>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Show today’s activity"
               onPress={() => onDate(today)}
-              style={{ minHeight: 44, justifyContent: "center" }}
+              style={{
+                minHeight: 48,
+                justifyContent: "center",
+                paddingHorizontal: 10,
+                paddingVertical: 12,
+              }}
             >
-              <Txt size={16} bold>
-                Today
-              </Txt>
+              <ButtonLabel>Today</ButtonLabel>
             </Pressable>
           </View>
         </View>
       </Card>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-        <OwnerButton label="Add appointment" icon="Plus" onPress={onAdd} disabled={!live} />
-        <BlockTimeMenu onSelect={onBlock} />
+      <View
+        testID="calendar-actions"
+        style={{
+          flexDirection: "row",
+          alignItems: "stretch",
+          justifyContent: "center",
+          gap: 10,
+          width: "100%",
+          maxWidth: 560,
+          alignSelf: "center",
+          minHeight: 80,
+        }}
+      >
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <OwnerButton label="Add Appointment" onPress={onAdd} compact fill accent />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <BlockTimeMenu onSelect={onBlock} />
+        </View>
       </View>
       {selected && (
         <>
@@ -238,13 +267,16 @@ export default function CalendarTools({
                 style={{
                   flex: 1,
                   minHeight: 52,
+                  paddingVertical: 12,
+                  paddingHorizontal: 10,
+                  minWidth: 0,
                   alignItems: "center",
                   justifyContent: "center",
                   borderRadius: 10,
                   backgroundColor: v === view ? c.card : "transparent",
                 }}
               >
-                <OwnerText bold={v === view}>{v}</OwnerText>
+                <ButtonLabel size={20}>{v}</ButtonLabel>
               </Pressable>
             ))}
           </View>

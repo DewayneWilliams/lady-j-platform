@@ -22,7 +22,7 @@ export default function AuthCallback() {
       >
         {waiting && <ActivityIndicator color={c.primary} />}
         <Txt size={24} bold>
-          {waiting ? "Completing secure sign-in…" : "Return to your sign-in window"}
+          {waiting ? "Completing secure sign-in" : "Return to your sign-in window"}
         </Txt>
         <Txt style={{ textAlign: "center" }}>
           Your account is opened only after the sign-in response is verified. If the original window

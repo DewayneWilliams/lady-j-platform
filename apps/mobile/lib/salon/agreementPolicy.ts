@@ -50,7 +50,8 @@ export type SignaturePoint = { x: number; y: number };
 export type SignatureStroke = SignaturePoint[];
 export type SignedAgreement = {
   id: string;
-  customer_id: string;
+  customer_id: string | null;
+  client_id?: string | null;
   signer_name: string;
   signed_at: string;
   object_path: string;

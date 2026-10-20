@@ -46,7 +46,7 @@ export default function PromoCode({ pricing }: { pricing: ReturnType<typeof useD
       )}
       {pricing.busy && (
         <Txt size={13} color={c.mutedForeground}>
-          Checking your price…
+          Checking your price
         </Txt>
       )}
     </View>

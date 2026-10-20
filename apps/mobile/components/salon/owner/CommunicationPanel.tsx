@@ -118,9 +118,9 @@ export default function CommunicationPanel({ demo }: { demo: boolean }) {
       <Card style={{ gap: 16 }}>
         <OwnerText size={24} bold>
           {demo
-            ? "Demo · Email delivery is paused"
+            ? "Email delivery is paused"
             : !connection && !error
-              ? "Checking email connection…"
+              ? "Checking email connection"
               : connection?.enabled && connection?.configured
                 ? "Email reminders are on"
                 : "Email delivery is paused"}
@@ -169,7 +169,7 @@ export default function CommunicationPanel({ demo }: { demo: boolean }) {
         <Card>
           <OwnerText muted>
             {demo
-              ? "No messages are sent from the demo workspace."
+              ? "No emails have been sent."
               : "New booking, payment and order updates will appear here. Old or changed requests are skipped automatically."}
           </OwnerText>
         </Card>

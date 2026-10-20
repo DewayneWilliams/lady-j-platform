@@ -1,3 +1,4 @@
+import ClientMediaScreen from "@/components/salon/media/ClientMediaScreen";
 import { AgreementList } from "@/components/salon/ServiceAgreement";
 import { Heading } from "@/components/salon/ui";
 import React from "react";
@@ -36,6 +37,7 @@ const titles: Record<string, string> = {
   orders: "My Orders",
   payments: "Payments & Credits",
   agreements: "My service agreements",
+  "my-media": "My media",
   bag: "Shopping Bag",
   checkout: "Secure Checkout",
   about: "About Lady J",
@@ -82,6 +84,9 @@ export default function Page() {
     case "register":
     case "owner-login":
       content = <AuthScreen key={page} mode={page} next={next} />;
+      break;
+    case "my-media":
+      content = s.session ? <ClientMediaScreen /> : <AccountGate next="my-media" />;
       break;
     case "agreements":
       content = (
@@ -130,7 +135,7 @@ export default function Page() {
         </Shell>
       );
   }
-  if (["booking", "bag", "checkout"].includes(page) && !s.session) {
+  if (["bag", "checkout"].includes(page) && !s.session) {
     const query = new URLSearchParams();
     if (id) query.set("id", id);
     if (kind) query.set("kind", kind);

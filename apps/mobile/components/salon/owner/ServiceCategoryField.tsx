@@ -2,7 +2,7 @@ import React from "react";
 import { ScrollView, View } from "react-native";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { predefinedServiceCategories } from "@/lib/salon/categories";
-import { useColors } from "../ui";
+import { ButtonLabel, useColors } from "../ui";
 import { OwnerText } from "./OwnerUI";
 import { ownerEditorPortal } from "./OwnerEditorPortal";
 
@@ -14,10 +14,10 @@ export default function ServiceCategoryField({
   onChange: (value: string) => void;
 }) {
   const c = useColors();
-  const categories = [...new Set([...predefinedServiceCategories, value].filter(Boolean))];
+  const categories = predefinedServiceCategories;
   return (
     <View style={{ gap: 10, marginBottom: 20 }}>
-      <OwnerText bold>Service category</OwnerText>
+      <OwnerText bold>Service Category</OwnerText>
       <Select
         value={{ value, label: value }}
         onValueChange={(option) => {
@@ -25,18 +25,18 @@ export default function ServiceCategoryField({
         }}
       >
         <SelectTrigger
-          accessibilityLabel="Service category"
+          accessibilityLabel="Service Category"
           style={{
             minHeight: 58,
             height: "auto",
             borderRadius: 12,
-            paddingHorizontal: 15,
-            paddingVertical: 15,
+            paddingHorizontal: 12,
+            paddingVertical: 12,
             backgroundColor: c.background,
             borderColor: c.border,
           }}
         >
-          <OwnerText>{value || "Select a category"}</OwnerText>
+          <ButtonLabel size={20}>{value || "Select a category"}</ButtonLabel>
         </SelectTrigger>
         <SelectContent
           portalHost={ownerEditorPortal}

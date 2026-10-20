@@ -1,12 +1,12 @@
 import { activityColor } from "@/lib/salon/calendarActivity";
 import CalendarActivityDot from "./CalendarActivityDot";
 import React from "react";
-import { View, Pressable, ScrollView } from "react-native";
+import { View, Pressable } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { Appointment, Transaction, money, timeLabel } from "@/lib/salon/types";
 import { appointmentDuration } from "@/lib/salon/ownerPrep";
 import { appointmentPayment } from "@/lib/salon/appointmentPayment";
-import { Card, Txt, useColors } from "../ui";
+import { Card, Txt, ButtonLabel, useColors } from "../ui";
 import { OwnerStatus, OwnerText } from "./OwnerUI";
 export default function AppointmentCard({
   appointment: a,
@@ -39,7 +39,7 @@ export default function AppointmentCard({
         style={{
           borderLeftWidth: 7,
           borderColor: a.kind === "block" ? c.mutedForeground : paymentColor,
-          padding: 20,
+          padding: 16,
           gap: 14,
         }}
       >
@@ -51,11 +51,11 @@ export default function AppointmentCard({
             gap: 10,
           }}
         >
-          <Txt size={18} style={{ flex: 1, minWidth: 0 }}>
+          <Txt size={16} style={{ flex: 1, minWidth: 0 }}>
             {timeLabel(a.starts_at).replace(/\s/g, "").toLowerCase()}–
             {timeLabel(a.ends_at).replace(/\s/g, "").toLowerCase()}
           </Txt>
-          <Txt size={18} bold style={{ maxWidth: "43%", textAlign: "right" }}>
+          <Txt size={16} bold style={{ maxWidth: "53%", textAlign: "right" }}>
             {appointmentDuration(a.starts_at, a.ends_at)}
           </Txt>
         </View>
@@ -73,26 +73,44 @@ export default function AppointmentCard({
               <View
                 style={{
                   backgroundColor: c.paymentPaidBadge,
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  flexShrink: 1,
                   borderRadius: 12,
-                  paddingHorizontal: 14,
-                  paddingVertical: 9,
+                  paddingHorizontal: 12,
+                  paddingVertical: 12,
                   alignSelf: "flex-start",
                 }}
               >
-                <Txt size={18} bold color={c.paymentPaidBadgeForeground}>
-                  {payment.label}
-                </Txt>
+                <ButtonLabel color={c.paymentPaidBadgeForeground}>{payment.label}</ButtonLabel>
+              </View>
+            ) : payment.state === "pending" ? (
+              <View
+                style={{
+                  borderRadius: 999,
+                  paddingVertical: 12,
+                  paddingHorizontal: 12,
+                  backgroundColor: c.paymentPendingBadge,
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  flexShrink: 1,
+                }}
+              >
+                <ButtonLabel color={c.primaryForeground}>Payment pending</ButtonLabel>
               </View>
             ) : (
               <Txt
-                size={18}
+                style={{ flex: 1, minWidth: 0 }}
+                size={16}
                 bold
                 color={payment.state === "deposit" ? c.paymentDepositForeground : paymentColor}
               >
                 {payment.label}
               </Txt>
             ))}
-          <OwnerStatus status={a.kind === "block" ? "block" : a.status} />
+          {a.status !== "pending" && (
+            <OwnerStatus status={a.kind === "block" ? "block" : a.status} />
+          )}
         </View>
         <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
           <View
@@ -127,7 +145,9 @@ export default function AppointmentCard({
               </View>
             </View>
             <OwnerText muted>
-              {a.services?.map((v) => v.name).join(" + ") || a.note || "Time reserved for you"}
+              {a.services?.map((v) => (v.name === "Consults" ? "Consult" : v.name)).join(" + ") ||
+                a.note ||
+                "Time reserved for you"}
             </OwnerText>
           </View>
         </View>
@@ -145,7 +165,13 @@ export default function AppointmentCard({
               (
                 [
                   ["Total", money(a.total)],
-                  ["Deposit Paid", money(payment.depositReceived)],
+                  [
+                    payment.received > a.deposit ? "Total Paid" : "Deposit Paid",
+                    money(payment.received),
+                  ],
+                  ...(Number(a.discount_total) > 0
+                    ? [["Discount Applied", "−" + money(a.discount_total!)] as const]
+                    : []),
                   ["Balance Due", money(payment.remaining)],
                 ] as const
               ).map(([label, amount]) => (
@@ -155,16 +181,20 @@ export default function AppointmentCard({
                 >
                   <OwnerText muted={label !== "Balance Due"}>{label}</OwnerText>
                   <Txt
-                    size={20}
+                    size={label === "Balance Due" ? 27 : 20}
                     bold={label === "Balance Due"}
-                    color={
-                      label === "Balance Due"
-                        ? payment.state === "deposit"
-                          ? c.paymentDepositForeground
-                          : paymentColor
-                        : c.foreground
-                    }
-                    style={{ textAlign: "right", flexShrink: 1 }}
+                    color={label === "Balance Due" ? c.balanceDueInk : c.foreground}
+                    style={{
+                      textAlign: "right",
+                      flexShrink: 1,
+                      ...(label === "Balance Due"
+                        ? {
+                            backgroundColor: c.balanceDueSurface,
+                            borderRadius: 8,
+                            paddingHorizontal: 8,
+                          }
+                        : {}),
+                    }}
                   >
                     {amount}
                   </Txt>
@@ -202,29 +232,36 @@ export default function AppointmentCard({
 export function AppointmentLegend() {
   const c = useColors();
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
+    <View
       accessibilityLabel="Appointment status legend: green means paid in full, yellow means confirmed, red means pending"
-      contentContainerStyle={{
+      style={{
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
+        width: "100%",
         gap: 14,
         paddingBottom: 16,
       }}
     >
       {[
-        { label: "Paid in full", color: c.paymentPaid },
+        { label: "Paid in Full", color: c.paymentPaid },
         { label: "Confirmed", color: c.paymentDeposit },
         { label: "Pending", color: c.paymentPending },
       ].map(({ label, color }) => (
         <View key={label} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-          <Txt size={14} lines={1}>
-            {label}
-          </Txt>
+          <View
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: color,
+              borderWidth: label === "Confirmed" ? 1 : 0,
+              borderColor: c.paymentDepositForeground,
+            }}
+          />
+          <Txt size={14}>{label}</Txt>
         </View>
       ))}
-    </ScrollView>
+    </View>
   );
 }

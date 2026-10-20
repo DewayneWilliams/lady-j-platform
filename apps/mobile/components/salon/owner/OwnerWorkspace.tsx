@@ -1,17 +1,16 @@
 import { BottomNavigation } from "../BottomNavigation";
-import React, { useRef } from "react";
-import { BlurTargetView } from "expo-blur";
+import React from "react";
 import { View, Pressable, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "@/lib/icons/LucideIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Brand } from "../Shell";
-import { Txt, useColors } from "../ui";
+import { Txt, ButtonLabel, useColors } from "../ui";
 import { OwnerButton } from "./OwnerUI";
 const tabs = [
-  { name: "Today", icon: "CalendarCheck2" as const },
+  { name: "Today", icon: "Gem" as const },
   { name: "Calendar", icon: "CalendarRange" as const },
-  { name: "Clients", icon: "ContactRound" as const },
+  { name: "Clients", icon: "UsersRound" as const },
   { name: "Business", icon: "BriefcaseBusiness" as const },
   { name: "Maria", icon: "AudioLines" as const },
 ];
@@ -21,6 +20,7 @@ export default function OwnerWorkspace({
   demo,
   onSalon,
   onAdd,
+  onAction,
   children,
 }: {
   tab: string;
@@ -28,12 +28,12 @@ export default function OwnerWorkspace({
   demo: boolean;
   onSalon: () => void;
   onAdd: () => void;
+  onAction: () => void;
   children: React.ReactNode;
 }) {
   const c = useColors(),
     { width } = useWindowDimensions();
   const desktop = width >= 1100;
-  const blurTarget = useRef<View>(null);
   const navItem = (n: (typeof tabs)[number]) => {
     const active = n.name === tab;
     return (
@@ -52,13 +52,13 @@ export default function OwnerWorkspace({
           flexGrow: desktop ? undefined : 1,
           flexDirection: desktop ? "row" : "column",
           alignItems: "center",
-          justifyContent: desktop ? "flex-start" : "center",
+          justifyContent: "center",
           gap: desktop ? 14 : 4,
-          paddingHorizontal: desktop ? 17 : 0,
-          paddingVertical: desktop ? 0 : 6,
+          paddingHorizontal: desktop ? 12 : 0,
+          paddingVertical: 12,
           borderRadius: desktop ? 12 : 0,
           backgroundColor: desktop && active ? c.goldSurface : "transparent",
-          opacity: pressed ? 0.65 : 1,
+          opacity: pressed ? 0.98 : 1,
         })}
       >
         <Icon
@@ -67,15 +67,13 @@ export default function OwnerWorkspace({
           strokeWidth={active ? 2.3 : 1.8}
           color={desktop ? (active ? c.warning : c.mutedForeground) : c.tertiaryForeground}
         />
-        <Txt
-          size={desktop ? 20 : 12}
-          lines={1}
+        <ButtonLabel
+          size={desktop ? 20 : 18}
           style={desktop ? undefined : { width: "100%", textAlign: "center" }}
-          bold={active}
           color={desktop ? c.foreground : c.tertiaryForeground}
         >
           {n.name}
-        </Txt>
+        </ButtonLabel>
         {desktop && n.name === "Maria" && (
           <View
             style={{
@@ -92,6 +90,10 @@ export default function OwnerWorkspace({
   };
   return (
     <SafeAreaView
+      onStartShouldSetResponderCapture={() => {
+        onAction();
+        return false;
+      }}
       style={{ flex: 1, minHeight: 0, backgroundColor: c.headerGold }}
       edges={{ top: "additive", left: "additive", right: "additive", bottom: "off" }}
     >
@@ -165,7 +167,12 @@ export default function OwnerWorkspace({
                   accessibilityLabel="View salon"
                   accessibilityRole="button"
                   onPress={onSalon}
-                  style={{ width: 48, height: 48, alignItems: "center", justifyContent: "center" }}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
                 >
                   <Icon name="ArrowUpRight" size={23} color={c.headerInk} />
                 </Pressable>
@@ -177,7 +184,7 @@ export default function OwnerWorkspace({
               style={{
                 backgroundColor: c.goldSurface,
                 paddingHorizontal: desktop ? 32 : 20,
-                paddingVertical: 10,
+                paddingVertical: 6,
                 borderBottomWidth: 1,
                 borderColor: c.goldBorder,
                 flexDirection: "row",
@@ -185,27 +192,19 @@ export default function OwnerWorkspace({
                 gap: 10,
               }}
             >
-              <Icon name="Sparkles" size={19} color={c.warning} />
-              <Txt size={16} color={c.warning} style={{ flex: 1 }}>
-                Demo workspace · Fictional records
+              <Icon name="Sparkles" size={15} color={c.warning} />
+              <Txt size={12} color={c.warning} style={{ flex: 1 }}>
+                Sample data
               </Txt>
             </View>
           )}
-          <BlurTargetView
-            ref={blurTarget}
-            style={{ flex: 1, minHeight: 0, backgroundColor: c.background }}
+          <BottomNavigation
+            items={tabs.map((n) => ({ key: n.name, label: n.name, icon: n.icon }))}
+            selectedKey={tab}
+            onSelect={onTab}
           >
             {children}
-          </BlurTargetView>
-          {!desktop && (
-            <BottomNavigation
-              blurTarget={blurTarget}
-              accessibilityLabel="Owner navigation"
-              items={tabs.map((n) => ({ key: n.name, label: n.name, icon: n.icon }))}
-              selectedKey={tab}
-              onSelect={onTab}
-            />
-          )}
+          </BottomNavigation>
         </View>
       </View>
     </SafeAreaView>

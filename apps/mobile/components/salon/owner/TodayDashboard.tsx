@@ -1,12 +1,12 @@
 import { useBottomNavigationSpacing } from "../BottomNavigation";
 import React, { useState } from "react";
 import { FlatList, Linking, Pressable, View, useWindowDimensions } from "react-native";
-import { Appointment, dateLabel } from "@/lib/salon/types";
-import { dailyBibleVerse } from "@/lib/salon/ownerToday";
+import { Appointment } from "@/lib/salon/types";
+import { headerDate, dailyBibleVerse } from "@/lib/salon/ownerToday";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { AppointmentLegend } from "./AppointmentCard";
-import { Txt, useColors } from "../ui";
-import { OwnerButton, OwnerEmpty, OwnerText } from "./OwnerUI";
+import { Txt, ButtonLabel, useColors } from "../ui";
+import { OwnerEmpty } from "./OwnerUI";
 export type OwnerAction =
   | "appointment"
   | "block"
@@ -61,23 +61,19 @@ export default function TodayDashboard({
       ListHeaderComponent={
         <View style={{ gap: 24 }}>
           {notice}
-          <OwnerText size={28} bold>
-            {dateLabel(day + "T12:00:00-04:00", { weekday: "long" })}
-          </OwnerText>
+          <Txt size={24} bold style={{ textAlign: "center", width: "100%" }}>
+            {headerDate(day + "T12:00:00-04:00")}
+          </Txt>
           <View
             accessibilityLabel="Daily Bible verse"
             style={{
               maxWidth: 740,
-              borderLeftWidth: 3,
-              borderColor: c.goldBorder,
-              paddingLeft: 16,
               gap: 8,
             }}
           >
-            <OwnerText>“{verse.text}”</OwnerText>
             <Pressable
               accessibilityRole="link"
-              accessibilityLabel={"Read " + verse.reference + " in the New World Translation"}
+              accessibilityLabel={"Read " + verse.reference + ": " + verse.text}
               onPress={() => {
                 void Linking.openURL(verse.url).catch(() =>
                   s.notify("Unable to open the Bible reference. Please try again."),
@@ -85,14 +81,38 @@ export default function TodayDashboard({
               }}
               style={{ minHeight: 44, justifyContent: "center" }}
             >
-              <OwnerText size={16} muted>
-                {verse.reference} · New World Translation
-              </OwnerText>
+              <Txt size={18}>
+                “{verse.text}”{" "}
+                <Txt size={16} color={c.mutedForeground}>
+                  {verse.reference}
+                </Txt>
+              </Txt>
+            </Pressable>
+          </View>
+          <View style={{ alignItems: "center" }}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onAdd}
+              style={{
+                borderRadius: 999,
+                backgroundColor: c.brandAccentFill,
+                paddingHorizontal: 12,
+                maxWidth: "100%",
+                minWidth: 0,
+                alignItems: "center",
+                paddingVertical: 14,
+                minHeight: 58,
+                justifyContent: "center",
+              }}
+            >
+              <ButtonLabel size={22} color={c.tertiaryForeground}>
+                Add Appointment
+              </ButtonLabel>
             </Pressable>
           </View>
           <View style={{ gap: 18 }}>
-            <Txt size={24} bold lines={1} style={{ textAlign: "center", width: "100%" }}>
-              Today’s appointments
+            <Txt size={24} bold style={{ textAlign: "center", width: "100%" }}>
+              Today’s Appointments
             </Txt>
             <AppointmentLegend />
           </View>
@@ -104,14 +124,7 @@ export default function TodayDashboard({
           body="Appointments and blocked time for today will appear here in time order."
         />
       }
-      ListFooterComponent={
-        <View style={{ gap: 28, paddingTop: 24 }}>
-          <View style={{ alignItems: "center" }}>
-            <OwnerButton label="Add appointment" icon="Plus" onPress={onAdd} />
-          </View>
-          {briefing}
-        </View>
-      }
+      ListFooterComponent={<View style={{ gap: 28, paddingTop: 24 }}>{briefing}</View>}
     />
   );
 }

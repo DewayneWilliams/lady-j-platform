@@ -1,6 +1,6 @@
 import * as SelectPrimitive from "@rn-primitives/select";
 import * as React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, type TextStyle } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import LucideIcon from "@/lib/icons/LucideIcon";
 import { cn } from "@/lib/utils";
@@ -27,8 +27,8 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       ref={ref}
       className={cn(
-        "native:h-12 flex h-10 flex-row items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground web:ring-offset-background web:focus:outline-none web:focus:ring-2 web:focus:ring-ring web:focus:ring-offset-2 [&>span]:line-clamp-1",
-        props.disabled && "opacity-50 web:cursor-not-allowed",
+        "h-auto min-h-[52px] min-w-0 max-w-full flex flex-row items-center justify-center gap-3 rounded-md border border-input bg-background px-3 py-3 text-[18px] leading-[1.25] text-muted-foreground web:ring-offset-background web:focus:outline-none web:focus:ring-2 web:focus:ring-ring web:focus:ring-offset-2 ",
+        props.disabled && "web:cursor-not-allowed",
         className,
       )}
       {...props}
@@ -38,7 +38,7 @@ function SelectTrigger({
         name="ChevronDown"
         size={16}
         aria-hidden={true}
-        className="text-foreground opacity-50"
+        className="text-muted-foreground"
       />
     </SelectPrimitive.Trigger>
   );
@@ -120,7 +120,7 @@ function SelectContent({
                 className: cn(
                   "p-1",
                   position === "popper" &&
-                    "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
+                    "max-h-[var(--radix-select-content-available-height)] w-full min-w-[var(--radix-select-trigger-width)]",
                 ),
               },
               children,
@@ -153,11 +153,13 @@ function SelectLabel({
 function SelectItem({
   className,
   textClassName,
+  textStyle,
   testID,
   ...props
 }: SelectPrimitive.ItemProps & {
   ref?: React.RefObject<SelectPrimitive.ItemRef>;
   textClassName?: string;
+  textStyle?: TextStyle;
 }) {
   // Web Item uses a DOM slot; native-only testID must not reach that element.
   return React.createElement(
@@ -166,8 +168,8 @@ function SelectItem({
       ...props,
       ...(Platform.OS === "web" ? {} : { testID }),
       className: cn(
-        "web:group native:py-2 native:pl-10 relative flex w-full flex-row items-center rounded-sm py-1.5 pl-8 pr-2 active:bg-accent web:cursor-default web:select-none web:outline-none web:hover:bg-accent/50 web:focus:bg-accent",
-        props.disabled && "opacity-50 web:pointer-events-none",
+        "web:group relative min-h-[48px] flex w-full flex-row items-center justify-center rounded-sm py-3 px-3 active:bg-accent web:cursor-default web:select-none web:outline-none web:hover:bg-accent/50 web:focus:bg-accent",
+        props.disabled && "web:pointer-events-none",
         className,
       ),
     },
@@ -178,8 +180,13 @@ function SelectItem({
         </SelectPrimitive.ItemIndicator>
       </View>
       <SelectPrimitive.ItemText
+        style={{
+          paddingHorizontal: 18,
+          lineHeight: (textStyle?.fontSize ?? 18) * 1.25,
+          ...textStyle,
+        }}
         className={cn(
-          "native:text-lg text-caption text-sm text-popover-foreground web:group-focus:text-accent-foreground",
+          "min-w-0 max-w-full shrink text-button text-[18px] leading-[1.25] text-center text-popover-foreground web:group-focus:text-accent-foreground",
           textClassName,
         )}
       />
