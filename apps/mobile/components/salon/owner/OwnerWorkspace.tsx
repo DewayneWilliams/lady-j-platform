@@ -161,20 +161,30 @@ export default function OwnerWorkspace({
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <ThemeToggle color={c.headerInk} />
               {desktop ? (
-                <OwnerButton label="View salon" secondary onPress={onSalon} />
+                <OwnerButton
+                  label={demo ? "Client View" : "View salon"}
+                  secondary
+                  onPress={onSalon}
+                />
               ) : (
                 <Pressable
-                  accessibilityLabel="View salon"
+                  accessibilityLabel={demo ? "Open Client View" : "View salon"}
                   accessibilityRole="button"
                   onPress={onSalon}
                   style={{
-                    width: 48,
+                    minWidth: 92,
                     height: 48,
+                    paddingHorizontal: 7,
+                    flexDirection: "row",
+                    gap: 5,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Icon name="ArrowUpRight" size={23} color={c.headerInk} />
+                  <Icon name="ArrowUpRight" size={18} color={c.headerInk} />
+                  <Txt size={11} bold color={c.headerInk}>
+                    {demo ? "Client View" : "Salon"}
+                  </Txt>
                 </Pressable>
               )}
             </View>

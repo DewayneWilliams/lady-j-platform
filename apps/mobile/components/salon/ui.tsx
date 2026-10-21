@@ -131,12 +131,10 @@ export function Heading({
       }}
     >
       <View style={{ flex: 1 }}>
-        <Txt serif>{children}</Txt>
-        {sub && (
-          <Txt color={undefined} style={{ marginTop: 6, opacity: 0.65 }}>
-            {sub}
-          </Txt>
-        )}
+        <Txt serif className={"justify-center text-base w-full items-center"}>
+          {children}
+        </Txt>
+        {sub && null}
       </View>
       {action}
     </View>
@@ -149,6 +147,7 @@ export function Action({
   gold = false,
   prominent = false,
   icon,
+  iconColor,
   disabled = false,
   busy = false,
   style,
@@ -159,6 +158,7 @@ export function Action({
   gold?: boolean;
   prominent?: boolean;
   icon?: IconName;
+  iconColor?: string;
   disabled?: boolean;
   busy?: boolean;
   style?: ViewStyle;
@@ -200,12 +200,13 @@ export function Action({
         style,
         (disabled || busy) && { backgroundColor: c.muted, borderColor: c.border, borderWidth: 1 },
       ]}
+      className={"lg:items-center lg:justify-center"}
     >
       {busy && <ActivityIndicator color={contentColor} />}
       <ButtonLabel size={prominent ? 22 : secondary ? 18 : 20} color={contentColor}>
         {label}
       </ButtonLabel>
-      {!busy && icon && <Icon name={icon} size={22} color={contentColor} />}
+      {!busy && icon && <Icon name={icon} size={22} color={iconColor || contentColor} />}
     </Button>
   );
 }

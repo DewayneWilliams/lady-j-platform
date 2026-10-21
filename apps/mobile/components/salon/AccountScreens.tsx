@@ -12,6 +12,7 @@ import {
   authDestination,
   AuthProviders,
   SocialProvider,
+  signOutCurrentDevice,
 } from "@/lib/salon/auth";
 import { AccountTrust } from "./AccountGate";
 import Shell, { useNav } from "./Shell";
@@ -125,7 +126,7 @@ export function AuthScreen({
         const result = check(await db().auth.signInWithPassword({ email: email.trim(), password }));
         if (owner) {
           if (!check(await db().rpc("lj_is_owner"))) {
-            await db().auth.signOut();
+            await signOutCurrentDevice();
             setError(
               "This account is not authorized for owner access. Please use customer sign-in.",
             );
@@ -377,7 +378,7 @@ export function AccountScreen() {
       />
     </Card>
   );
-  if (!s.session)
+  if (!s.session && !s.testMode)
     return (
       <Shell>
         <View style={{ maxWidth: 720, alignSelf: "center", width: "100%", paddingVertical: 30 }}>
@@ -396,12 +397,7 @@ export function AccountScreen() {
       </Shell>
     );
   const tiles = [
-    [
-      "Gem",
-      "Premium checkout",
-      "A polished shortcut to your bag and secure checkout",
-      "checkout",
-    ],
+    ["Gem", "Premium checkout", "A polished shortcut to your bag and secure checkout", "checkout"],
     ["CalendarDays", "My appointments", "Your upcoming moments of care", "appointments"],
     [
       "GraduationCap",
@@ -419,11 +415,12 @@ export function AccountScreen() {
   return (
     <Shell>
       <Heading sub="A private space for everything Lady J.">
-        Welcome,
-        {s.profile?.full_name?.split(" ")[0] ||
-          s.session.user.user_metadata?.full_name?.split(" ")[0] ||
-          "beautiful"}
-        .
+        {"Welcome, " +
+          (s.profile?.full_name?.split(" ")[0] ||
+            s.session?.user.user_metadata?.full_name?.split(" ")[0] ||
+            (s.testMode ? "Test Client" : "") ||
+            "beautiful") +
+          "."}
       </Heading>
       <View style={{ marginBottom: 20 }}>{ownerCard}</View>
       <View style={{ flexDirection: "row", gap: 20, flexWrap: "wrap" }}>
@@ -454,18 +451,21 @@ export function AccountScreen() {
         ))}
       </View>
 
-      <LinkText
-        onPress={() => {
-          void db()
-            .auth.signOut()
-            .then(({ error }) => {
-              if (error) s.notify(error.message);
-              else go("home");
-            });
-        }}
-      >
-        Sign out securely
-      </LinkText>
+      {s.session ? (
+        <LinkText
+          onPress={() => {
+            void signOutCurrentDevice()
+              .then(() => go("home"))
+              .catch((reason: unknown) =>
+                s.notify(reason instanceof Error ? reason.message : "Unable to sign out."),
+              );
+          }}
+        >
+          Sign out securely
+        </LinkText>
+      ) : (
+        <Tag>Development Test Mode · No private account loaded</Tag>
+      )}
     </Shell>
   );
 }
@@ -474,9 +474,15 @@ export function ProfileScreen() {
     go = useNav(),
     c = useColors();
   const full = s.profile?.full_name || s.session?.user?.user_metadata?.full_name || "";
-  const [firstName, setFirstName] = useState(s.profile?.first_name || full.split(" ")[0] || ""),
-    [lastName, setLastName] = useState(s.profile?.last_name || full.split(" ").slice(1).join(" ")),
-    [email, setEmail] = useState(s.profile?.email || s.session?.user?.email || ""),
+  const [firstName, setFirstName] = useState(
+      s.profile?.first_name || full.split(" ")[0] || (s.testMode ? "Test" : ""),
+    ),
+    [lastName, setLastName] = useState(
+      s.profile?.last_name || full.split(" ").slice(1).join(" ") || (s.testMode ? "Client" : ""),
+    ),
+    [email, setEmail] = useState(
+      s.profile?.email || s.session?.user?.email || (s.testMode ? "test@example.invalid" : ""),
+    ),
     [phone, setPhone] = useState(s.profile?.phone || ""),
     [birthday, setBirthday] = useState(s.profile?.birthday || ""),
     [preferences, setPreferences] = useState(s.profile?.preferences || ""),
@@ -486,12 +492,16 @@ export function ProfileScreen() {
     [error, setError] = useState("");
   const name = `${firstName.trim()} ${lastName.trim()}`.trim();
   async function save() {
-    if (!s.session) return;
     setError("");
     if (!firstName.trim() || !lastName.trim() || !email.includes("@")) {
       setError("Enter your first name, last name and email.");
       return;
     }
+    if (s.testMode && !s.session) {
+      s.notify("Test profile updated locally. No client record was created.");
+      return;
+    }
+    if (!s.session) return;
     if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
       setError("Use YYYY-MM-DD for your birthday.");
       return;
@@ -525,7 +535,7 @@ export function ProfileScreen() {
   return (
     <Shell>
       <Heading sub="Only you and the salon owner can access your details.">My profile</Heading>
-      {!s.session ? (
+      {!s.session && !s.testMode ? (
         <Empty
           title="Sign in to view your profile"
           body="Your personal details stay private."
@@ -533,6 +543,7 @@ export function ProfileScreen() {
         />
       ) : (
         <Card style={{ maxWidth: 650, width: "100%" }}>
+          {s.testMode && !s.session && <Tag>Development Test Mode · Local fields only</Tag>}
           {!!error && <ErrorBox message={error} />}
           <Txt size={18} bold>
             Name
@@ -606,6 +617,11 @@ export function RecordsScreen({ page }: { page: string }) {
           ? "My workshops"
           : "Payments & credits";
   async function cancelPurchase(id: string) {
+    if (s.testMode && !s.session) {
+      setConfirm("");
+      s.notify("Test request cancelled locally. No purchase was changed.");
+      return;
+    }
     setBusy(true);
     try {
       s.notify(check(await db().rpc("lj_cancel_unpaid_purchase", { p_id: id })));
@@ -619,6 +635,11 @@ export function RecordsScreen({ page }: { page: string }) {
     }
   }
   async function cancel(id: string) {
+    if (s.testMode && !s.session) {
+      setConfirm("");
+      s.notify("Test appointment cancelled locally. No appointment was changed.");
+      return;
+    }
     setBusy(true);
     try {
       s.notify(check(await db().rpc("lj_cancel", { p_id: id })));
@@ -633,7 +654,7 @@ export function RecordsScreen({ page }: { page: string }) {
   return (
     <Shell>
       <Heading sub="Private records, clearly organised.">{title}</Heading>
-      {!s.session ? (
+      {!s.session && !s.testMode ? (
         <Empty
           title="A private space, just for you"
           body="Sign in to view your salon history."
@@ -714,7 +735,7 @@ export function RecordsScreen({ page }: { page: string }) {
                 action={<Action label="Book an appointment" onPress={() => go("booking")} />}
               />
             ))}
-          {page === "appointments" && <MyWaitlist />}
+          {page === "appointments" && !s.testMode && <MyWaitlist />}
           {(page === "orders" || page === "my-workshops") &&
             (() => {
               const rows = s.purchases.filter(

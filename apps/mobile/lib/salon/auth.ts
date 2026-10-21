@@ -1,6 +1,6 @@
 import { db, check } from "./client";
 import { openAuthSessionAsync } from "expo-web-browser";
-import * as Linking from "expo-linking";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 export type SocialProvider = "google" | "facebook" | "apple";
 export type AuthProviders = Record<SocialProvider, boolean>;
@@ -46,11 +46,54 @@ export function authDestination(next?: string) {
   if (kind === "product" || kind === "workshop") params.kind = kind;
   return { page, params };
 }
+
+function configuredScheme() {
+  const configured = Constants.expoConfig?.scheme;
+  const scheme = Array.isArray(configured) ? configured[0] : configured;
+  if (!scheme || !/^[a-z][a-z0-9+.-]*$/i.test(scheme))
+    throw new Error("Secure sign-in is not configured for this app build.");
+  return scheme;
+}
+
+export function oauthRedirectUrl() {
+  if (Platform.OS === "web") {
+    if (typeof globalThis.location === "undefined")
+      throw new Error("Secure sign-in must be started in the app.");
+    return globalThis.location.origin + "/auth/callback";
+  }
+
+  // Do not use Linking.createURL here. In a shared preview container it creates an
+  // exp:// launcher URL, which can reopen the launcher as "App Not Found". iOS
+  // ASWebAuthenticationSession captures this stable callback and returns it to the
+  // same presenting Preview app; published builds own the configured scheme.
+  return `${configuredScheme()}://auth/callback`;
+}
+
+export async function completeOAuthCallback(callbackUrl: string) {
+  const callback = new URL(callbackUrl);
+  const error =
+    callback.searchParams.get("error_description") || callback.searchParams.get("error");
+  if (error) throw new Error(error);
+  const code = callback.searchParams.get("code");
+  if (!code) throw new Error("The sign-in response could not be verified. Please try again.");
+  const data = check(await db().auth.exchangeCodeForSession(code));
+  if (!data.session || !data.user)
+    throw new Error("Sign-in has not been confirmed. Please try again.");
+  return data;
+}
+
+export async function signOutCurrentDevice() {
+  const client = db();
+  const result = await client.auth.signOut();
+  if (!result.error) return;
+
+  // A network/server failure must not leave a session usable on this device.
+  const local = await client.auth.signOut({ scope: "local" });
+  if (local.error) throw new Error(result.error.message);
+}
+
 export async function socialSignIn(provider: SocialProvider, marketing: boolean) {
-  const redirectTo =
-    Platform.OS === "web"
-      ? globalThis.location.origin + "/auth/callback"
-      : Linking.createURL("auth/callback");
+  const redirectTo = oauthRedirectUrl();
   const { url } = check(
     await db().auth.signInWithOAuth({
       provider,
@@ -61,14 +104,7 @@ export async function socialSignIn(provider: SocialProvider, marketing: boolean)
   const result = await openAuthSessionAsync(url, redirectTo);
   if (result.type !== "success")
     throw new Error("Sign-in was cancelled. Your account was not changed.");
-  const callback = new URL(result.url),
-    code = callback.searchParams.get("code"),
-    error = callback.searchParams.get("error_description");
-  if (error) throw new Error(error);
-  if (!code) throw new Error("The sign-in response could not be verified. Please try again.");
-  const data = check(await db().auth.exchangeCodeForSession(code));
-  if (!data.session || !data.user)
-    throw new Error("Sign-in has not been confirmed. Please try again.");
+  const data = await completeOAuthCallback(result.url);
   // Unchecked opt-in never subscribes new users or withdraws an existing preference on login.
   if (marketing)
     check(

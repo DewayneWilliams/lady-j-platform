@@ -45,6 +45,37 @@ export function useDiscountQuote(kind: "service" | "product" | "workshop", items
     if (!enabled) return;
     let active = true;
     setResult(null);
+    if (s.testMode) {
+      const catalog =
+        kind === "service" ? s.services : kind === "product" ? s.products : s.workshops;
+      const quotedItems = (JSON.parse(itemsJson) as DiscountItem[]).flatMap((item) => {
+        const match = catalog.find((entry) => entry.id === item.id);
+        if (!match) return [];
+        const price = Number(match.price);
+        return [
+          {
+            id: item.id,
+            name: match.name,
+            price,
+            original_price: price,
+            quantity: item.quantity,
+            discount_percentage: 0,
+          },
+        ];
+      });
+      const subtotal = quotedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      setResult({
+        key,
+        quote: {
+          items: quotedItems,
+          subtotal,
+          original_subtotal: subtotal,
+          discount_total: 0,
+          code: code || null,
+        },
+      });
+      return;
+    }
     void (async () => {
       try {
         const quote = check(
@@ -67,7 +98,7 @@ export function useDiscountQuote(kind: "service" | "product" | "workshop", items
     return () => {
       active = false;
     };
-  }, [enabled, key, kind, itemsJson, code, retry]);
+  }, [enabled, key, kind, itemsJson, code, retry, s.testMode, s.services, s.products, s.workshops]);
   const current = enabled && result?.key === key ? result : null;
   const quote = current?.quote;
   return {

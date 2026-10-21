@@ -4,12 +4,13 @@ module.exports = {
       foregroundImage: "./assets/images/adaptive-icon.png",
       backgroundColor: "#ffffff"
     },
-    package: "com.draftbitbuildservices.newapp"
+    package: "com.draftbitbuildservices.newapp",
+    versionCode: 1
   },
   assetBundlePatterns: ["**/*"],
   experiments: { typedRoutes: true, tsconfigPaths: true },
   icon: "./assets/images/icon.png",
-  ios: { supportsTablet: true },
+  ios: { supportsTablet: true, bundleIdentifier: "com.draftbit.newapp", buildNumber: "1" },
   name: "Lady J",
   orientation: "portrait",
   plugins: [
@@ -45,6 +46,7 @@ module.exports = {
 
 
   }]],
+
 
 
 

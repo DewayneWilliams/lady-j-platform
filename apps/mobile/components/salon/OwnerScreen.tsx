@@ -42,6 +42,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { db, check } from "@/lib/salon/client";
+import { signOutCurrentDevice } from "@/lib/salon/auth";
 import {
   Appointment,
   Client,
@@ -1669,7 +1670,10 @@ export default function OwnerScreen() {
                                     {String(v.name)}
                                   </OT>
                                   <OT muted>
-                                    {"duration" in v ? servicePriceLabel(v as Service) : money(v.price)} ·
+                                    {"duration" in v
+                                      ? servicePriceLabel(v as Service)
+                                      : money(v.price)}{" "}
+                                    ·
                                     {"stock" in v
                                       ? `${v.stock} in stock`
                                       : "duration" in v
@@ -2057,13 +2061,15 @@ export default function OwnerScreen() {
                             s.setDemoOwner(false);
                             if (demo) go("home");
                             else
-                              void db()
-                                .auth.signOut()
-                                .then(({ error }) => {
-                                  if (error) s.notify(error.message);
-                                  else go("home");
-                                })
-                                .catch(() => s.notify("Unable to sign out."));
+                              void signOutCurrentDevice()
+                                .then(() => go("home"))
+                                .catch((reason: unknown) =>
+                                  s.notify(
+                                    reason instanceof Error
+                                      ? reason.message
+                                      : "Unable to sign out.",
+                                  ),
+                                );
                           }}
                         />
                       </View>
@@ -2491,8 +2497,16 @@ export default function OwnerScreen() {
                             </View>
                             {!customerId && (
                               <View style={{ gap: 14, marginBottom: 18 }}>
-                                <OF label="Full Name" value={newClientName} onChange={setNewClientName} />
-                                <OF label="Email" value={newClientEmail} onChange={setNewClientEmail} />
+                                <OF
+                                  label="Full Name"
+                                  value={newClientName}
+                                  onChange={setNewClientName}
+                                />
+                                <OF
+                                  label="Email"
+                                  value={newClientEmail}
+                                  onChange={setNewClientEmail}
+                                />
                                 <OF
                                   label="Mobile Number"
                                   value={newClientPhone}

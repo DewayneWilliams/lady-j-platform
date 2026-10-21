@@ -2,12 +2,11 @@ import SalonLocation from "./SalonLocation";
 import GoogleReviews from "./GoogleReviews";
 import { formatDuration } from "@/lib/salon/duration";
 import React, { useEffect, useState } from "react";
-import { View, useWindowDimensions, Linking } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { money } from "@/lib/salon/types";
 import CatalogGallery from "./CatalogGallery";
-import { whatsappSupportUrl } from "@/lib/salon/whatsapp";
 import Shell, { useNav } from "./Shell";
 import { Txt, Action, Heading, Photo, Card, useColors, shared } from "./ui";
 export default function HomeScreen() {
@@ -16,14 +15,6 @@ export default function HomeScreen() {
     { width } = useWindowDimensions(),
     s = useSalon();
   const desktop = width >= 850;
-  const whatsappUrl = whatsappSupportUrl(s.settings?.whatsapp_phone);
-  const freeConsultation = s.services.find(
-    (service) =>
-      service.active &&
-      service.bookable !== false &&
-      service.name === "Free consultation" &&
-      (!s.session || Number(service.price) === 0),
-  );
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const next = Math.min(
@@ -66,45 +57,6 @@ export default function HomeScreen() {
           marginBottom: 24,
         }}
       >
-        <View
-          style={{
-            flex: desktop ? 1.04 : undefined,
-            padding: desktop ? 48 : 28,
-            justifyContent: "center",
-            alignItems: "flex-start",
-          }}
-        >
-          <View style={[shared.row, { gap: 8, marginBottom: 20 }]}>
-            <View style={{ height: 1, width: 26, backgroundColor: c.tertiary }} />
-            <Txt size={12} color={c.secondaryForeground}>
-              LADY J SALON & DAY SPA
-            </Txt>
-          </View>
-          <Txt
-            serif
-            size={desktop ? 48 : 36}
-            style={{ lineHeight: desktop ? 58 : 44, letterSpacing: -1.2, marginBottom: 19 }}
-          >
-            Look like yourself.{`\n`}Feel renewed.
-          </Txt>
-          <Txt
-            size={16}
-            color={c.mutedForeground}
-            style={{ lineHeight: 26, maxWidth: 365, marginBottom: 27 }}
-          >
-            Your days ask a lot of you. Make room for care that begins with listening, feels
-            unrushed, and leaves you confident in your own reflection.
-          </Txt>
-          <Txt size={13} color={c.warning} style={{ marginTop: 12 }}>
-            A personal plan. Thoughtful care. A feeling that stays with you.
-          </Txt>
-          <View style={[shared.row, { gap: 8, marginTop: 24 }]}>
-            <Icon name="ShieldCheck" size={15} color={c.warning} />
-            <Txt size={11} color={c.mutedForeground}>
-              Clear guidance. Your comfort comes first.
-            </Txt>
-          </View>
-        </View>
         <View style={{ flex: 1, minHeight: desktop ? 450 : 320 }}>
           <Photo name="hero" style={{ height: "100%", minHeight: desktop ? 450 : 320 }} />
           <View
@@ -143,44 +95,6 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
-      </View>
-      <View style={{ gap: 10, marginBottom: 24 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            alignItems: "stretch",
-            justifyContent: "center",
-            gap: 12,
-          }}
-        >
-          <Action
-            label="Have a Question?"
-            icon="MessageCircle"
-            secondary
-            onPress={() => {
-              if (whatsappUrl)
-                void Linking.openURL(whatsappUrl).catch(() => s.notify("Unable to open WhatsApp."));
-              else go("contact");
-            }}
-          />
-          <Action
-            label="Book A Free Consultation"
-            icon="CalendarHeart"
-            disabled={s.loading || !freeConsultation}
-            onPress={() => {
-              if (!freeConsultation) return;
-              s.setSelected([freeConsultation.id]);
-              go("booking", { id: freeConsultation.id });
-            }}
-          />
-        </View>
-
-        {!s.loading && !freeConsultation && (
-          <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
-            Free consultations are currently unavailable.
-          </Txt>
-        )}
       </View>
       <View
         style={{
@@ -252,19 +166,6 @@ export default function HomeScreen() {
             shape the visit around your goals, your routine, and the way you want to feel.
           </Txt>
         </View>
-        <Card style={{ gap: 16, backgroundColor: c.goldSurface, borderColor: c.goldBorder }}>
-          <Txt size={24} bold>
-            Confidence begins before your treatment.
-          </Txt>
-          <Txt color={c.mutedForeground} style={{ lineHeight: 26 }}>
-            Understand your options, ask questions, and agree on your care before we begin.
-            Thoughtful guidance and personalised attention are part of every visit.
-          </Txt>
-          <Txt size={15} color={c.mutedForeground} style={{ lineHeight: 24 }}>
-            Questions about training or licensing? Ask during your consultation so you can confirm
-            the right professional for your treatment.
-          </Txt>
-        </Card>
         <View style={{ gap: 16, paddingVertical: 12, maxWidth: 760 }}>
           <Heading>Care you will be glad you made time for.</Heading>
           <Txt color={c.mutedForeground} style={{ lineHeight: 26 }}>
@@ -275,7 +176,10 @@ export default function HomeScreen() {
           <Action
             label="BOOK YOUR APPOINTMENT"
             onPress={() =>
-              go(s.session ? "booking" : "register", s.session ? {} : { next: "booking" })
+              go(
+                s.session || s.testMode ? "booking" : "register",
+                s.session || s.testMode ? {} : { next: "booking" },
+              )
             }
             style={{ alignSelf: "stretch" }}
           />

@@ -19,6 +19,7 @@ export default function ProductStore() {
   const [category, setCategory] = useState("All products");
   const [sort, setSort] = useState("Name A–Z");
   const [page, setPage] = useState(0);
+  const desktop = width > 850;
   const filtered = s.products
     .filter(
       (v) =>
@@ -81,7 +82,7 @@ export default function ProductStore() {
         <Txt color={c.mutedForeground} style={{ maxWidth: 620 }}>
           Shop by brand and find your daily essentials.
         </Txt>
-        {!s.session && (
+        {!s.session && !s.testMode && (
           <LinkText onPress={() => go("register", { next: "boutique" })}>
             Create a free account to shop
           </LinkText>
@@ -186,49 +187,67 @@ export default function ProductStore() {
           ))}
         </View>
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 20 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, alignItems: "stretch" }}>
         {filtered.slice(currentPage * 24, currentPage * 24 + 24).map((v) => (
           <Card
             key={v.id}
             style={{
-              width: width > 1100 ? "23%" : width > 650 ? "47%" : "100%",
+              padding: 0,
+              overflow: "hidden",
+              width: desktop ? "31%" : "100%",
               flexGrow: 1,
-              maxWidth: width > 1100 ? "25%" : width > 650 ? "49%" : undefined,
-              padding: 16,
-              gap: 14,
+              maxWidth: desktop ? "33%" : undefined,
             }}
           >
-            <CatalogGallery photos={v.photos} cover={v.image} height={220} />
-            <Txt size={12} bold color={c.secondaryForeground}>
-              {v.brand || "Lady J collection"}
-            </Txt>
-            <Pressable accessibilityRole="button" onPress={() => go("product", { id: v.id })}>
-              <Txt size={18} bold>
-                {v.name}
+            <CatalogGallery photos={v.photos} cover={v.image} height={180} />
+            <View style={{ padding: 16, gap: 8, flex: 1 }}>
+              <Txt size={12} bold color={c.secondaryForeground}>
+                {v.brand || "Lady J collection"}
               </Txt>
-            </Pressable>
-
-            <Txt size={20} bold>
-              {money(v.price)}
-            </Txt>
-            <Txt size={13} color={c.mutedForeground}>
-              {v.stock > 0 ? "Available for pickup or delivery" : "Currently out of stock"}
-            </Txt>
-            <Action
-              label={s.cart[v.id] ? "In bag (" + s.cart[v.id] + ") · Add" : "Add to bag"}
-              icon="Plus"
-              disabled={v.stock <= 0 || (s.cart[v.id] || 0) >= v.stock}
-              style={{ alignSelf: "stretch", paddingHorizontal: 12 }}
-              onPress={() => {
-                if (!s.session) {
-                  go("register", { next: "product?id=" + v.id });
-                  return;
-                }
-                s.setCart((old) => ({ ...old, [v.id]: (old[v.id] || 0) + 1 }));
-                s.notify(v.name + " added to your bag.");
-              }}
-            />
-            <LinkText onPress={() => go("product", { id: v.id })}>View details</LinkText>
+              <Pressable accessibilityRole="button" onPress={() => go("product", { id: v.id })}>
+                <Txt serif size={25}>
+                  {v.name}
+                </Txt>
+              </Pressable>
+              <Txt size={13} color={c.mutedForeground}>
+                {v.is_demo &&
+                /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
+                  ? "Ask the salon for details."
+                  : v.description}
+              </Txt>
+              <View style={{ marginTop: "auto", gap: 8 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  <Txt size={13} color={c.mutedForeground}>
+                    {v.stock > 0 ? "Pickup or delivery" : "Out of stock"}
+                  </Txt>
+                  <Txt size={16} bold>
+                    {money(v.price)}
+                  </Txt>
+                </View>
+                <Action
+                  label={s.cart[v.id] ? "In bag (" + s.cart[v.id] + ") · Add" : "Add to bag"}
+                  icon="Plus"
+                  disabled={v.stock <= 0 || (s.cart[v.id] || 0) >= v.stock}
+                  style={{ alignSelf: "stretch", paddingHorizontal: 12 }}
+                  onPress={() => {
+                    if (!s.session && !s.testMode) {
+                      go("register", { next: "product?id=" + v.id });
+                      return;
+                    }
+                    s.setCart((old) => ({ ...old, [v.id]: (old[v.id] || 0) + 1 }));
+                    s.notify(v.name + " added to your bag.");
+                  }}
+                />
+                <LinkText onPress={() => go("product", { id: v.id })}>View details</LinkText>
+              </View>
+            </View>
           </Card>
         ))}
       </View>

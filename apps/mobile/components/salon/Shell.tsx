@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { salonIdentity } from "@/lib/salon/identity";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import HeaderLanguageSelector from "./HeaderLanguageSelector";
@@ -42,20 +41,17 @@ export function useNav() {
 export function Brand({
   onGold = false,
   compact = false,
+  interactive = true,
 }: {
   onGold?: boolean;
   compact?: boolean;
+  interactive?: boolean;
 }) {
   const { theme } = useTheme();
   const c = theme.colors;
   const go = useNav();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Lady J home"
-      onPress={() => go("home")}
-      style={{ flexShrink: compact ? 0 : 1, width: compact ? 84 : undefined }}
-    >
+  const wordmark = (
+    <>
       <Txt
         serif
         size={
@@ -81,7 +77,20 @@ export function Brand({
       >
         Salon & Day Spa
       </Txt>
+    </>
+  );
+  const style = { flexShrink: compact ? 0 : 1, width: compact ? 84 : undefined };
+  return interactive ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Lady J home"
+      onPress={() => go("home")}
+      style={style}
+    >
+      {wordmark}
     </Pressable>
+  ) : (
+    <View style={style}>{wordmark}</View>
   );
 }
 export default function Shell({
@@ -89,11 +98,13 @@ export default function Shell({
   wide = false,
   footer = true,
   scrollRevision,
+  bottomBar,
 }: {
   children: React.ReactNode;
   wide?: boolean;
   footer?: boolean;
   scrollRevision?: string | number;
+  bottomBar?: React.ReactNode;
 }) {
   const c = useColors(),
     { width } = useWindowDimensions(),
@@ -152,7 +163,10 @@ export default function Shell({
           <Button
             accessibilityLabel={copy.booking}
             onPress={() =>
-              go(s.session ? "booking" : "register", s.session ? {} : { next: "booking" })
+              go(
+                s.session || s.testMode ? "booking" : "register",
+                s.session || s.testMode ? {} : { next: "booking" },
+              )
             }
             style={{
               backgroundColor: c.primary,
@@ -174,10 +188,46 @@ export default function Shell({
           </Button>
         </View>
       </View>
+      {s.testMode && (
+        <View
+          accessibilityLabel="Development test mode"
+          style={{
+            backgroundColor: c.goldSurface,
+            borderBottomWidth: 1,
+            borderColor: c.goldBorder,
+            paddingHorizontal: compact ? 12 : 40,
+            paddingVertical: 6,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+          }}
+        >
+          <Txt size={12} bold color={c.warning}>
+            TEST MODE · CLIENT VIEW
+          </Txt>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open Owner Dashboard test view"
+            onPress={() => {
+              s.setDemoOwner(true);
+              go("owner");
+            }}
+            style={{ paddingHorizontal: 10, paddingVertical: 5 }}
+          >
+            <Txt size={12} bold color={c.brandAccent}>
+              Owner Dashboard
+            </Txt>
+          </Pressable>
+        </View>
+      )}
       <View style={{ flex: 1, minHeight: 0 }}>
         <ScrollView
           ref={scroll}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -228,68 +278,57 @@ export default function Shell({
                 borderTopWidth: 1,
                 borderColor: c.border,
                 paddingHorizontal: desktop ? 40 : 20,
-                paddingVertical: 34,
-                marginTop: 32,
+                paddingVertical: 26,
+                marginTop: 28,
               }}
             >
               <View
                 style={[
                   shared.responsive,
                   {
-                    flexDirection: desktop ? "row" : "column",
-                    justifyContent: "space-between",
-                    gap: 25,
+                    alignItems: "center",
+                    gap: 12,
                   },
                 ]}
               >
-                <View>
-                  <Brand />
-                  <Txt size={12} color={c.mutedForeground} style={{ marginTop: 15 }}>
-                    Exceptional care. Effortless beauty.
-                  </Txt>
-                  <View style={{ flexDirection: "row", gap: 9, maxWidth: 320, marginTop: 16 }}>
-                    <Icon name="MapPin" size={19} color={c.warning} />
-                    <Txt size={15} style={{ flex: 1 }}>
-                      {s.settings?.address || salonIdentity.address}
+                <View style={{ alignItems: "center", gap: 3 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+                    <Icon name="Clock3" size={14} color={c.brandAccent} />
+                    <Txt size={11} bold color={c.brandAccent} style={{ letterSpacing: 0.8 }}>
+                      OPENING HOURS
                     </Txt>
                   </View>
-                  <Txt size={13} color={c.mutedForeground} style={{ marginTop: 10 }}>
-                    Tuesday–Saturday · 10 AM–6 PM
+                  <Txt size={15} bold style={{ marginTop: 5 }}>
+                    Tuesday – Saturday
+                  </Txt>
+                  <Txt size={15}>10:00 AM – 6:00 PM</Txt>
+                  <Txt size={12} color={c.mutedForeground}>
+                    Sunday & Monday · Closed
                   </Txt>
                 </View>
-                <View style={{ flexDirection: "row", gap: desktop ? 40 : 28, flexWrap: "wrap" }}>
-                  <View>
-                    {["About", "Contact", "Gallery", "Promotions"].map((v) => (
-                      <LinkText key={v} onPress={() => go(v.toLowerCase())}>
-                        {v}
-                      </LinkText>
-                    ))}
-                  </View>
-                  <View>
-                    {["Booking policies", "Privacy", "Terms"].map((v) => (
-                      <LinkText
-                        key={v}
-                        onPress={() => go(v === "Booking policies" ? "policies" : v.toLowerCase())}
-                      >
-                        {v}
-                      </LinkText>
-                    ))}
-                    <LinkText onPress={() => go("owner-login")}>Owner access</LinkText>
-                  </View>
-                  <View>
-                    <Txt size={12} style={{ opacity: 0.7, marginBottom: 8 }}>
-                      Your appearance
-                    </Txt>
-                    <ThemeToggle />
-                    <Txt size={11} color={c.mutedForeground} style={{ marginTop: 12 }}>
-                      Sample data
-                    </Txt>
-                  </View>
+                <View
+                  style={{
+                    width: "100%",
+                    maxWidth: 420,
+                    height: 1,
+                    backgroundColor: c.border,
+                    marginVertical: 4,
+                  }}
+                />
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}
+                >
+                  <LinkText onPress={() => go("terms")}>Terms of Service</LinkText>
+                  <Txt size={12} color={c.mutedForeground}>
+                    ·
+                  </Txt>
+                  <LinkText onPress={() => go("privacy")}>Privacy Policy</LinkText>
                 </View>
               </View>
             </View>
           )}
         </ScrollView>
+        {bottomBar}
       </View>
       {!!s.notice && <StatusNotice message={s.notice} onDismiss={() => s.notify("")} />}
     </SafeAreaView>

@@ -59,7 +59,9 @@ export function PaymentChoice({
           id: "simulation",
           icon: "CreditCard" as const,
           title: "Credit / debit card",
-          desc: "Not available yet · Please use bank transfer",
+          desc: s.testMode
+            ? "Development simulation · No payment or record created"
+            : "Not available yet · Please use bank transfer",
         },
         {
           id: "bank",
@@ -70,14 +72,17 @@ export function PaymentChoice({
       ].map((v) => (
         <Pressable
           accessibilityRole="radio"
-          accessibilityState={{ checked: method === v.id, disabled: v.id === "simulation" }}
+          accessibilityState={{
+            checked: method === v.id,
+            disabled: v.id === "simulation" && !s.testMode,
+          }}
           key={v.id}
-          disabled={v.id === "simulation"}
+          disabled={v.id === "simulation" && !s.testMode}
           onPress={() => setMethod(v.id)}
           style={{
             paddingHorizontal: 12,
             paddingVertical: 12,
-            backgroundColor: v.id === "simulation" ? c.muted : c.card,
+            backgroundColor: v.id === "simulation" && !s.testMode ? c.muted : c.card,
             borderWidth: method === v.id ? 2 : 1,
             borderColor: method === v.id ? c.primary : c.border,
             borderRadius: 12,
@@ -141,7 +146,7 @@ export default function BookingScreen() {
     [slots, setSlots] = useState<string[]>([]),
     [slotLoading, setSlotLoading] = useState(false),
     [error, setError] = useState(""),
-    [method, setMethod] = useState("bank"),
+    [method, setMethod] = useState(s.testMode ? "simulation" : "bank"),
     [reference, setReference] = useState(""),
     [policy, setPolicy] = useState(false),
     [agreementId, setAgreementId] = useState(""),
@@ -179,6 +184,14 @@ export default function BookingScreen() {
     duration = selected.reduce((n, v) => n + v.duration, 0),
     deposit = Math.round(total * 50) / 100;
   const noPaymentRequired = selected.length > 0 && pricing.ready && total === 0;
+  const submitDisabled =
+    !agreementId ||
+    !policy ||
+    !pricing.ready ||
+    (!s.session && !s.testMode && (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()));
+  useEffect(() => {
+    if (s.testMode && step === 3) setAgreementId("development-test-agreement");
+  }, [s.testMode, step]);
   const slotGeneration = useRef(0);
   const customerId = s.session?.user.id;
   const refreshSlots = useCallback(async () => {
@@ -265,6 +278,91 @@ export default function BookingScreen() {
       setBusy(false);
     }
   }
+  const barDisabled =
+    step === 1
+      ? !selected.length || selected.length > 10
+      : step === 2
+        ? !time || slotLoading
+        : submitDisabled;
+  const barLabel =
+    step === 1
+      ? "Next"
+      : step === 2
+        ? noPaymentRequired
+          ? "Confirm"
+          : "Payment"
+        : noPaymentRequired
+          ? "Confirm booking"
+          : "Submit request";
+  const bookingBar = (
+    <View
+      accessibilityLabel="Booking totals and navigation"
+      style={{
+        flexShrink: 0,
+        borderTopWidth: 1,
+        borderColor: c.border,
+        backgroundColor: c.background,
+        paddingHorizontal: width > 700 ? 24 : 10,
+        paddingVertical: 8,
+      }}
+    >
+      <View
+        style={{
+          width: "100%",
+          maxWidth: 760,
+          alignSelf: "center",
+          minHeight: 54,
+          borderRadius: 15,
+          backgroundColor: c.primary,
+          paddingHorizontal: 10,
+          paddingVertical: 7,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        {step > 1 && (
+          <Action
+            label="Back"
+            secondary
+            onPress={() => {
+              setStep(step - 1);
+              setError("");
+            }}
+            style={{ minHeight: 42, paddingHorizontal: 9, paddingVertical: 7 }}
+          />
+        )}
+        <View style={{ flex: 1, minWidth: 72 }}>
+          <Txt size={11} color={c.primaryForeground} numberOfLines={1}>
+            {selected.length} service{selected.length === 1 ? "" : "s"}
+          </Txt>
+          <Txt
+            size={width < 390 ? 13 : 15}
+            bold
+            color={c.primaryForeground}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.78}
+          >
+            {pricing.busy ? "Updating…" : money(total)} · {formatDuration(duration)}
+          </Txt>
+        </View>
+        <Action
+          label={barLabel}
+          gold
+          icon={step < 3 ? "ArrowRight" : undefined}
+          disabled={barDisabled}
+          busy={step === 3 && busy}
+          onPress={() => {
+            if (step === 1) setStep(2);
+            else if (step === 2) setStep(3);
+            else void submit();
+          }}
+          style={{ minHeight: 42, paddingHorizontal: 10, paddingVertical: 7 }}
+        />
+      </View>
+    </View>
+  );
   if (done)
     return (
       <Shell>
@@ -320,7 +418,7 @@ export default function BookingScreen() {
       </Shell>
     );
   return (
-    <Shell footer={false}>
+    <Shell footer={false} bottomBar={bookingBar}>
       <View
         accessibilityLiveRegion="polite"
         accessibilityRole="progressbar"
@@ -386,8 +484,6 @@ export default function BookingScreen() {
           <View style={{ flex: 1 }}>
             <Search value={query} onChange={setQuery} placeholder="Find your service" />
             <ServiceCategories booking value={category} onChange={setCategory} />
-            <Tag>Confirm your service with the salon</Tag>
-            <View style={{ height: 16 }} />
             {s.services
               .filter(
                 (v) =>
@@ -435,8 +531,8 @@ export default function BookingScreen() {
                 </Pressable>
               ))}
           </View>
-          <View style={{ width: width > 900 ? 315 : undefined, gap: 20 }}>
-            <Card>
+          <View style={{ width: width > 900 ? 315 : "100%", gap: 20, alignItems: "center" }}>
+            <Card style={{ width: "100%", maxWidth: 420, alignSelf: "center" }}>
               <Txt serif size={24}>
                 Your inspiration
               </Txt>
@@ -452,6 +548,7 @@ export default function BookingScreen() {
               <Action
                 label={photo ? "Change photo" : "Choose inspiration photo"}
                 icon="ImagePlus"
+                iconColor={c.brandAccent}
                 secondary
                 onPress={() => void choosePhoto()}
               />
@@ -473,21 +570,6 @@ export default function BookingScreen() {
                   </LinkText>
                 </View>
               )}
-            </Card>
-            <Card style={{ backgroundColor: c.secondary }}>
-              <Txt bold size={15}>
-                {selected.length} service{selected.length === 1 ? "" : "s"} selected
-              </Txt>
-              <Txt size={13} style={{ marginTop: 8, marginBottom: 18 }}>
-                {formatDuration(duration)} · {money(total)}
-              </Txt>
-              <Action
-                label="Choose date & time"
-                disabled={!selected.length || selected.length > 10}
-                icon="ArrowRight"
-                onPress={() => setStep(2)}
-                style={{ alignSelf: "stretch" }}
-              />
             </Card>
           </View>
         </View>
@@ -534,14 +616,6 @@ export default function BookingScreen() {
                 <JoinWaitlist date={date} services={s.selected} />
               </>
             )}
-            <View style={{ marginTop: 28 }}>
-              <Action
-                label={noPaymentRequired ? "Continue to confirmation" : "Continue to deposit"}
-                icon="ArrowRight"
-                disabled={!time || slotLoading}
-                onPress={() => setStep(3)}
-              />
-            </View>
             <LinkText onPress={() => setStep(1)}>Change services</LinkText>
           </Card>
         </View>
@@ -552,9 +626,11 @@ export default function BookingScreen() {
             <Txt serif size={28} style={{ marginBottom: 20 }}>
               {noPaymentRequired ? "Confirm your appointment" : "Secure your appointment"}
             </Txt>
-            {!s.session && (
+            {!s.session && !s.testMode && (
               <Card style={{ gap: 15, marginBottom: 20 }}>
-                <Txt size={20} bold>Guest contact details</Txt>
+                <Txt size={20} bold>
+                  Guest contact details
+                </Txt>
                 <Txt color={c.mutedForeground}>
                   We use these details to save your private client record and keep this appointment
                   linked correctly.
@@ -574,7 +650,15 @@ export default function BookingScreen() {
                 />
               </Card>
             )}
-            {(s.session || (guestName.trim() && guestEmail.trim() && guestPhone.trim())) && (
+            {s.testMode ? (
+              <Card style={{ gap: 8, backgroundColor: c.goldSurface, borderColor: c.goldBorder }}>
+                <Tag>Development Test Mode</Tag>
+                <Txt bold>Agreement preview enabled</Txt>
+                <Txt size={13} color={c.mutedForeground}>
+                  No signature, appointment, payment or private client record will be created.
+                </Txt>
+              </Card>
+            ) : s.session || (guestName.trim() && guestEmail.trim() && guestPhone.trim()) ? (
               <ServiceAgreement
                 services={selected.map((v) => v.id)}
                 onReady={setAgreementId}
@@ -583,7 +667,7 @@ export default function BookingScreen() {
                 guestName={guestName}
                 onGuestReady={setGuestAgreement}
               />
-            )}
+            ) : null}
             {s.session && !noPaymentRequired && <PromoCode pricing={pricing} />}
             {noPaymentRequired ? (
               <Card>
@@ -617,24 +701,6 @@ export default function BookingScreen() {
                 ? "Please cancel or reschedule if you cannot attend."
                 : "24+ hours: full deposit refund or one complimentary rescheduling. Under 24 hours: the deposit is non-refundable; management may offer 50% as future credit. No-shows forfeit the deposit."}
             </Txt>
-            <Action
-              label={
-                noPaymentRequired
-                  ? "Confirm free consultation"
-                  : method === "simulation"
-                    ? "Try simulated card checkout"
-                    : "Submit bank transfer request"
-              }
-              disabled={
-                !agreementId ||
-                !policy ||
-                !pricing.ready ||
-                (!s.session && (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()))
-              }
-              busy={busy}
-              onPress={() => void submit()}
-              style={{ alignSelf: "stretch" }}
-            />
           </View>
           <Card
             style={{

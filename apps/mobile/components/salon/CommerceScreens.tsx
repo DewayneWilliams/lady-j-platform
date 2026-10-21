@@ -105,7 +105,7 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
     go = useNav(),
     c = useColors(),
     { width } = useWindowDimensions();
-  const [method, setMethod] = useState("bank"),
+  const [method, setMethod] = useState(s.testMode ? "simulation" : "bank"),
     [fulfillment, setFulfillment] = useState("pickup"),
     [address, setAddress] = useState(""),
     [reference, setReference] = useState(""),
@@ -143,7 +143,7 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
       setDone("demo");
       return;
     }
-    if (!s.session) {
+    if (!s.session && !s.testMode) {
       go("login", { next: "bag" });
       return;
     }
@@ -221,7 +221,7 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
           <View style={{ flex: 1, gap: 20 }}>
             {!!error && <ErrorBox message={error} />}
             <Tag>Sample data</Tag>
-            {!s.session && (
+            {!s.session && !s.testMode && (
               <Card style={{ gap: 14 }}>
                 <Txt>
                   Sign in to submit a bank transfer request and track it in your private account.
@@ -280,7 +280,9 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
             <Action
               busy={busy}
               disabled={
-                !accepted || (method === "bank" && !s.session) || (!!s.session && !pricing.ready)
+                !accepted ||
+                (method === "bank" && !s.session) ||
+                ((!!s.session || s.testMode) && !pricing.ready)
               }
               label={
                 method === "simulation"

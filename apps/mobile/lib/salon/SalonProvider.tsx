@@ -5,6 +5,7 @@ import { orderServicesByCategory } from "./categories";
 import type { Session } from "@supabase/supabase-js";
 import type { ClientLanguage } from "./clientLanguage";
 import { supabase, db, check } from "./client";
+import { developmentTestMode } from "./testMode";
 import {
   Service,
   Product,
@@ -42,6 +43,7 @@ interface SalonState {
   setSelected: React.Dispatch<React.SetStateAction<string[]>>;
   demoOwner: boolean;
   setDemoOwner: (v: boolean) => void;
+  testMode: boolean;
   refresh: () => Promise<void>;
   refreshPrivate: () => Promise<void>;
   notice: string;
@@ -67,7 +69,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
     [credits, setCredits] = useState<Credit[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({}),
     [selected, setSelected] = useState<string[]>([]),
-    [demoOwner, setDemoOwner] = useState(false),
+    [demoOwner, setDemoOwner] = useState(developmentTestMode),
     [notice, setNotice] = useState("");
   const [clientLanguage, setClientLanguage] = useState<ClientLanguage>("en");
   const identity = useRef<string | null>(null);
@@ -187,7 +189,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         setPurchases([]);
         setTransactions([]);
         setCredits([]);
-        setDemoOwner(false);
+        setDemoOwner(developmentTestMode);
         setCart({});
         setSelected([]);
         setOwner(false);
@@ -265,6 +267,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         setSelected,
         demoOwner,
         setDemoOwner,
+        testMode: developmentTestMode,
         refresh,
         refreshPrivate,
         notice,

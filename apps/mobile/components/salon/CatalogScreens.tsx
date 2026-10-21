@@ -8,19 +8,7 @@ import { useSalon } from "@/lib/salon/SalonProvider";
 import { money, servicePriceLabel, dateLabel, timeLabel } from "@/lib/salon/types";
 import { salonIdentity } from "@/lib/salon/identity";
 import Shell, { useNav } from "./Shell";
-import {
-  Txt,
-  Action,
-  Heading,
-  Photo,
-  Tag,
-  LinkText,
-  Chip,
-  Card,
-  Empty,
-  useColors,
-  shared,
-} from "./ui";
+import { Txt, Action, Heading, Tag, LinkText, Card, Empty, useColors } from "./ui";
 import { fonts } from "@/lib/salon/design";
 export function Search({
   value,
@@ -94,7 +82,7 @@ export function ServicesScreen() {
       <Heading sub="Expert hands. Thoughtful treatments. Care that feels like you.">
         Find your kind of beautiful
       </Heading>
-      {!s.session && (
+      {!s.session && !s.testMode && (
         <Card
           style={{
             gap: 12,
@@ -102,13 +90,10 @@ export function ServicesScreen() {
             backgroundColor: c.goldSurface,
             borderColor: c.goldBorder,
           }}
+          className={"h-64 lg:mb-0 lg:pb-0"}
         >
-          <Txt size={20} bold>
-            Prices are open to everyone
-          </Txt>
-          <Txt size={16} color={c.mutedForeground}>
-            Browse every price now. Create a free account when you are ready to choose a time and
-            book.
+          <Txt size={16} color={c.mutedForeground} className={""}>
+            Create a free account when you are ready to choose a time and book.
           </Txt>
           <Action
             label="Create free account"
@@ -142,7 +127,7 @@ export function ServicesScreen() {
           {filtered.length} {filtered.length === 1 ? "service" : "services"} found
         </Txt>
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 20 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
         {filtered.slice(currentPage * 12, currentPage * 12 + 12).map((v) => (
           <Card
             key={v.id}
@@ -154,8 +139,8 @@ export function ServicesScreen() {
               maxWidth: desktop ? "33%" : undefined,
             }}
           >
-            <CatalogGallery photos={v.photos} cover={v.image} height={220} />
-            <View style={{ padding: 21, gap: 10 }}>
+            <CatalogGallery photos={v.photos} cover={v.image} height={180} />
+            <View style={{ padding: 16, gap: 8 }}>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 <Tag>{v.category}</Tag>
                 {v.is_add_on && <Tag>Add-on</Tag>}
@@ -163,15 +148,13 @@ export function ServicesScreen() {
               <Txt serif size={25}>
                 {v.name}
               </Txt>
-              <Txt size={13} color={c.mutedForeground} style={{ minHeight: 60 }}>
+              <Txt size={13} color={c.mutedForeground}>
                 {v.is_demo &&
                 /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
                   ? "Ask the salon for details."
                   : v.description}
               </Txt>
-              <View
-                style={{ flexDirection: "row", justifyContent: "space-between", marginVertical: 8 }}
-              >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <Txt size={13} color={c.mutedForeground}>
                   {serviceDurationLabel(v)}
                 </Txt>
@@ -179,21 +162,11 @@ export function ServicesScreen() {
                   {servicePriceLabel(v)}
                 </Txt>
               </View>
-              <Action
-                label={
-                  v.bookable !== false
-                    ? "Book this service"
-                    : v.is_add_on
-                      ? "Available as an add-on"
-                      : "Contact salon to book"
-                }
-                disabled={v.bookable === false}
-                onPress={() => {
-                  s.setSelected([v.id]);
-                  go("booking");
-                }}
-                style={{ alignSelf: "stretch" }}
-              />
+              {v.bookable === false && (
+                <Txt size={12} color={c.mutedForeground}>
+                  {v.is_add_on ? "Available as an add-on" : "Contact the salon to book"}
+                </Txt>
+              )}
             </View>
           </Card>
         ))}
@@ -258,105 +231,33 @@ export function ServicesScreen() {
   );
 }
 export function WorkshopsScreen() {
-  const s = useSalon(),
-    go = useNav(),
-    c = useColors(),
-    { width } = useWindowDimensions();
-  const [filter, setFilter] = useState("All");
+  const c = useColors();
   return (
     <Shell>
       <View
         style={{
-          borderWidth: 1,
-          borderColor: c.goldBorder,
-          backgroundColor: c.goldSurface,
-          borderRadius: 20,
-          overflow: "hidden",
-          flexDirection: width > 800 ? "row" : "column",
-          marginBottom: 32,
+          width: "100%",
+          maxWidth: 820,
+          alignSelf: "center",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingVertical: 48,
+          paddingHorizontal: 8,
+          gap: 24,
         }}
       >
-        <View
-          style={{ flex: 1.2, padding: width > 800 ? 38 : 26, gap: 17, justifyContent: "center" }}
-        >
-          <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-            <Icon name="GraduationCap" size={24} color={c.warning} />
-            <Txt size={14} bold color={c.warning}>
-              Professional beauty education
-            </Txt>
-          </View>
-          <Txt serif size={width > 800 ? 43 : 34} style={{ lineHeight: width > 800 ? 49 : 40 }}>
-            {salonIdentity.academyName}
-          </Txt>
-          <Txt size={16} color={c.mutedForeground}>
-            Refine your artistry. Build your confidence. Explore live and recorded beauty workshops
-            with Lady J.
-          </Txt>
-          <View style={{ flexDirection: "row", gap: 18, flexWrap: "wrap" }}>
-            <Txt size={13} color={c.warning}>
-              Online workshops
-            </Txt>
-            <Txt size={13} color={c.warning}>
-              In-person workshops
-            </Txt>
-          </View>
-        </View>
-        <Photo
-          name="workshop"
-          style={{
-            flex: width > 800 ? 1 : undefined,
-            width: width > 800 ? undefined : "100%",
-            height: width > 800 ? 340 : 210,
-          }}
-        />
-      </View>
-      <Heading sub="Choose a workshop and take your next step in beauty.">
-        Academy workshops
-      </Heading>
-      <View style={[shared.row, { marginBottom: 23 }]}>
-        {["All", "Online", "In person"].map((v) => (
-          <Chip label={v} key={v} selected={filter === v} onPress={() => setFilter(v)} />
-        ))}
-      </View>
-      <Tag>Sample data</Tag>
-      <View style={{ height: 22 }} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 24 }}>
-        {s.workshops
-          .filter((v) => filter === "All" || filter === v.format)
-          .map((v) => (
-            <View key={v.id} style={{ width: width > 800 ? "48%" : "100%", flexGrow: 1 }}>
-              <CatalogGallery photos={v.photos} cover={v.image} height={290} />
-              <View style={{ paddingVertical: 20, gap: 10 }}>
-                <Tag gold>{v.format === "Online" ? "Online workshop" : "In-person workshop"}</Tag>
-                <Txt serif size={30}>
-                  {v.name}
-                </Txt>
-                <Txt color={c.mutedForeground} size={14}>
-                  {v.is_demo &&
-                  /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
-                    ? "Ask the salon for details."
-                    : v.description}
-                </Txt>
-                <Txt size={13}>
-                  {v.starts_at
-                    ? `${dateLabel(v.starts_at)} · ${timeLabel(v.starts_at)}`
-                    : "Date to be announced"}
-                </Txt>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Txt bold size={19}>
-                    {money(v.price)}
-                  </Txt>
-                  <LinkText onPress={() => go("workshop", { id: v.id })}>View workshop ↗</LinkText>
-                </View>
-              </View>
-            </View>
-          ))}
+        <Txt serif size={38} style={{ textAlign: "center", lineHeight: 47 }}>
+          Lady J International Beauty Academy
+        </Txt>
+        <Txt size={17} color={c.mutedForeground} style={{ textAlign: "center", lineHeight: 29 }}>
+          Your passion for beauty deserves more than a dream—it deserves a future. At Lady J
+          International Beauty Academy, we help aspiring beauty professionals develop the skills,
+          confidence, and knowledge to turn their talent into opportunity. Through structured
+          cosmetology curricula, engaging online education, hands-on training, and in-person
+          workshops, students experience a supportive learning environment designed to build
+          professional expertise and prepare them for real-world opportunities in the beauty
+          industry.
+        </Txt>
       </View>
     </Shell>
   );
@@ -412,7 +313,7 @@ export function DetailScreen({ kind, id }: { kind: "product" | "workshop"; id: s
                 icon="ShoppingBag"
                 disabled={"stock" in v && (s.cart[v.id] || 0) >= v.stock}
                 onPress={() => {
-                  if (!s.session) {
+                  if (!s.session && !s.testMode) {
                     go("register", { next: "product?id=" + v.id });
                     return;
                   }

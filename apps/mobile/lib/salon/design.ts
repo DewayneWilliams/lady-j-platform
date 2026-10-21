@@ -5,7 +5,9 @@ export const fonts = {
   bold: "Inter_600SemiBold",
   display: "Inter_600SemiBold",
 };
-export function fieldLabel(label: string) {
-  return label.replace(/\b[a-z][a-zA-Z]*/g, (word) => word[0].toUpperCase() + word.slice(1));
+export function fieldLabel(label: unknown) {
+  const normalized = typeof label === "string" ? label.trim() : "";
+  if (!normalized) return "Field";
+  return normalized.replace(/\b[a-z][a-zA-Z]*/g, (word) => word[0].toUpperCase() + word.slice(1));
 }
 export const radii = { card: 18, button: 12 };

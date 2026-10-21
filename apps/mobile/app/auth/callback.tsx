@@ -1,19 +1,41 @@
-import React, { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
-import { Stack } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import { View, ActivityIndicator, Platform } from "react-native";
+import { Stack, useGlobalSearchParams, useRouter } from "expo-router";
 import { maybeCompleteAuthSession } from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Txt, Action, useColors } from "@/components/salon/ui";
-import { useNav } from "@/components/salon/Shell";
+import { completeOAuthCallback, oauthRedirectUrl } from "@/lib/salon/auth";
 export default function AuthCallback() {
   const c = useColors(),
-    go = useNav(),
-    [waiting, setWaiting] = useState(true);
+    router = useRouter(),
+    params = useGlobalSearchParams<{ code?: string; error?: string; error_description?: string }>(),
+    [waiting, setWaiting] = useState(true),
+    [error, setError] = useState(""),
+    attempted = useRef("");
   useEffect(() => {
-    maybeCompleteAuthSession();
-    const timer = setTimeout(() => setWaiting(false), 12000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (Platform.OS === "web") {
+      maybeCompleteAuthSession();
+      const timer = setTimeout(() => setWaiting(false), 12000);
+      return () => clearTimeout(timer);
+    }
+
+    // Usually openAuthSessionAsync captures the callback before routing. This is
+    // the secure recovery path when iOS delivers a cold-start deep link instead.
+    const search = new URLSearchParams();
+    if (typeof params.code === "string") search.set("code", params.code);
+    if (typeof params.error === "string") search.set("error", params.error);
+    if (typeof params.error_description === "string")
+      search.set("error_description", params.error_description);
+    const callbackUrl = oauthRedirectUrl() + "?" + search.toString();
+    if (attempted.current === callbackUrl) return;
+    attempted.current = callbackUrl;
+    void completeOAuthCallback(callbackUrl)
+      .then(() => router.replace("/account"))
+      .catch((reason: unknown) => {
+        setError(reason instanceof Error ? reason.message : "Sign-in could not be completed.");
+        setWaiting(false);
+      });
+  }, [params.code, params.error, params.error_description, router]);
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.background }}>
       <Stack.Screen options={{ title: "Secure sign-in" }} />
@@ -22,13 +44,17 @@ export default function AuthCallback() {
       >
         {waiting && <ActivityIndicator color={c.primary} />}
         <Txt size={24} bold>
-          {waiting ? "Completing secure sign-in" : "Return to your sign-in window"}
+          {waiting
+            ? "Completing secure sign-in"
+            : error
+              ? "Sign-in could not be completed"
+              : "Return to your sign-in window"}
         </Txt>
         <Txt style={{ textAlign: "center" }}>
-          Your account is opened only after the sign-in response is verified. If the original window
-          was closed, please start again.
+          {error ||
+            "Your account is opened only after the sign-in response is verified. If the original window was closed, please start again."}
         </Txt>
-        {!waiting && <Action label="Back to sign-in" onPress={() => go("login")} />}
+        {!waiting && <Action label="Back to sign-in" onPress={() => router.replace("/login")} />}
       </View>
     </SafeAreaView>
   );

@@ -24,4 +24,5 @@ export const photos: Record<string, ImageSourcePropType> = {
   body: require("@/assets/salon/body.jpg"),
   gift: require("@/assets/salon/gift.jpg"),
   salon: require("@/assets/salon/salon.jpg"),
+  contactReception: require("@/assets/salon/contact-reception.jpg"),
 };

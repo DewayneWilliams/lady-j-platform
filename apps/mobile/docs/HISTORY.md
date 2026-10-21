@@ -1,3 +1,5 @@
+- Home uses a platform-specific verified Google Maps embed, a Terms/Privacy-only footer and exact two-line address; service cards are compact and buttonless, while booking keeps fixed totals/navigation above the tab bar.
+- OAuth callbacks use the stable native app scheme in Draftbit Preview and published builds, with PKCE cold-start recovery and local logout fallback; web callbacks remain origin-specific.
 - Customer and owner experiences share Lady J design tokens but use separate routes; owner access is enforced by Supabase RLS and explicitly assigned roles.
 - Development uses real Supabase records for customer requests and separate in-memory demo records for owner exploration; card, voice and AI demonstrations never claim backend execution.
 - Customer booking uses prominent gold actions; Workshops promotes Lady J International Beauty Academy, with a configurable direct WhatsApp support link and the approved Petit Valley address in the footer.
@@ -25,7 +27,7 @@ Owner catalog tools support public photo galleries, combined service specials wi
 - Calendar uses live-only five-color activity dots and a tap-to-open agenda; reasoned, all-day and recurring blocks reuse existing reservation protection and synchronize through privacy-safe Realtime invalidation.
 - Calendar legend wraps above the month without scrolling; Block time opens its reason dropdown directly, Today includes activity dots and blocks, and the labeled owner demo includes Bible-inspired examples for every dot color.
 - Active service, product and workshop prices are public; accounts remain required for private availability, booking, shopping bags and checkout.
-Owner workspace uses wrapping text, solid-gold native tab navigation, inline combo packages, CSV downloads and separate service/payment celebrations.
+  Owner workspace uses wrapping text, solid-gold native tab navigation, inline combo packages, CSV downloads and separate service/payment celebrations.
 
 - Business prioritizes Create Special below attention warnings; compact Sample data markers replace verbose preview notices, and payment cards reconcile verified receipts.
 - Contacts combine services, products and workshops under Purchase History and require typed confirmation for removal; bottom navigation uses only bold white icons and a faceted diamond.
@@ -42,3 +44,4 @@ Owner workspace uses wrapping text, solid-gold native tab navigation, inline com
 - The supplied 129-entry service catalog is live without duplicate regular rows; a separate zero-cost consultation supports the homepage CTA, incomplete Makeup stays unpublished, and add-ons/N/A-duration services remain non-bookable.
 
 - Calendar marks the current salon-local date with a fast outline-only pulse; Reduce Motion keeps it steady and background/unmount stops animation.
+- Home’s post-map footer is limited to opening hours and Terms/Privacy; Products follow the service-card grid, Workshops is an editorial Academy introduction, Contact uses an original representative reception image, and one DEVELOPMENT-only flag controls isolated login-free client/owner UI testing.

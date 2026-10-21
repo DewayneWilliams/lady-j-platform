@@ -86,14 +86,26 @@ export default function Page() {
       content = <AuthScreen key={page} mode={page} next={next} />;
       break;
     case "my-media":
-      content = s.session ? <ClientMediaScreen /> : <AccountGate next="my-media" />;
+      content = s.session ? (
+        <ClientMediaScreen />
+      ) : s.testMode ? (
+        <Shell>
+          <Heading>My media</Heading>
+          <Empty
+            title="Development test view"
+            body="Private client media is intentionally excluded from login-free Test Mode."
+          />
+        </Shell>
+      ) : (
+        <AccountGate next="my-media" />
+      );
       break;
     case "agreements":
       content = (
         <Shell>
           <Heading>My signed agreements</Heading>
-          {s.session ? (
-            <AgreementList customerId={s.session.user.id} />
+          {s.session || s.testMode ? (
+            <AgreementList customerId={s.session?.user.id} demo={s.testMode && !s.session} />
           ) : (
             <Action label="Sign in" onPress={() => go("login", { next: "agreements" })} />
           )}
@@ -135,7 +147,7 @@ export default function Page() {
         </Shell>
       );
   }
-  if (["bag", "checkout"].includes(page) && !s.session) {
+  if (["bag", "checkout"].includes(page) && !s.session && !s.testMode) {
     const query = new URLSearchParams();
     if (id) query.set("id", id);
     if (kind) query.set("kind", kind);

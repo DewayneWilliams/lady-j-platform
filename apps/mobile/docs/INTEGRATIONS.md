@@ -21,10 +21,10 @@ Use the Supabase panel environment selector to configure the intended developmen
    - Development preview: `https://1cd79b1a7c.sandbox.draftbit.dev:5101/auth/callback`.
    - Published staging: `https://fd7e56a016.draftbit.dev/auth/callback`.
    - Published production: `https://dc521c9ec4.draftbit.dev/auth/callback`.
-   - Native published build: `lady-j://auth/callback`. Native simulators/Expo Go may use a development deep link; allow the exact URL produced by Expo Linking for that preview.
-3. Keep the actual browser origin consistent: the app computes its callback from the current origin. If the preview or published hostname changes, allow its `/auth/callback` URL in the selected environment. Do not hardcode temporary Supabase branch URLs in the app.
+   - Native Preview and published build: `lady-j://auth/callback`. The in-app authentication session captures this stable callback and returns it to the same presenting app; do not replace it with an `exp://` launcher URL.
+3. Keep the actual browser origin consistent: web computes its callback from the current origin, while native derives the stable callback from the configured app scheme. If a preview or published web hostname changes, allow its `/auth/callback` URL in the selected environment. Do not hardcode temporary Supabase branch URLs in the app.
 
-The sign-in screen checks Supabase's public Auth settings and automatically enables configured provider buttons. Web uses a separate browser popup, which must be allowed; the callback completes on the same origin and the parent exchanges the one-time code with its PKCE verifier. Native uses Expo WebBrowser and the app deep link. Sessions survive reload/closing; signing out removes the stored session. Browser environments that deny storage use an in-memory fallback. A cancelled or failed provider flow never claims success. The social flow never grants owner access.
+The sign-in screen checks Supabase's public Auth settings and automatically enables configured provider buttons. Web uses a separate browser popup, which must be allowed; the callback completes on the same origin and the parent exchanges the one-time code with its PKCE verifier. Native uses Expo WebBrowser and the configured app-scheme callback, with a cold-start callback recovery route. Sessions survive reload/closing; signing out removes the stored session even when remote revocation is unavailable. Browser environments that deny storage use an in-memory fallback. A cancelled or failed provider flow never claims success. The social flow never grants owner access.
 
 The `lj_public_*` views expose active catalog descriptions, imagery and prices plus public contact settings. They retain explicit column allowlists and active filters; base catalog table SELECT and availability execution remain denied to anonymous roles. Marketing is separate from authentication; profiles default false and the database timestamps changes. No marketing messages are sent until communication providers are configured.
 
@@ -45,6 +45,7 @@ A future conversational provider may propose only allowlisted typed actions agai
 Transactional email uses `lj_message_jobs` and the `lj-send-reminders` Edge Function. Calendar, purchase and receipt triggers queue requests, confirmations, deposit reminders, 24h/2h reminders, cancellations, waitlist openings, order updates, payment receipts and after-visit thanks. Historical confirmations are not replayed. Service recipients come from verified Auth account email, never an editable client-supplied destination. Appointment notes, health data and card details are excluded. Marketing and birthday campaigns remain off.
 
 Configure the intended environment in **Supabase → Secrets**:
+
 - `RESEND_API_KEY`: the salon's Resend sending API key.
 - `LJ_EMAIL_FROM`: a sender address on the salon's verified Resend domain, optionally `Lady J <bookings@your-verified-domain>`.
 - `LJ_APP_URL`: that environment's published HTTPS app origin, without a path, so account links reach the correct app.
