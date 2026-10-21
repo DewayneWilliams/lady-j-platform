@@ -1,6 +1,8 @@
 import { displayDateTime } from "@/lib/salon/dates";
 import React, { useEffect, useState } from "react";
-import { View, ScrollView, Linking } from "react-native";
+import { View, ScrollView, Linking, Modal, Pressable } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { db, check } from "@/lib/salon/client";
 import {
@@ -15,6 +17,8 @@ import { Action, Card, Check, ErrorBox, Field, LinkText, Txt, useColors } from "
 export type GuestAgreementDraft = {
   signerName: string;
   signature: SignatureStroke[];
+  typedSignature?: string;
+  signatureMethod: "drawn" | "typed";
   version: string;
   agreed: true;
 };
@@ -28,10 +32,61 @@ export async function openAgreementPdf(path: string) {
   if (!result?.signedUrl) throw new Error("Unable to open this agreement. Please try again.");
   await Linking.openURL(result.signedUrl);
 }
+export function AppointmentAgreement({ appointmentId }: { appointmentId: string }) {
+  const [agreement, setAgreement] = useState<Pick<
+    SignedAgreement,
+    "object_path" | "signed_at"
+  > | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const link = check(
+          await db()
+            .from("lj_appointment_agreements")
+            .select("agreement_id")
+            .eq("appointment_id", appointmentId)
+            .maybeSingle(),
+        ) as { agreement_id: string } | null;
+        let query = db()
+          .from("lj_service_agreements")
+          .select("object_path,signed_at")
+          .eq("pdf_ready", true);
+        query = link?.agreement_id
+          ? query.eq("id", link.agreement_id)
+          : query.eq("appointment_id", appointmentId);
+        const row = check(await query.maybeSingle()) as Pick<
+          SignedAgreement,
+          "object_path" | "signed_at"
+        > | null;
+        if (active) setAgreement(row);
+      } catch (reason) {
+        if (active)
+          setError(reason instanceof Error ? reason.message : "Unable to load the agreement.");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [appointmentId]);
+  if (!agreement) return error ? <ErrorBox message={error} /> : null;
+  return (
+    <Action
+      label="View Signed Service Agreement"
+      icon="FileCheck"
+      secondary
+      onPress={() =>
+        void openAgreementPdf(agreement.object_path).catch((reason) => setError(reason.message))
+      }
+      style={{ alignSelf: "stretch" }}
+    />
+  );
+}
 export default function ServiceAgreement({
   services,
   onReady,
-  noPaymentRequired = false,
+  noPaymentRequired: _noPaymentRequired = false,
   guest = false,
   guestName = "",
   onGuestReady,
@@ -48,6 +103,9 @@ export default function ServiceAgreement({
   const [name, setName] = useState(s.profile?.full_name || "");
   const [accepted, setAccepted] = useState(false);
   const [signature, setSignature] = useState<SignatureStroke[]>([]);
+  const [typedSignature, setTypedSignature] = useState("");
+  const [signatureMethod, setSignatureMethod] = useState<"drawn" | "typed">("drawn");
+  const [open, setOpen] = useState(false);
   const [guestSaved, setGuestSaved] = useState(false);
   const [saved, setSaved] = useState<Pick<
     SignedAgreement,
@@ -61,12 +119,50 @@ export default function ServiceAgreement({
     setGuestSaved(false);
     onReady("");
     onGuestReady?.(null);
-  }, [key, name, signature, accepted, onReady, onGuestReady]);
+  }, [key, onReady, onGuestReady]);
   useEffect(() => {
     if (guest && guestName && !name) setName(guestName);
   }, [guest, guestName, name]);
+  useEffect(() => {
+    if (guest || !s.session?.user.id) return;
+    let active = true;
+    void (async () => {
+      try {
+        const rows = check(
+          await db()
+            .from("lj_service_agreements")
+            .select("id,signed_at,object_path,signer_name,services,policy_version,signature_method")
+            .eq("customer_id", s.session!.user.id)
+            .eq("policy_version", agreementVersion)
+            .eq("pdf_ready", true)
+            .contains("services", services)
+            .order("signed_at", { ascending: false })
+            .limit(10),
+        ) as unknown as (SignedAgreement & { services: string[] })[];
+        const current = rows.find(
+          (row) =>
+            row.services.length === services.length &&
+            services.every((id) => row.services.includes(id)),
+        );
+        if (active && current) {
+          setSaved(current);
+          setName(current.signer_name);
+          onReady(current.id);
+        }
+      } catch {
+        // A new signature remains available when no reusable current agreement can be loaded.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [guest, key, onReady, s.session?.user.id]);
   const valid =
-    accepted && name.trim().length >= 3 && signature.reduce((n, v) => n + v.length, 0) >= 6;
+    accepted &&
+    name.trim().length >= 3 &&
+    (signatureMethod === "typed"
+      ? typedSignature.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase()
+      : signature.reduce((n, v) => n + v.length, 0) >= 6);
   async function save() {
     if (!valid || busy) return;
     setBusy(true);
@@ -76,11 +172,14 @@ export default function ServiceAgreement({
         onGuestReady?.({
           signerName: name.trim(),
           signature,
+          typedSignature,
+          signatureMethod,
           version: agreementVersion,
           agreed: true,
         });
         onReady("guest-signed");
         setGuestSaved(true);
+        setOpen(false);
         return;
       }
       const response = await db().functions.invoke("lj-sign-agreement", {
@@ -88,6 +187,8 @@ export default function ServiceAgreement({
           name: name.trim(),
           services,
           signature,
+          typedSignature,
+          signatureMethod,
           version: agreementVersion,
           agreed: accepted,
         },
@@ -106,6 +207,7 @@ export default function ServiceAgreement({
         throw new Error(response.data?.error || "The agreement was not saved. Please try again.");
       setSaved(response.data.agreement);
       onReady(response.data.agreement.id);
+      setOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save your agreement.");
       onReady("");
@@ -113,75 +215,154 @@ export default function ServiceAgreement({
       setBusy(false);
     }
   }
+  const isReady = guest ? guestSaved : !!saved;
   return (
-    <Card style={{ gap: 16, marginBottom: 24 }}>
-      <Txt size={24} bold>
-        Client service agreement
-      </Txt>
-      <Txt color={c.mutedForeground}>
-        {noPaymentRequired
-          ? "Review, agree and sign to confirm your appointment."
-          : "Review, agree and sign before payment."}{" "}
-        {guest
-          ? "Your signed details are saved securely with this appointment in Lady J’s owner records."
-          : "A dated PDF is saved privately to your account and Lady J’s owner records."}
-      </Txt>
-      <ScrollView
-        nestedScrollEnabled
-        style={{ maxHeight: 310 }}
-        contentContainerStyle={{ paddingRight: 10 }}
-      >
-        <Txt size={15}>{agreementText.replace(/^#+\s*/gm, "")}</Txt>
-      </ScrollView>
-      <Field
-        label="Client name · First and Last"
-        value={name}
-        onChangeText={(v) => {
-          if (!busy) setName(v);
-        }}
-      />
-      <Check
-        checked={accepted}
-        onPress={() => {
-          if (!busy) setAccepted((v) => !v);
-        }}
-        label="I Agree to the Service, Booking & Photography Policies."
-      />
-      <SignaturePad onChange={setSignature} disabled={busy} />
-      {!!error && <ErrorBox message={error} />}
-      {guest && guestSaved ? (
-        <View style={{ gap: 8 }}>
-          <Txt bold color={c.success}>Signed and ready</Txt>
-          <Txt size={13}>You can now continue to booking.</Txt>
+    <>
+      <Card style={{ gap: 12, padding: 18, borderColor: isReady ? c.success : c.goldBorder }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Icon
+            name={isReady ? "BadgeCheck" : "Signature"}
+            size={24}
+            color={isReady ? c.success : c.brandAccent}
+          />
+          <View style={{ flex: 1 }}>
+            <Txt size={19} bold>
+              {isReady ? "Agreement Signed ✓" : "Review & Sign Agreement"}
+            </Txt>
+            <Txt size={13} color={c.mutedForeground}>
+              {isReady
+                ? `Current agreement · ${saved ? displayDateTime(saved.signed_at) : "ready for booking"}`
+                : "Review the approved terms, consent, and add your legal signature."}
+            </Txt>
+          </View>
         </View>
-      ) : saved ? (
-        <View style={{ gap: 8 }}>
-          <Txt bold color={c.success}>
-            Signed and saved · {displayDateTime(saved.signed_at)}
-          </Txt>
+        {saved?.object_path ? (
           <LinkText
-            onPress={() => {
-              void openAgreementPdf(saved.object_path).catch((e) => setError(e.message));
+            onPress={() =>
+              void openAgreementPdf(saved.object_path).catch((e) => setError(e.message))
+            }
+          >
+            View signed PDF
+          </LinkText>
+        ) : (
+          <Action
+            label="Review & Sign Agreement"
+            secondary
+            onPress={() => setOpen(true)}
+            style={{ alignSelf: "stretch" }}
+          />
+        )}
+        {!!error && <ErrorBox message={error} />}
+      </Card>
+      <Modal
+        visible={open}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => !busy && setOpen(false)}
+      >
+        <SafeAreaView
+          style={{ flex: 1, backgroundColor: c.background }}
+          edges={["top", "right", "bottom", "left"]}
+        >
+          <View
+            style={{
+              minHeight: 60,
+              flexDirection: "row",
+              alignItems: "center",
+              borderBottomWidth: 1,
+              borderColor: c.goldBorder,
+              paddingHorizontal: 16,
+              gap: 12,
             }}
           >
-            Download signed PDF
-          </LinkText>
-          <Txt size={13}>
-            {noPaymentRequired
-              ? "You can now confirm your appointment."
-              : "You can now continue to payment."}
-          </Txt>
-        </View>
-      ) : (
-        <Action
-          label="Sign & save my agreement"
-          onPress={() => void save()}
-          busy={busy}
-          disabled={!valid}
-          style={{ alignSelf: "stretch" }}
-        />
-      )}
-    </Card>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close agreement"
+              disabled={busy}
+              onPress={() => setOpen(false)}
+              style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+            >
+              <Icon name="X" size={24} color={c.foreground} />
+            </Pressable>
+            <Txt size={20} bold style={{ flex: 1 }}>
+              Service Agreement
+            </Txt>
+            <Txt size={12} color={c.mutedForeground}>
+              {agreementVersion}
+            </Txt>
+          </View>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              width: "100%",
+              maxWidth: 760,
+              alignSelf: "center",
+              padding: 18,
+              paddingBottom: 48,
+              gap: 16,
+            }}
+          >
+            <Txt size={15}>{agreementText.replace(/^#+\s*/gm, "")}</Txt>
+            <Field label="Full Legal Name" value={name} onChangeText={(v) => !busy && setName(v)} />
+            <Check
+              checked={accepted}
+              onPress={() => !busy && setAccepted((v) => !v)}
+              label="I have reviewed and explicitly consent to this Service, Booking & Photography Agreement."
+            />
+            {!guest && (
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                {(["typed", "drawn"] as const).map((mode) => (
+                  <Pressable
+                    key={mode}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: signatureMethod === mode }}
+                    onPress={() => setSignatureMethod(mode)}
+                    style={{
+                      flex: 1,
+                      minHeight: 48,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: signatureMethod === mode ? c.primary : c.border,
+                      backgroundColor: signatureMethod === mode ? c.brandAccentSurface : c.card,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 10,
+                    }}
+                  >
+                    <Txt bold color={signatureMethod === mode ? c.brandAccent : c.foreground}>
+                      {mode === "typed" ? "Type signature" : "Draw signature"}
+                    </Txt>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {signatureMethod === "typed" && !guest ? (
+              <Field
+                label="Type Your Full Legal Name"
+                value={typedSignature}
+                onChangeText={setTypedSignature}
+                placeholder={name || "Your legal name"}
+              />
+            ) : (
+              <SignaturePad onChange={setSignature} disabled={busy} />
+            )}
+            {!!error && <ErrorBox message={error} />}
+            <Action
+              label="Sign & Save Agreement"
+              onPress={() => void save()}
+              busy={busy}
+              disabled={!valid}
+              style={{ alignSelf: "stretch" }}
+            />
+            <Txt size={12} color={c.mutedForeground} style={{ textAlign: "center" }}>
+              {guest
+                ? "Your consent evidence is saved with this appointment."
+                : "A dated, tamper-evident PDF and consent audit record are stored privately for you and authorized salon staff."}
+            </Txt>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+    </>
   );
 }
 export function AgreementList({
@@ -215,7 +396,7 @@ export function AgreementList({
           .order("signed_at", { ascending: false })
           .order("id")
           .range(page * 20, page * 20 + 19);
-        if (customerId) query = query.eq("customer_id", customerId);
+        if (customerId) query = query.or(`customer_id.eq.${customerId},client_id.eq.${customerId}`);
         const records = check(await query) as SignedAgreement[];
         if (active) setRows(records);
       } catch (e) {

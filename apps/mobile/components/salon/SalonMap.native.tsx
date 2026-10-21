@@ -28,14 +28,22 @@ export default function SalonMap() {
   return (
     <WebView
       source={{ uri: mapEmbedUrl }}
+      originWhitelist={["https://*"]}
       style={{ flex: 1, backgroundColor: c.muted }}
       startInLoadingState
+      javaScriptEnabled
+      domStorageEnabled
+      mixedContentMode="never"
       renderLoading={() => (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={c.brandAccent} />
         </View>
       )}
       onError={() => setFailed(true)}
+      onHttpError={(event) => {
+        if (event.nativeEvent.statusCode >= 400) setFailed(true);
+      }}
+      onRenderProcessGone={() => setFailed(true)}
       setSupportMultipleWindows={false}
       allowsFullscreenVideo={false}
     />

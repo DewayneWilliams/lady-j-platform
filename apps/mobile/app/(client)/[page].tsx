@@ -103,7 +103,10 @@ export default function Page() {
     case "agreements":
       content = (
         <Shell>
-          <Heading>My signed agreements</Heading>
+          <Heading sub="Your booking terms and signed consent forms in one secure place.">
+            Policies & Agreements
+          </Heading>
+          <Action label="Read booking policies" secondary onPress={() => go("policies")} />
           {s.session || s.testMode ? (
             <AgreementList customerId={s.session?.user.id} demo={s.testMode && !s.session} />
           ) : (

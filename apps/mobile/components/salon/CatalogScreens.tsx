@@ -116,6 +116,7 @@ export function ServicesScreen() {
       />
       <ServiceCategories
         includeAll={false}
+        interactiveArrows
         value={category}
         onChange={(value) => {
           setCategory(value);

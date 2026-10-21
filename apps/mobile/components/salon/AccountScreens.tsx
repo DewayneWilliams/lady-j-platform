@@ -1,7 +1,7 @@
 import { MyWaitlist } from "./Waitlist";
 import { DateField } from "./DateFields";
 import React, { useState, useEffect } from "react";
-import { View, useWindowDimensions, Pressable, Linking } from "react-native";
+import { View, Pressable, Linking } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { db, check } from "@/lib/salon/client";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/salon/auth";
 import { AccountTrust } from "./AccountGate";
 import Shell, { useNav } from "./Shell";
+import { ProfilePhotoEditor } from "./ProfilePhoto";
 import {
   Txt,
   Action,
@@ -347,40 +348,10 @@ export function AuthScreen({
 export function AccountScreen() {
   const s = useSalon(),
     go = useNav(),
-    c = useColors(),
-    { width } = useWindowDimensions();
-  const ownerCard = (
-    <Card
-      style={{
-        gap: 14,
-        borderColor: c.goldBorder,
-        backgroundColor: c.goldSurface,
-      }}
-    >
-      <View style={[shared.row, { justifyContent: "space-between", flexWrap: "wrap" }]}>
-        <Txt serif size={28}>
-          Owner
-        </Txt>
-        {!s.owner && <Tag>Sample data</Tag>}
-      </View>
-      <Txt color={c.mutedForeground}>
-        {s.owner
-          ? "Your private workspace for your calendar, clients and business."
-          : "Appointments, clients and business details in one place."}
-      </Txt>
-      <Action
-        label="View dashboard"
-        gold
-        onPress={() => {
-          s.setDemoOwner(!s.owner);
-          go("owner");
-        }}
-      />
-    </Card>
-  );
+    c = useColors();
   if (!s.session && !s.testMode)
     return (
-      <Shell>
+      <Shell footer={false}>
         <View style={{ maxWidth: 720, alignSelf: "center", width: "100%", paddingVertical: 30 }}>
           <Empty
             title="Your own private space"
@@ -392,80 +363,137 @@ export function AccountScreen() {
               </View>
             }
           />
-          <View style={{ marginTop: 20 }}>{ownerCard}</View>
         </View>
       </Shell>
     );
-  const tiles = [
-    ["Gem", "Premium checkout", "A polished shortcut to your bag and secure checkout", "checkout"],
-    ["CalendarDays", "My appointments", "Your upcoming moments of care", "appointments"],
-    [
-      "GraduationCap",
-      "My workshops",
-      "In-person and online registrations & materials",
-      "my-workshops",
-    ],
-    ["ShoppingBag", "My orders", "Follow your boutique purchases", "orders"],
-    ["Wallet", "Payments & credits", "Deposits, transactions & balances", "payments"],
-    ["Images", "My media", "Photos and videos shared privately by Lady J", "my-media"],
-    ["FileText", "Service agreements", "Your signed, dated consent PDFs", "agreements"],
-    ["UserRound", "My profile", "Your preferences and personal details", "profile"],
-    ["ShieldCheck", "Booking policies", "Carefully considered, clearly explained", "policies"],
+  const name =
+    s.profile?.full_name ||
+    s.session?.user.user_metadata?.full_name ||
+    (s.testMode ? "Test Client" : "Client");
+  const firstName = s.profile?.first_name || name.split(" ")[0] || "beautiful";
+  const rows = [
+    ["UserRound", "Profile", "Personal details and preferences", "profile"],
+    ["CalendarDays", "Appointments", "Upcoming bookings and service history", "appointments"],
+    ["Wallet", "Orders & Payments", "Purchases, deposits, credits and balances", "payments"],
+    ["GraduationCap", "Beauty Academy", "Courses, workshops and learning materials", "my-workshops"],
+    ["Images", "Photos & Videos", "Privately share your beauty inspiration", "my-media"],
+    ["FileText", "Policies & Agreements", "Booking policies and signed consent forms", "agreements"],
   ] as const;
   return (
-    <Shell>
-      <Heading sub="A private space for everything Lady J.">
-        {"Welcome, " +
-          (s.profile?.full_name?.split(" ")[0] ||
-            s.session?.user.user_metadata?.full_name?.split(" ")[0] ||
-            (s.testMode ? "Test Client" : "") ||
-            "beautiful") +
-          "."}
-      </Heading>
-      <View style={{ marginBottom: 20 }}>{ownerCard}</View>
-      <View style={{ flexDirection: "row", gap: 20, flexWrap: "wrap" }}>
-        {tiles.map(([icon, title, desc, page]) => (
+    <Shell footer={false}>
+      <View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
+        <Txt serif size={34} style={{ marginBottom: 22 }}>
+          Account
+        </Txt>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 18,
+            paddingBottom: 24,
+          }}
+        >
+          <ProfilePhotoEditor
+            name={name}
+            mode="client"
+            clientPath={s.profile?.profile_photo_path}
+            displayPath={s.profile?.display_profile_photo_path}
+            updatedAt={s.profile?.profile_photo_updated_at}
+            disabled={!s.session}
+            onChanged={s.refreshPrivate}
+          />
+          <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+            <Txt size={24} bold>
+              Welcome Back, {firstName}
+            </Txt>
+            <Txt color={c.mutedForeground}>Your personal beauty experience</Txt>
+            {!s.session && s.testMode && (
+              <Txt size={12} color={c.mutedForeground}>
+                Development Test Mode · profile uploads require sign-in
+              </Txt>
+            )}
+          </View>
+        </View>
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
+            borderColor: c.goldBorder,
+          }}
+        >
+          {rows.map(([icon, title, desc, page], index) => (
           <Pressable
             key={page}
             onPress={() => go(page)}
-            style={{ width: width > 800 ? "31%" : "100%", flexGrow: 1 }}
+            accessibilityRole="button"
+            accessibilityLabel={`${title}. ${desc}`}
+            style={({ pressed }) => ({
+              minHeight: 76,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 14,
+              paddingVertical: 12,
+              paddingHorizontal: 4,
+              borderTopWidth: index ? 1 : 0,
+              borderColor: c.border,
+              opacity: pressed ? 0.62 : 1,
+            })}
           >
-            <Card
+            <View
               style={{
-                minHeight: 170,
-                gap: 12,
-                ...(page === "checkout"
-                  ? { borderColor: c.goldBorder, backgroundColor: c.goldSurface }
-                  : {}),
+                width: 38,
+                height: 38,
+                borderRadius: 11,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: c.goldSurface,
               }}
             >
-              <Icon name={icon} size={25} color={c.secondaryForeground} />
-              <Txt serif size={25}>
+              <Icon name={icon} size={21} color={c.brandAccent} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+              <Txt size={17} bold>
                 {title}
               </Txt>
               <Txt size={13} color={c.mutedForeground}>
                 {desc}
               </Txt>
-            </Card>
+            </View>
+            <Icon name="ChevronRight" size={20} color={c.mutedForeground} />
           </Pressable>
         ))}
-      </View>
-
-      {s.session ? (
-        <LinkText
+        </View>
+        <Pressable
+          accessibilityRole="button"
           onPress={() => {
+            if (s.testMode && !s.session) {
+              s.exitTestMode();
+              go("home");
+              return;
+            }
             void signOutCurrentDevice()
-              .then(() => go("home"))
+              .then(() => go("login"))
               .catch((reason: unknown) =>
-                s.notify(reason instanceof Error ? reason.message : "Unable to sign out."),
+                s.notify(reason instanceof Error ? reason.message : "Unable to log out."),
               );
           }}
+          style={{
+            marginTop: 30,
+            paddingTop: 20,
+            borderTopWidth: 1,
+            borderColor: c.border,
+            minHeight: 54,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+          }}
         >
-          Sign out securely
-        </LinkText>
-      ) : (
-        <Tag>Development Test Mode · No private account loaded</Tag>
-      )}
+          <Icon name="LogOut" size={18} color={c.mutedForeground} />
+          <Txt color={c.mutedForeground}>
+            {s.testMode && !s.session ? "Exit Test Mode" : "Log Out"}
+          </Txt>
+        </Pressable>
+      </View>
     </Shell>
   );
 }
@@ -545,6 +573,20 @@ export function ProfileScreen() {
         <Card style={{ maxWidth: 650, width: "100%" }}>
           {s.testMode && !s.session && <Tag>Development Test Mode · Local fields only</Tag>}
           {!!error && <ErrorBox message={error} />}
+          <View style={{ alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <ProfilePhotoEditor
+              name={name || "Client"}
+              mode="client"
+              clientPath={s.profile?.profile_photo_path}
+              displayPath={s.profile?.display_profile_photo_path}
+              updatedAt={s.profile?.profile_photo_updated_at}
+              disabled={!s.session}
+              onChanged={s.refreshPrivate}
+            />
+            <Txt size={13} color={c.mutedForeground}>
+              Tap to update your private profile photo
+            </Txt>
+          </View>
           <Txt size={18} bold>
             Name
           </Txt>
@@ -615,7 +657,7 @@ export function RecordsScreen({ page }: { page: string }) {
         ? "My orders"
         : page === "my-workshops"
           ? "My workshops"
-          : "Payments & credits";
+          : "Orders & Payments";
   async function cancelPurchase(id: string) {
     if (s.testMode && !s.session) {
       setConfirm("");
@@ -664,70 +706,133 @@ export function RecordsScreen({ page }: { page: string }) {
         <View style={{ gap: 17 }}>
           {page === "appointments" &&
             (s.appointments.length ? (
-              s.appointments.slice(currentPage * 20, currentPage * 20 + 20).map((a) => (
-                <Card key={a.id}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 15 }}>
-                    <View style={{ flex: 1 }}>
-                      <Txt serif size={25}>
-                        {a.services?.map((v) => v.name).join(" + ") || "Salon appointment"}
-                      </Txt>
-                      <Txt style={{ marginVertical: 10 }}>
-                        {dateLabel(a.starts_at)} at {timeLabel(a.starts_at)}
-                      </Txt>
-                      <Txt size={13}>
-                        Total {money(a.total)} · Deposit {money(a.deposit)} · Remaining
-                        {money(a.total - (a.deposit_paid ? a.deposit : 0))}
-                      </Txt>
-                    </View>
-                    <Tag>{a.status === "pending" ? "Payment pending" : a.status}</Tag>
-                  </View>
-                  {["pending", "confirmed"].includes(a.status) &&
-                    new Date(a.starts_at) > new Date() &&
-                    (confirm === a.id ? (
-                      <View style={{ marginTop: 20, gap: 12 }}>
-                        <Txt size={14}>
-                          Cancel this appointment? The cancellation policy will apply to any
-                          verified deposit.
-                        </Txt>
-                        <View style={shared.row}>
-                          <Action
-                            label="Confirm cancellation"
-                            busy={busy}
-                            onPress={() => void cancel(a.id)}
-                          />
-                          <Action
-                            label="Keep appointment"
-                            secondary
-                            onPress={() => setConfirm("")}
-                          />
-                        </View>
-                      </View>
-                    ) : (
-                      <LinkText onPress={() => setConfirm(a.id)}>Cancel appointment</LinkText>
-                    ))}
-                  {["completed", "cancelled", "no_show"].includes(a.status) && (
-                    <LinkText
-                      onPress={() => {
-                        const names = a.services?.map((v) => v.name) || [];
-                        const services = names.map((name) =>
-                          s.services.find((v) => v.name === name && v.active),
-                        );
-                        if (!names.length || services.some((v) => !v)) {
-                          s.notify(
-                            "Some services have changed. Please choose from the current menu.",
-                          );
-                          go("services");
-                          return;
-                        }
-                        s.setSelected(services.flatMap((v) => (v ? [v.id] : [])));
-                        go("booking");
-                      }}
+              s.appointments.slice(currentPage * 20, currentPage * 20 + 20).map((a) => {
+                const payment = s.transactions.find(
+                  (transaction) =>
+                    transaction.appointment_id === a.id && !["voided"].includes(transaction.status),
+                );
+                return (
+                  <Card key={a.id}>
+                    <View
+                      style={{ flexDirection: "row", justifyContent: "space-between", gap: 15 }}
                     >
-                      Book these services again
-                    </LinkText>
-                  )}
-                </Card>
-              ))
+                      <View style={{ flex: 1 }}>
+                        <Txt serif size={25}>
+                          {a.services?.map((v) => v.name).join(" + ") || "Salon appointment"}
+                        </Txt>
+                        <Txt style={{ marginVertical: 10 }}>
+                          {dateLabel(a.starts_at)} at {timeLabel(a.starts_at)}
+                        </Txt>
+                        <Txt size={13}>
+                          Total {money(a.total)} · Deposit {money(a.deposit)} · Remaining
+                          {money(a.total - (a.deposit_paid ? a.deposit : 0))}
+                        </Txt>
+                      </View>
+                      <Tag>
+                        {payment?.status === "pending"
+                          ? "Pending Verification"
+                          : payment?.status === "rejected"
+                            ? "Payment Rejected"
+                            : a.status}
+                      </Tag>
+                    </View>
+                    {!!payment && (
+                      <View
+                        style={{
+                          marginTop: 12,
+                          gap: 6,
+                          borderTopWidth: 1,
+                          borderColor: c.border,
+                          paddingTop: 12,
+                        }}
+                      >
+                        <Txt size={13}>
+                          Bank transfer · {money(payment.amount)} · Reference{" "}
+                          {payment.reference || "not supplied"}
+                        </Txt>
+                        {!!payment.payment_date && (
+                          <Txt size={13}>
+                            Payment Date:{" "}
+                            {dateLabel(payment.payment_date + "T12:00:00Z", { year: "numeric" })}
+                          </Txt>
+                        )}
+                        {!!payment.rejection_reason && (
+                          <Txt size={13} color={c.paymentPending}>
+                            Reason: {payment.rejection_reason}
+                          </Txt>
+                        )}
+                        {!!payment.receipt_path && (
+                          <LinkText
+                            onPress={() =>
+                              void (async () => {
+                                const result = check(
+                                  await db()
+                                    .storage.from("lj-payment-receipts")
+                                    .createSignedUrl(payment.receipt_path!, 60),
+                                );
+                                if (!result?.signedUrl)
+                                  throw new Error("Unable to open this receipt.");
+                                await Linking.openURL(result.signedUrl);
+                              })().catch((e) =>
+                                s.notify(
+                                  e instanceof Error ? e.message : "Unable to open this receipt.",
+                                ),
+                              )
+                            }
+                          >
+                            View payment receipt
+                          </LinkText>
+                        )}
+                      </View>
+                    )}
+                    {["pending", "confirmed"].includes(a.status) &&
+                      new Date(a.starts_at) > new Date() &&
+                      (confirm === a.id ? (
+                        <View style={{ marginTop: 20, gap: 12 }}>
+                          <Txt size={14}>
+                            Cancel this appointment? The cancellation policy will apply to any
+                            verified deposit.
+                          </Txt>
+                          <View style={shared.row}>
+                            <Action
+                              label="Confirm cancellation"
+                              busy={busy}
+                              onPress={() => void cancel(a.id)}
+                            />
+                            <Action
+                              label="Keep appointment"
+                              secondary
+                              onPress={() => setConfirm("")}
+                            />
+                          </View>
+                        </View>
+                      ) : (
+                        <LinkText onPress={() => setConfirm(a.id)}>Cancel appointment</LinkText>
+                      ))}
+                    {["completed", "cancelled", "no_show"].includes(a.status) && (
+                      <LinkText
+                        onPress={() => {
+                          const names = a.services?.map((v) => v.name) || [];
+                          const services = names.map((name) =>
+                            s.services.find((v) => v.name === name && v.active),
+                          );
+                          if (!names.length || services.some((v) => !v)) {
+                            s.notify(
+                              "Some services have changed. Please choose from the current menu.",
+                            );
+                            go("services");
+                            return;
+                          }
+                          s.setSelected(services.flatMap((v) => (v ? [v.id] : [])));
+                          go("booking");
+                        }}
+                      >
+                        Book these services again
+                      </LinkText>
+                    )}
+                  </Card>
+                );
+              })
             ) : (
               <Empty
                 title="Your next moment is waiting"
@@ -817,6 +922,13 @@ export function RecordsScreen({ page }: { page: string }) {
             })()}
           {page === "payments" && (
             <>
+              <Card style={{ gap: 12 }}>
+                <Txt bold size={18}>Purchases</Txt>
+                <Txt color={c.mutedForeground}>
+                  Review boutique purchases, fulfillment and unpaid requests.
+                </Txt>
+                <Action label="View product orders" secondary onPress={() => go("orders")} />
+              </Card>
               <Card style={{ backgroundColor: c.secondary }}>
                 <Txt size={14}>Your available future credit</Txt>
                 <Txt serif size={36}>

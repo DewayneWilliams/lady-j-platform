@@ -11,6 +11,7 @@ import ServiceCategories from "./ServiceCategories";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { View, Pressable, useWindowDimensions, ActivityIndicator } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as Clipboard from "expo-clipboard";
 import { Image } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
@@ -43,46 +44,78 @@ export const todayKey = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+const requestUuid = () =>
+  globalThis.crypto?.randomUUID?.() ||
+  "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (value) => {
+    const random = Math.floor(Math.random() * 16);
+    return (value === "x" ? random : (random & 3) | 8).toString(16);
+  });
+async function receiptBytes(asset: ImagePicker.ImagePickerAsset) {
+  if (asset.file) return asset.file.arrayBuffer();
+  if (!asset.base64) throw new Error("Choose the receipt again before confirming.");
+  return Uint8Array.from(atob(asset.base64), (char) => char.charCodeAt(0)).buffer;
+}
 export function PaymentChoice({
   method,
   setMethod,
+  deposit,
+  reference = "",
+  setReference = () => undefined,
+  paymentDate = "",
+  setPaymentDate = () => undefined,
+  receipt = null,
+  chooseReceipt = () => undefined,
 }: {
   method: string;
   setMethod: (v: string) => void;
+  deposit?: number;
+  reference?: string;
+  setReference?: (v: string) => void;
+  paymentDate?: string;
+  setPaymentDate?: (v: string) => void;
+  receipt?: ImagePicker.ImagePickerAsset | null;
+  chooseReceipt?: () => void;
 }) {
   const c = useColors(),
     s = useSalon();
+  const [expanded, setExpanded] = useState(true);
+  const details = [
+    ["Bank", s.settings?.bank_name || "First Citizens Bank"],
+    ["Account Name", s.settings?.bank_account_name || "LADY J SALON AND DAY SPA"],
+    ["Account Type", s.settings?.bank_account_type || "Savings"],
+    ["Account Number", s.settings?.bank_account_number || "3201297"],
+    ["Currency", s.settings?.bank_currency || "TTD"],
+  ];
   return (
     <View style={{ gap: 13 }}>
       {[
         {
-          id: "simulation",
-          icon: "CreditCard" as const,
-          title: "Credit / debit card",
-          desc: s.testMode
-            ? "Development simulation · No payment or record created"
-            : "Not available yet · Please use bank transfer",
-        },
-        {
           id: "bank",
           icon: "Landmark" as const,
           title: "Bank transfer",
-          desc: "Pending until the owner verifies your funds",
+          desc: "Recommended · Pending owner verification",
+        },
+        {
+          id: "card",
+          icon: "CreditCard" as const,
+          title: "Credit / debit card",
+          desc: "Card processing is not currently available",
         },
       ].map((v) => (
         <Pressable
           accessibilityRole="radio"
           accessibilityState={{
             checked: method === v.id,
-            disabled: v.id === "simulation" && !s.testMode,
+            disabled: v.id === "card",
           }}
           key={v.id}
-          disabled={v.id === "simulation" && !s.testMode}
+          disabled={v.id === "card"}
           onPress={() => setMethod(v.id)}
           style={{
             paddingHorizontal: 12,
             paddingVertical: 12,
-            backgroundColor: v.id === "simulation" && !s.testMode ? c.muted : c.card,
+            backgroundColor:
+              v.id === "card" ? c.muted : method === v.id ? c.brandAccentSurface : c.card,
             borderWidth: method === v.id ? 2 : 1,
             borderColor: method === v.id ? c.primary : c.border,
             borderRadius: 12,
@@ -106,18 +139,102 @@ export function PaymentChoice({
         </Pressable>
       ))}
       {method === "bank" && (
-        <Card style={{ backgroundColor: c.secondary }}>
-          <Txt bold size={14}>
-            Bank transfer instructions
-          </Txt>
-          <Txt size={14} style={{ marginTop: 8 }}>
-            {s.settings?.bank_instructions ||
-              "The salon has not provided bank details yet. You may submit an unpaid request; contact the salon for instructions before transferring any funds."}
-          </Txt>
-          <Txt size={12} style={{ marginTop: 10, opacity: 0.7 }}>
-            Your appointment or purchase remains pending until the owner confirms receipt. A
-            transfer reference alone does not confirm payment.
-          </Txt>
+        <Card
+          style={{
+            backgroundColor: c.goldSurface,
+            borderColor: c.goldBorder,
+            padding: 16,
+            gap: 12,
+          }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}
+            onPress={() => setExpanded((value) => !value)}
+            style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+          >
+            <View style={{ flex: 1 }}>
+              <Txt bold>
+                {deposit == null
+                  ? "Bank transfer instructions"
+                  : `Transfer ${money(deposit)} to reserve your time`}
+              </Txt>
+              <Txt size={12} color={c.mutedForeground}>
+                Secure bank details
+              </Txt>
+            </View>
+            <Icon name={expanded ? "ChevronUp" : "ChevronDown"} size={20} color={c.brandAccent} />
+          </Pressable>
+          {expanded && (
+            <View style={{ gap: 10 }}>
+              {details.map(([label, value]) => (
+                <View
+                  key={label}
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    gap: 18,
+                    borderTopWidth: label === "Bank" ? 0 : 1,
+                    borderColor: c.goldBorder,
+                    paddingTop: label === "Bank" ? 0 : 9,
+                  }}
+                >
+                  <Txt size={13} color={c.mutedForeground}>
+                    {label}
+                  </Txt>
+                  <Txt size={14} bold style={{ textAlign: "right", flex: 1 }}>
+                    {value}
+                  </Txt>
+                </View>
+              ))}
+              <Action
+                label="Copy Account Number"
+                secondary
+                icon="Copy"
+                onPress={() =>
+                  void Clipboard.setStringAsync(details[3][1]).then(() =>
+                    s.notify("Account number copied."),
+                  )
+                }
+                style={{ alignSelf: "stretch" }}
+              />
+              {!!s.settings?.bank_instructions && (
+                <Txt size={13}>{s.settings.bank_instructions}</Txt>
+              )}
+              <Txt size={12} color={c.mutedForeground}>
+                Uploading proof does not verify payment. Your deposit stays Pending Verification
+                until authorized salon staff confirms the funds in the bank account.
+              </Txt>
+              {deposit != null && (
+                <>
+                  <Field
+                    label="Transaction Reference Number"
+                    value={reference}
+                    onChangeText={setReference}
+                    placeholder="Enter the bank reference"
+                  />
+                  <Field
+                    label="Payment Date"
+                    value={paymentDate}
+                    onChangeText={setPaymentDate}
+                    placeholder="YYYY-MM-DD"
+                  />
+                  <Action
+                    label={receipt ? "Change Payment Receipt" : "Upload Payment Receipt"}
+                    secondary
+                    icon="Upload"
+                    onPress={chooseReceipt}
+                    style={{ alignSelf: "stretch" }}
+                  />
+                  {!!receipt && (
+                    <Txt size={13} color={c.success}>
+                      Selected: {receipt.fileName || "Payment receipt image"}
+                    </Txt>
+                  )}
+                </>
+              )}
+            </View>
+          )}
         </Card>
       )}
     </View>
@@ -146,8 +263,10 @@ export default function BookingScreen() {
     [slots, setSlots] = useState<string[]>([]),
     [slotLoading, setSlotLoading] = useState(false),
     [error, setError] = useState(""),
-    [method, setMethod] = useState(s.testMode ? "simulation" : "bank"),
+    [method, setMethod] = useState("bank"),
     [reference, setReference] = useState(""),
+    [paymentDate, setPaymentDate] = useState(todayKey()),
+    [receipt, setReceipt] = useState<ImagePicker.ImagePickerAsset | null>(null),
     [policy, setPolicy] = useState(false),
     [agreementId, setAgreementId] = useState(""),
     [busy, setBusy] = useState(false),
@@ -157,6 +276,7 @@ export default function BookingScreen() {
     [guestEmail, setGuestEmail] = useState(""),
     [guestPhone, setGuestPhone] = useState(""),
     [guestAgreement, setGuestAgreement] = useState<GuestAgreementDraft | null>(null);
+  const bookingRequestKey = useRef(requestUuid());
   const appliedServiceId = useRef("");
   useEffect(() => {
     if (
@@ -188,12 +308,15 @@ export default function BookingScreen() {
     !agreementId ||
     !policy ||
     !pricing.ready ||
+    (!noPaymentRequired &&
+      (method !== "bank" ||
+        !s.session ||
+        reference.trim().length < 3 ||
+        !validReportDate(paymentDate) ||
+        paymentDate > todayKey() ||
+        !receipt)) ||
     (!s.session && !s.testMode && (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()));
-  useEffect(() => {
-    if (s.testMode && step === 3) setAgreementId("development-test-agreement");
-  }, [s.testMode, step]);
   const slotGeneration = useRef(0);
-  const customerId = s.session?.user.id;
   const refreshSlots = useCallback(async () => {
     if (!s.authReady || step !== 2 || !duration) return;
     const generation = ++slotGeneration.current;
@@ -237,23 +360,55 @@ export default function BookingScreen() {
       s.notify(e instanceof Error ? e.message : "Unable to open your photos.");
     }
   }
+  async function chooseReceipt() {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.85,
+        base64: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets?.[0];
+      if (!asset) return;
+      if (asset.fileSize && asset.fileSize > 8 * 1024 * 1024)
+        throw new Error("Choose a receipt image smaller than 8 MB.");
+      setReceipt(asset);
+    } catch (e) {
+      s.notify(e instanceof Error ? e.message : "Unable to choose the payment receipt.");
+    }
+  }
   async function submit() {
     setError("");
     if (!policy || !time || !agreementId || !pricing.ready) return;
-    if (method === "simulation") {
-      setDone("demo");
-      return;
-    }
     setBusy(true);
+    let receiptPath: string | null = null;
     try {
+      if (!noPaymentRequired && (!s.session || !receipt))
+        throw new Error("Sign in and add your bank transfer proof before confirming.");
+      if (!noPaymentRequired && s.session && receipt) {
+        const mime = receipt.mimeType || "image/jpeg";
+        const extension = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
+        receiptPath = `${s.session.user.id}/${bookingRequestKey.current}/receipt.${extension}`;
+        check(
+          await db()
+            .storage.from("lj-payment-receipts")
+            .upload(receiptPath, await receiptBytes(receipt), { contentType: mime, upsert: true }),
+        );
+      }
       const id = s.session
         ? check(
-            await db().rpc("lj_book", {
+            await db().rpc("lj_book_checkout", {
               p_services: selected.map((v) => v.id),
               p_start: time,
               p_reference: reference,
               p_policy: policy,
               p_code: pricing.code,
+              p_agreement: agreementId,
+              p_payment_date: noPaymentRequired ? null : paymentDate,
+              p_receipt_path: receiptPath,
+              p_receipt_filename: receipt?.fileName || null,
+              p_receipt_mime: receipt?.mimeType || (receipt ? "image/jpeg" : null),
+              p_request_key: bookingRequestKey.current,
             }),
           )
         : check(
@@ -273,6 +428,12 @@ export default function BookingScreen() {
       setDone(String(id));
       if (s.session) await s.refreshPrivate();
     } catch (e) {
+      if (receiptPath) {
+        await db()
+          .storage.from("lj-payment-receipts")
+          .remove([receiptPath])
+          .catch(() => undefined);
+      }
       setError(e instanceof Error ? e.message : "We couldn’t save your request. Try again.");
     } finally {
       setBusy(false);
@@ -291,9 +452,7 @@ export default function BookingScreen() {
         ? noPaymentRequired
           ? "Confirm"
           : "Payment"
-        : noPaymentRequired
-          ? "Confirm booking"
-          : "Submit request";
+        : "Confirm My Appointment →";
   const bookingBar = (
     <View
       accessibilityLabel="Booking totals and navigation"
@@ -347,19 +506,19 @@ export default function BookingScreen() {
             {pricing.busy ? "Updating…" : money(total)} · {formatDuration(duration)}
           </Txt>
         </View>
-        <Action
-          label={barLabel}
-          gold
-          icon={step < 3 ? "ArrowRight" : undefined}
-          disabled={barDisabled}
-          busy={step === 3 && busy}
-          onPress={() => {
-            if (step === 1) setStep(2);
-            else if (step === 2) setStep(3);
-            else void submit();
-          }}
-          style={{ minHeight: 42, paddingHorizontal: 10, paddingVertical: 7 }}
-        />
+        {step < 3 && (
+          <Action
+            label={barLabel}
+            gold
+            icon="ArrowRight"
+            disabled={barDisabled}
+            onPress={() => {
+              if (step === 1) setStep(2);
+              else setStep(3);
+            }}
+            style={{ minHeight: 42, paddingHorizontal: 10, paddingVertical: 7 }}
+          />
+        )}
       </View>
     </View>
   );
@@ -369,23 +528,17 @@ export default function BookingScreen() {
         <View style={{ maxWidth: 640, alignSelf: "center", width: "100%", paddingVertical: 35 }}>
           <Card style={{ alignItems: "center", padding: 35, gap: 18 }}>
             <Icon
-              name={done === "demo" ? "Sparkles" : "CalendarCheck"}
+              name={noPaymentRequired ? "CalendarCheck" : "Clock3"}
               size={42}
               color={c.brandAccent}
             />
             <Tag>
-              {done === "demo"
-                ? "No booking created"
-                : noPaymentRequired
-                  ? "Appointment confirmed"
-                  : "Request saved · Payment pending"}
+              {noPaymentRequired ? "Appointment confirmed" : "Request saved · Payment pending"}
             </Tag>
             <Txt serif size={34} style={{ textAlign: "center" }}>
-              {done === "demo"
-                ? "A preview of your next moment."
-                : noPaymentRequired
-                  ? "Your consultation is booked."
-                  : "Your moment is on its way."}
+              {noPaymentRequired
+                ? "Your consultation is booked."
+                : "Your booking is pending verification."}
             </Txt>
             <Txt style={{ textAlign: "center" }}>
               {selected.map((v) => v.name).join(" + ")}
@@ -393,21 +546,11 @@ export default function BookingScreen() {
               {dateLabel(time)} at {timeLabel(time)}
             </Txt>
             <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
-              {done === "demo"
-                ? "No card was charged and no appointment was created. Choose bank transfer to submit a request."
-                : noPaymentRequired
-                  ? "Your appointment is confirmed. No payment or deposit is required."
-                  : "Your appointment is reserved pending owner verification of your bank deposit. This is not a payment receipt or a confirmed appointment."}
+              {noPaymentRequired
+                ? "Your appointment is confirmed. No payment or deposit is required."
+                : "Your transfer proof was saved securely. The appointment remains pending until the owner verifies funds received; uploaded proof is not a verified payment."}
             </Txt>
-            {done === "demo" ? (
-              <Action
-                label="Choose bank transfer"
-                onPress={() => {
-                  setDone("");
-                  setMethod("bank");
-                }}
-              />
-            ) : s.session ? (
+            {s.session ? (
               <Action label="View my appointments" onPress={() => go("appointments")} />
             ) : (
               <Action label="Return home" onPress={() => go("home")} />
@@ -621,156 +764,250 @@ export default function BookingScreen() {
         </View>
       )}
       {step === 3 && (
-        <View style={{ flexDirection: width > 800 ? "row" : "column", gap: 27 }}>
-          <View style={{ flex: 1 }}>
-            <Txt serif size={28} style={{ marginBottom: 20 }}>
-              {noPaymentRequired ? "Confirm your appointment" : "Secure your appointment"}
+        <View style={{ width: "100%", maxWidth: 760, alignSelf: "center", gap: 14 }}>
+          <View style={{ alignItems: "center", paddingHorizontal: 14, marginBottom: 8 }}>
+            <Txt serif size={width < 390 ? 29 : 34} style={{ textAlign: "center" }}>
+              Your Beautiful Transformation Awaits
             </Txt>
-            {!s.session && !s.testMode && (
-              <Card style={{ gap: 15, marginBottom: 20 }}>
-                <Txt size={20} bold>
-                  Guest contact details
-                </Txt>
-                <Txt color={c.mutedForeground}>
-                  We use these details to save your private client record and keep this appointment
-                  linked correctly.
-                </Txt>
-                <Field label="Full Name" value={guestName} onChangeText={setGuestName} />
-                <Field
-                  label="Email"
-                  value={guestEmail}
-                  onChangeText={setGuestEmail}
-                  keyboardType="email-address"
-                />
-                <Field
-                  label="Mobile Number"
-                  value={guestPhone}
-                  onChangeText={setGuestPhone}
-                  keyboardType="phone-pad"
-                />
-              </Card>
-            )}
-            {s.testMode ? (
-              <Card style={{ gap: 8, backgroundColor: c.goldSurface, borderColor: c.goldBorder }}>
-                <Tag>Development Test Mode</Tag>
-                <Txt bold>Agreement preview enabled</Txt>
-                <Txt size={13} color={c.mutedForeground}>
-                  No signature, appointment, payment or private client record will be created.
-                </Txt>
-              </Card>
-            ) : s.session || (guestName.trim() && guestEmail.trim() && guestPhone.trim()) ? (
-              <ServiceAgreement
-                services={selected.map((v) => v.id)}
-                onReady={setAgreementId}
-                noPaymentRequired={noPaymentRequired}
-                guest={!s.session}
-                guestName={guestName}
-                onGuestReady={setGuestAgreement}
-              />
-            ) : null}
-            {s.session && !noPaymentRequired && <PromoCode pricing={pricing} />}
-            {noPaymentRequired ? (
-              <Card>
-                <Txt bold>No payment or deposit required.</Txt>
-              </Card>
-            ) : (
-              <PaymentChoice method={method} setMethod={setMethod} />
-            )}
-            {!noPaymentRequired && method === "bank" && (
-              <View style={{ marginTop: 18 }}>
-                <Field
-                  label="Bank transfer reference (if available)"
-                  value={reference}
-                  onChangeText={setReference}
-                  placeholder="You can submit an unpaid request"
-                />
-              </View>
-            )}
-            <Check
-              checked={policy}
-              onPress={() => setPolicy(!policy)}
-              label={
-                noPaymentRequired
-                  ? "I agree to the booking terms. No payment is required."
-                  : "I understand the 50% deposit and cancellation terms in my signed agreement."
-              }
-            />
-            <LinkText onPress={() => go("policies")}>Read the cancellation policy</LinkText>
-            <Txt size={12} color={c.mutedForeground} style={{ marginBottom: 22 }}>
-              {noPaymentRequired
-                ? "Please cancel or reschedule if you cannot attend."
-                : "24+ hours: full deposit refund or one complimentary rescheduling. Under 24 hours: the deposit is non-refundable; management may offer 50% as future credit. No-shows forfeit the deposit."}
+            <Txt color={c.mutedForeground} style={{ textAlign: "center", marginTop: 8 }}>
+              You&apos;re one step closer to looking and feeling your best.
             </Txt>
           </View>
-          <Card
-            style={{
-              flex: width > 800 ? 0.7 : undefined,
-              height: "auto",
-              alignSelf: "flex-start",
-              width: width > 800 ? undefined : "100%",
-            }}
-          >
-            <Tag>Appointment summary</Tag>
-            <Txt serif size={26} style={{ marginVertical: 18 }}>
-              {dateLabel(time)}
-            </Txt>
-            <Txt size={16}>
-              {timeLabel(time)} · {formatDuration(duration)}
-            </Txt>
-            <View style={{ height: 1, backgroundColor: c.border, marginVertical: 20 }} />
-            {selected.map((v) => (
+          {!s.session && !noPaymentRequired && (
+            <Card style={{ gap: 12, borderColor: c.goldBorder, backgroundColor: c.goldSurface }}>
+              <Txt bold>Sign in to complete secure payment</Txt>
+              <Txt size={13} color={c.mutedForeground}>
+                A private account is required to store your receipt, signed PDF, and payment audit
+                trail.
+              </Txt>
+              <Action
+                label="Sign In to Continue"
+                onPress={() => go("login", { next: "booking" })}
+                style={{ alignSelf: "stretch" }}
+              />
+            </Card>
+          )}
+          {!s.session && noPaymentRequired && !s.testMode && (
+            <Card style={{ gap: 12 }}>
+              <Txt size={19} bold>
+                Guest contact details
+              </Txt>
+              <Field label="Full Name" value={guestName} onChangeText={setGuestName} />
+              <Field
+                label="Email"
+                value={guestEmail}
+                onChangeText={setGuestEmail}
+                keyboardType="email-address"
+              />
+              <Field
+                label="Mobile Number"
+                value={guestPhone}
+                onChangeText={setGuestPhone}
+                keyboardType="phone-pad"
+              />
+            </Card>
+          )}
+          <Card style={{ borderColor: c.goldBorder, padding: 18, gap: 0 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10, gap: 12 }}>
+              <Txt size={20} bold style={{ flex: 1 }}>
+                Your Selected Services
+              </Txt>
+              <LinkText onPress={() => setStep(1)}>Edit Services</LinkText>
+            </View>
+            {selected.map((service, index) => (
               <View
-                key={v.id}
+                key={service.id}
                 style={{
                   flexDirection: "row",
-                  justifyContent: "space-between",
-                  gap: 18,
-                  marginBottom: 15,
+                  alignItems: "center",
+                  gap: 12,
+                  paddingVertical: 11,
+                  borderTopWidth: index ? 1 : 0,
+                  borderColor: c.border,
                 }}
               >
-                <Txt size={14} style={{ flex: 1 }}>
-                  {v.name}
+                <Photo name={service.image} style={{ width: 48, height: 48, borderRadius: 10 }} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Txt size={15} bold>
+                    {service.name}
+                  </Txt>
+                  <Txt size={12} color={c.mutedForeground}>
+                    {serviceDurationLabel(service)}
+                  </Txt>
+                </View>
+                <Txt size={15} bold style={{ textAlign: "right" }}>
+                  {money(
+                    pricing.quote?.items.find((item) => item.id === service.id)?.price ??
+                      service.price,
+                  )}
                 </Txt>
-                <Txt size={14}>{money(v.price)}</Txt>
               </View>
             ))}
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                gap: 16,
+                backgroundColor: c.brandAccentSurface,
+                padding: 13,
+                borderRadius: 10,
+                marginTop: 8,
+              }}
+            >
+              <Txt bold color={c.brandAccent}>
+                {selected.length} service{selected.length === 1 ? "" : "s"}
+              </Txt>
+              <Txt bold color={c.brandAccent}>
+                {money(total)}
+              </Txt>
+            </View>
+          </Card>
+          <Card style={{ padding: 18, gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Icon name="CalendarDays" size={23} color={c.brandAccent} />
+              <Txt size={20} bold style={{ flex: 1 }}>
+                Your Appointment
+              </Txt>
+              <LinkText onPress={() => setStep(2)}>Edit</LinkText>
+            </View>
             {[
-              ...(Number(pricing.quote?.discount_total) > 0
-                ? [
-                    ["Subtotal", pricing.quote!.original_subtotal],
-                    ["Discount", -Number(pricing.quote!.discount_total)],
-                  ]
-                : []),
-              ["Total", total],
-              ...(!noPaymentRequired
-                ? [
-                    ["50% deposit", deposit],
-                    ["Remaining at your visit", total - deposit],
-                  ]
-                : []),
-            ].map(([label, amount]) => (
+              ["Date", dateLabel(time)],
+              ["Time", timeLabel(time)],
+              ["Total Duration", formatDuration(duration)],
+              ["Total Price", money(total)],
+            ].map(([label, value], index) => (
               <View
                 key={label}
                 style={{
                   flexDirection: "row",
                   justifyContent: "space-between",
-                  gap: 20,
-                  marginVertical: 10,
+                  gap: 18,
+                  paddingTop: 10,
+                  borderTopWidth: index ? 1 : 0,
+                  borderColor: c.border,
                 }}
               >
-                <Txt size={label === "50% deposit" ? 17 : 14} bold={label === "50% deposit"}>
+                <Txt size={14} color={c.mutedForeground}>
                   {label}
                 </Txt>
-                <Txt size={17} bold={label === "50% deposit"}>
-                  {money(Number(amount))}
+                <Txt size={14} bold style={{ textAlign: "right" }}>
+                  {value}
                 </Txt>
               </View>
             ))}
-            <Txt size={12} color={c.mutedForeground} style={{ marginTop: 13 }}>
-              Sample TTD prices. Your selected services and final quote require professional
-              confirmation.
-            </Txt>
           </Card>
+          <Card style={{ padding: 18, gap: 13 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Icon name="WalletCards" size={23} color={c.brandAccent} />
+              <View style={{ flex: 1 }}>
+                <Txt size={20} bold>
+                  Payment Method
+                </Txt>
+                <Txt size={13} color={c.mutedForeground}>
+                  Choose how you&apos;d like to pay your deposit.
+                </Txt>
+              </View>
+            </View>
+            {noPaymentRequired ? (
+              <Txt bold>No payment or deposit required.</Txt>
+            ) : (
+              <PaymentChoice
+                method={method}
+                setMethod={setMethod}
+                deposit={deposit}
+                reference={reference}
+                setReference={setReference}
+                paymentDate={paymentDate}
+                setPaymentDate={setPaymentDate}
+                receipt={receipt}
+                chooseReceipt={() => void chooseReceipt()}
+              />
+            )}
+          </Card>
+          <Card style={{ padding: 18, gap: 0 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <Icon name="Calculator" size={23} color={c.brandAccent} />
+              <Txt size={20} bold>
+                Payment Summary
+              </Txt>
+            </View>
+            {s.session && !noPaymentRequired && <PromoCode pricing={pricing} />}
+            {[
+              ["Total Price", money(total)],
+              ["50% Deposit", money(noPaymentRequired ? 0 : deposit)],
+              ["Remaining Balance", money(noPaymentRequired ? 0 : total - deposit)],
+              ["Selected Method", noPaymentRequired ? "No payment required" : "Bank transfer"],
+              ["Payment Status", noPaymentRequired ? "No payment due" : "Pending Verification"],
+            ].map(([label, value], index) => (
+              <View
+                key={label}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: 18,
+                  paddingVertical: 11,
+                  borderTopWidth: index ? 1 : 0,
+                  borderColor: c.border,
+                }}
+              >
+                <Txt size={14} color={c.mutedForeground}>
+                  {label}
+                </Txt>
+                <Txt
+                  size={label === "50% Deposit" ? 17 : 14}
+                  bold
+                  color={
+                    label === "50% Deposit" || label === "Payment Status"
+                      ? c.brandAccent
+                      : c.foreground
+                  }
+                  style={{ textAlign: "right", flex: 1 }}
+                >
+                  {value}
+                </Txt>
+              </View>
+            ))}
+          </Card>
+          {s.testMode ? (
+            <Card style={{ gap: 8, backgroundColor: c.goldSurface, borderColor: c.goldBorder }}>
+              <Tag>Development Test Mode</Tag>
+              <Txt bold>Secure signing is unavailable in the login-free preview.</Txt>
+              <Txt size={13} color={c.mutedForeground}>
+                Sign in to create a real private agreement and booking.
+              </Txt>
+            </Card>
+          ) : s.session ||
+            (noPaymentRequired && guestName.trim() && guestEmail.trim() && guestPhone.trim()) ? (
+            <ServiceAgreement
+              services={selected.map((v) => v.id)}
+              onReady={setAgreementId}
+              noPaymentRequired={noPaymentRequired}
+              guest={!s.session}
+              guestName={guestName}
+              onGuestReady={setGuestAgreement}
+            />
+          ) : null}
+          <Card style={{ padding: 16, gap: 8 }}>
+            <Check
+              checked={policy}
+              onPress={() => setPolicy(!policy)}
+              label={
+                noPaymentRequired
+                  ? "I acknowledge the booking policy."
+                  : "I acknowledge the booking, deposit, and cancellation policy."
+              }
+            />
+            <LinkText onPress={() => go("policies")}>Read Policy</LinkText>
+          </Card>
+          {!!error && <ErrorBox message={error} />}
+          <Action
+            label="Confirm My Appointment →"
+            prominent
+            disabled={barDisabled}
+            busy={busy}
+            onPress={() => void submit()}
+            style={{ alignSelf: "stretch", width: "100%", borderRadius: 14 }}
+          />
         </View>
       )}
       <View style={{ height: 40 }} />

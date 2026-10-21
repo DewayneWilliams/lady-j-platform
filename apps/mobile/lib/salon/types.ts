@@ -109,6 +109,11 @@ export type Transaction = {
   amount: number;
   method: string;
   reference: string;
+  payment_date?: string | null;
+  receipt_path?: string | null;
+  receipt_filename?: string | null;
+  receipt_mime?: string | null;
+  rejection_reason?: string | null;
   received_at?: string | null;
   refunded_at?: string | null;
   recorded_by?: string | null;
@@ -118,6 +123,9 @@ export type Transaction = {
   created_at: string;
 };
 export type Profile = {
+  profile_photo_path?: string | null;
+  display_profile_photo_path?: string | null;
+  profile_photo_updated_at?: string | null;
   medical_conditions?: string;
   email?: string;
   id: string;
@@ -130,6 +138,10 @@ export type Profile = {
   marketing_consent: boolean;
 };
 export type Client = {
+  client_photo_path?: string | null;
+  owner_photo_path?: string | null;
+  use_owner_photo?: boolean;
+  profile_photo_updated_at?: string | null;
   medical_conditions?: string;
   deleted_at?: string | null;
   is_minor?: boolean;
@@ -156,6 +168,12 @@ export type Settings = {
   id: string;
   business_name: string;
   bank_instructions: string;
+  bank_name?: string;
+  bank_account_name?: string;
+  bank_account_type?: string;
+  bank_account_number?: string;
+  bank_currency?: string;
+  bank_account_verified?: boolean;
   contact_email: string;
   contact_phone: string;
   whatsapp_phone?: string;

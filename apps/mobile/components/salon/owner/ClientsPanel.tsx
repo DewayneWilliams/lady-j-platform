@@ -8,6 +8,7 @@ import { Client } from "@/lib/salon/types";
 import { fonts } from "@/lib/salon/design";
 import { Card, Txt, ButtonLabel, useColors, ErrorBox } from "../ui";
 import { OwnerButton, OwnerEmpty, OwnerText } from "./OwnerUI";
+import { ProfileAvatar } from "../ProfilePhoto";
 type Profile = Record<string, unknown>;
 export default function ClientsPanel({
   clients,
@@ -42,6 +43,8 @@ export default function ClientsPanel({
           notes: "",
           client: v,
           profile: undefined as Profile | undefined,
+          photoPath: v.use_owner_photo && v.owner_photo_path ? v.owner_photo_path : v.client_photo_path,
+          photoUpdatedAt: v.profile_photo_updated_at,
         }))
       : profiles.map((v) => ({
           id: String(v.id),
@@ -50,6 +53,8 @@ export default function ClientsPanel({
           notes: "",
           client: undefined as Client | undefined,
           profile: v,
+          photoPath: String(v.profile_photo_path || "") || null,
+          photoUpdatedAt: String(v.profile_photo_updated_at || "") || null,
         }));
   const filtered = records
     .filter((v) =>
@@ -189,24 +194,12 @@ export default function ClientsPanel({
               }
               style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 12 }}
             >
-              <View
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 26,
-                  backgroundColor: c.secondary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Txt size={20} bold color={c.secondaryForeground}>
-                  {item.name
-                    .split(" ")
-                    .map((v) => v[0])
-                    .slice(0, 2)
-                    .join("")}
-                </Txt>
-              </View>
+              <ProfileAvatar
+                name={item.name}
+                path={item.photoPath}
+                version={item.photoUpdatedAt}
+                size={52}
+              />
               <View style={{ flex: 1, gap: 5 }}>
                 <OwnerText size={24} bold>
                   {item.name}

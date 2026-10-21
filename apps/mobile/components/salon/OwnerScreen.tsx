@@ -24,7 +24,7 @@ import { formatDuration, serviceDurationLabel } from "@/lib/salon/duration";
 import ServiceCategoryField from "./owner/ServiceCategoryField";
 import OwnerEditorPortal from "./owner/OwnerEditorPortal";
 import { useBottomNavigationSpacing } from "./BottomNavigation";
-import { AgreementList } from "./ServiceAgreement";
+import { AgreementList, AppointmentAgreement } from "./ServiceAgreement";
 import { DateField, DateTimeField, DurationField } from "./DateFields";
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { orderServicesByCategory } from "@/lib/salon/categories";
@@ -37,6 +37,7 @@ import {
   TextInput,
   useWindowDimensions,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "@/lib/icons/LucideIcon";
@@ -87,6 +88,7 @@ import ExpensesPanel from "./owner/ExpensesPanel";
 import CommunicationPanel from "./owner/CommunicationPanel";
 import MariaPanel from "./owner/MariaPanel";
 import { OwnerText as OT, OwnerButton as OA } from "./owner/OwnerUI";
+import { ProfilePhotoEditor } from "./ProfilePhoto";
 
 type Row = Record<string, unknown>;
 type Editor = {
@@ -213,6 +215,8 @@ export default function OwnerScreen() {
   const [catalogPage, setCatalogPage] = useState(0);
   const [demoNotifications, setDemoNotifications] = useState(false);
   const [paymentCelebration, setPaymentCelebration] = useState(0);
+  const [rejectingPayment, setRejectingPayment] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
   const [celebration, setCelebration] = useState<Appointment | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
@@ -271,6 +275,23 @@ export default function OwnerScreen() {
     setEditingContact(false);
     setError("");
   }, [selectedClient?.id]);
+  useEffect(() => {
+    if (!selectedClient) return;
+    const current = clients.find((client) => client.id === selectedClient.id);
+    if (!current || current.profile_photo_updated_at === selectedClient.profile_photo_updated_at)
+      return;
+    setSelectedClient((old) =>
+      old
+        ? {
+            ...old,
+            client_photo_path: current.client_photo_path,
+            owner_photo_path: current.owner_photo_path,
+            use_owner_photo: current.use_owner_photo,
+            profile_photo_updated_at: current.profile_photo_updated_at,
+          }
+        : old,
+    );
+  }, [clients, selectedClient]);
   const load = useCallback(
     async (quiet = false) => {
       const generation = ++loadGeneration.current;
@@ -400,6 +421,23 @@ export default function OwnerScreen() {
   }, [load]);
   useForegroundRefresh(() => load(true), allowed && !demo);
   const calendarSync = useCalendarRealtime(() => load(true), allowed && !demo);
+  useEffect(() => {
+    if (!allowed || demo) return;
+    const channel = db()
+      .channel("lj-owner-client-profiles")
+      .on("postgres_changes", { event: "*", schema: "public", table: "lj_profiles" }, () =>
+        void load(true),
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "lj_client_records" },
+        () => void load(true),
+      )
+      .subscribe();
+    return () => {
+      void db().removeChannel(channel);
+    };
+  }, [allowed, demo, load]);
   const refreshWorkspace = async () => {
     setRefreshing(true);
     try {
@@ -545,6 +583,16 @@ export default function OwnerScreen() {
           { key: "contact_phone", label: "Contact phone" },
           { key: "whatsapp_phone", label: "WhatsApp support number (include country code)" },
           { key: "contact_email", label: "Contact email" },
+          { key: "bank_name", label: "Bank name" },
+          { key: "bank_account_name", label: "Registered bank account name" },
+          { key: "bank_account_type", label: "Bank account type" },
+          { key: "bank_account_number", label: "Bank account number" },
+          { key: "bank_currency", label: "Bank currency" },
+          {
+            key: "bank_account_verified",
+            label: "Registered account name verified",
+            type: "boolean",
+          },
           { key: "bank_instructions", label: "Bank transfer instructions", type: "multiline" },
           { key: "delivery_fee", label: "Delivery Fee", type: "number" },
           {
@@ -553,7 +601,15 @@ export default function OwnerScreen() {
             type: "number",
           },
         ],
-        defaults: { max_daily_bookings_per_client: 1 },
+        defaults: {
+          max_daily_bookings_per_client: 1,
+          bank_name: "First Citizens Bank",
+          bank_account_name: "LADY J SALON AND DAY SPA",
+          bank_account_type: "Savings",
+          bank_account_number: "3201297",
+          bank_currency: "TTD",
+          bank_account_verified: false,
+        },
       },
       lj_promotions: {
         title: "Create promotion",
@@ -865,6 +921,26 @@ export default function OwnerScreen() {
     }
     sounds.play("payment", t.id);
   }
+  async function openPaymentReceipt(t: Transaction) {
+    if (!t.receipt_path) throw new Error("No payment receipt was uploaded.");
+    const result = check(
+      await db().storage.from("lj-payment-receipts").createSignedUrl(t.receipt_path, 60),
+    );
+    if (!result?.signedUrl) throw new Error("Unable to open this receipt.");
+    await Linking.openURL(result.signedUrl);
+  }
+  async function rejectPayment(t: Transaction) {
+    setBusy(true);
+    try {
+      check(await db().rpc("lj_reject_payment", { p_id: t.id, p_reason: rejectionReason.trim() }));
+      setRejectingPayment("");
+      setRejectionReason("");
+      await load();
+      s.notify("Bank transfer rejected. The original proof and audit history were preserved.");
+    } finally {
+      setBusy(false);
+    }
+  }
   async function recordPayment(
     a: Appointment,
     method: "cash" | "bank",
@@ -1091,6 +1167,36 @@ export default function OwnerScreen() {
       expanded={expandedAppointment === a.id}
       onToggle={() => setExpandedAppointment(expandedAppointment === a.id ? "" : a.id)}
     >
+      {a.kind === "appointment" &&
+        transactions
+          .filter((transaction) => transaction.appointment_id === a.id)
+          .map((transaction) => (
+            <Card key={transaction.id} style={{ padding: 14, gap: 8, backgroundColor: c.muted }}>
+              <OT bold>
+                Deposit {money(transaction.amount)} · {transaction.status}
+              </OT>
+              <OT muted>Bank transfer · Reference: {transaction.reference || "Not supplied"}</OT>
+              <OT muted>
+                Payment Date:{" "}
+                {transaction.payment_date
+                  ? dateLabel(transaction.payment_date + "T12:00:00Z", { year: "numeric" })
+                  : "Not supplied"}
+              </OT>
+              {!!transaction.receipt_path && (
+                <OA
+                  compact
+                  secondary
+                  fill
+                  label="View Payment Receipt"
+                  icon="ReceiptText"
+                  onPress={() =>
+                    void openPaymentReceipt(transaction).catch((e) => setError(e.message))
+                  }
+                />
+              )}
+            </Card>
+          ))}
+      {a.kind === "appointment" && <AppointmentAgreement appointmentId={a.id} />}
       {a.kind === "appointment" && (
         <OA
           fill
@@ -1927,18 +2033,72 @@ export default function OwnerScreen() {
                               {t.method === "bank" ? "Bank transfer" : t.method} · Reference:{" "}
                               {t.reference || "Not supplied"}
                             </OT>
-                            <OT muted>{dateLabel(t.created_at)}</OT>
-                            {t.status === "pending" && (
+                            <OT muted>
+                              Payment Date:{" "}
+                              {t.payment_date
+                                ? dateLabel(t.payment_date + "T12:00:00Z", { year: "numeric" })
+                                : "Not supplied"}
+                            </OT>
+                            {!!t.receipt_path && (
                               <OA
-                                label="Verify Bank Payment"
-                                icon="ShieldCheck"
+                                label="View Original Receipt"
+                                icon="ReceiptText"
+                                secondary
                                 onPress={() =>
-                                  setConfirm({
-                                    text: `Confirm you have received ${money(t.amount)} in your bank account. A reference alone does not prove payment.`,
-                                    run: () => verify(t),
-                                  })
+                                  void openPaymentReceipt(t).catch((e) => setError(e.message))
                                 }
                               />
+                            )}
+                            {!!t.rejection_reason && (
+                              <OT muted>Rejection Reason: {t.rejection_reason}</OT>
+                            )}
+                            <OT muted>{dateLabel(t.created_at)}</OT>
+                            {t.status === "pending" && (
+                              <View style={{ gap: 10 }}>
+                                <OA
+                                  label="Verify Bank Payment"
+                                  icon="ShieldCheck"
+                                  onPress={() =>
+                                    setConfirm({
+                                      text: `Confirm you have received ${money(t.amount)} in your bank account. Uploaded proof alone does not prove payment.`,
+                                      run: () => verify(t),
+                                    })
+                                  }
+                                />
+                                {rejectingPayment === t.id ? (
+                                  <View style={{ gap: 8 }}>
+                                    <OF
+                                      label="Rejection Reason"
+                                      value={rejectionReason}
+                                      onChange={setRejectionReason}
+                                      multiline
+                                    />
+                                    <OA
+                                      label={busy ? "Rejecting" : "Reject Transfer"}
+                                      secondary
+                                      disabled={busy || rejectionReason.trim().length < 3}
+                                      onPress={() =>
+                                        void rejectPayment(t).catch((e) => setError(e.message))
+                                      }
+                                    />
+                                    <OA
+                                      label="Keep Pending"
+                                      secondary
+                                      onPress={() => {
+                                        setRejectingPayment("");
+                                        setRejectionReason("");
+                                      }}
+                                    />
+                                  </View>
+                                ) : (
+                                  <OA
+                                    label="Reject Transfer"
+                                    icon="CircleX"
+                                    secondary
+                                    onPress={() => setRejectingPayment(t.id)}
+                                  />
+                                )}
+                              </View>
                             )}
 
                             {t.status === "refund_due" && (
@@ -2530,6 +2690,39 @@ export default function OwnerScreen() {
                     )}
                     {selectedClient && (
                       <View style={{ gap: 16 }}>
+                        <View style={{ alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <ProfilePhotoEditor
+                            name={selectedClient.full_name}
+                            mode="owner"
+                            clientId={selectedClient.id}
+                            clientPath={selectedClient.client_photo_path}
+                            ownerPath={selectedClient.owner_photo_path}
+                            useOwnerPhoto={selectedClient.use_owner_photo}
+                            updatedAt={selectedClient.profile_photo_updated_at}
+                            disabled={demo}
+                            size={96}
+                            onChanged={async () => {
+                              const fresh = check(
+                                await db()
+                                  .from("lj_client_records")
+                                  .select("*")
+                                  .eq("id", selectedClient.id)
+                                  .single(),
+                              ) as Client;
+                              setSelectedClient(fresh);
+                              setClients((old) =>
+                                old.map((client) => (client.id === fresh.id ? fresh : client)),
+                              );
+                            }}
+                          />
+                          <OT muted>
+                            {selectedClient.use_owner_photo && selectedClient.owner_photo_path
+                              ? "Owner photo selected"
+                              : selectedClient.client_photo_path
+                                ? "Client photo selected"
+                                : "Default avatar"}
+                          </OT>
+                        </View>
                         <OF
                           label="First Name"
                           wrap
@@ -2632,6 +2825,7 @@ export default function OwnerScreen() {
                         <ClientPurchaseHistory
                           customerId={selectedClient.customer_id || selectedClient.id}
                           appointments={appointments}
+                          transactions={transactions}
                         />
                         {contactIsMinor(selectedClient.birthday, selectedClient.is_minor) && (
                           <View style={{ gap: 8 }}>

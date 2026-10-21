@@ -29,16 +29,17 @@ const policies = [
   ],
 ];
 const socialPlatforms = [
-  { label: "YouTube", icon: "youtube", url: process.env.EXPO_PUBLIC_YOUTUBE_URL },
-  { label: "Facebook", icon: "facebook-f", url: process.env.EXPO_PUBLIC_FACEBOOK_URL },
   { label: "Instagram", icon: "instagram", url: process.env.EXPO_PUBLIC_INSTAGRAM_URL },
+  { label: "Facebook", icon: "facebook-f", url: process.env.EXPO_PUBLIC_FACEBOOK_URL },
   { label: "TikTok", icon: "tiktok", url: process.env.EXPO_PUBLIC_TIKTOK_URL },
+  { label: "YouTube", icon: "youtube", url: process.env.EXPO_PUBLIC_YOUTUBE_URL },
 ] as const;
 export default function InfoScreen({ page }: { page: string }) {
   const s = useSalon(),
     go = useNav(),
     c = useColors(),
     { width } = useWindowDimensions();
+  const socialColumns = width >= 980 ? 4 : width >= 540 ? 2 : 1;
   if (page === "gallery")
     return (
       <Shell>
@@ -145,6 +146,7 @@ export default function InfoScreen({ page }: { page: string }) {
           </Txt>
           <View
             style={{
+              width: "100%",
               flexDirection: "row",
               flexWrap: "wrap",
               justifyContent: "center",
@@ -163,32 +165,42 @@ export default function InfoScreen({ page }: { page: string }) {
                     if (platform.url) void Linking.openURL(platform.url);
                   }}
                   style={({ pressed }) => ({
-                    width: width > 700 ? 220 : "47%",
-                    minWidth: 145,
-                    minHeight: 74,
+                    width: socialColumns === 4 ? "23.5%" : socialColumns === 2 ? "48%" : "100%",
+                    maxWidth: socialColumns === 1 ? 440 : undefined,
+                    height: 76,
                     borderWidth: 1,
-                    borderColor: c.border,
+                    borderColor: c.goldBorder,
                     borderRadius: 14,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 11,
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: 11,
+                    gap: 12,
                     opacity: available ? (pressed ? 0.72 : 1) : 0.55,
                     backgroundColor: c.card,
                   })}
                 >
-                  <FontAwesome6
-                    name={platform.icon}
-                    iconStyle="brand"
-                    size={22}
-                    color={available ? c.brandAccent : c.mutedForeground}
-                  />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Txt size={13} bold>
+                  <View
+                    style={{
+                      width: 34,
+                      height: 34,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <FontAwesome6
+                      name={platform.icon}
+                      iconStyle="brand"
+                      size={21}
+                      color={available ? c.brandAccent : c.mutedForeground}
+                    />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0, justifyContent: "center" }}>
+                    <Txt size={14} bold numberOfLines={1}>
                       {platform.label}
                     </Txt>
-                    <Txt size={12} color={c.mutedForeground}>
+                    <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
                       @LadyJSalon
                     </Txt>
                   </View>

@@ -1,4 +1,5 @@
 - Home uses a platform-specific verified Google Maps embed, a Terms/Privacy-only footer and exact two-line address; service cards are compact and buttonless, while booking keeps fixed totals/navigation above the tab bar.
+- Booking Step 3 uses a single premium review flow with private receipt evidence, typed/drawn tamper-evident agreements and audited bank verification or rejection.
 - OAuth callbacks use the stable native app scheme in Draftbit Preview and published builds, with PKCE cold-start recovery and local logout fallback; web callbacks remain origin-specific.
 - Customer and owner experiences share Lady J design tokens but use separate routes; owner access is enforced by Supabase RLS and explicitly assigned roles.
 - Development uses real Supabase records for customer requests and separate in-memory demo records for owner exploration; card, voice and AI demonstrations never claim backend execution.

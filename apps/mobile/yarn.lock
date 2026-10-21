@@ -7780,6 +7780,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-clipboard@npm:~55.0.17":
+  version: 55.0.17
+  resolution: "expo-clipboard@npm:55.0.17"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/aa1bf089051f9dea281777c7b7ef4bb83c32f26658c30ddcd923f98dfb4b6fbf96f523f99c3af0cb24fc8dd500da33b630d5e623ee5391623f4efc6329d11842
+  languageName: node
+  linkType: hard
+
 "expo-constants@npm:~55.0.17":
   version: 55.0.17
   resolution: "expo-constants@npm:55.0.17"
@@ -11036,6 +11047,7 @@ __metadata:
     expo-asset: "npm:~55.0.19"
     expo-audio: "npm:~55.0.17"
     expo-blur: "npm:~55.0.0"
+    expo-clipboard: "npm:~55.0.17"
     expo-constants: "npm:~55.0.17"
     expo-file-system: "npm:~55.0.26"
     expo-font: "npm:~55.0.8"

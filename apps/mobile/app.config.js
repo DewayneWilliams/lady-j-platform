@@ -30,8 +30,8 @@ module.exports = {
   [
   "expo-image-picker",
   {
-    photosPermission: "Choose photos and videos for private client galleries.",
-    cameraPermission: "Capture photos and videos for private client galleries.",
+    photosPermission: "Choose photos for your private profile and salon galleries.",
+    cameraPermission: "Take photos for your private profile and salon galleries.",
     microphonePermission: "Record audio with appointment videos."
   }],
 
@@ -46,7 +46,6 @@ module.exports = {
 
 
   }]],
-
 
 
 

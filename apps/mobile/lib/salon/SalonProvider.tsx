@@ -44,6 +44,7 @@ interface SalonState {
   demoOwner: boolean;
   setDemoOwner: (v: boolean) => void;
   testMode: boolean;
+  exitTestMode: () => void;
   refresh: () => Promise<void>;
   refreshPrivate: () => Promise<void>;
   notice: string;
@@ -70,6 +71,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Record<string, number>>({}),
     [selected, setSelected] = useState<string[]>([]),
     [demoOwner, setDemoOwner] = useState(developmentTestMode),
+    [testMode, setTestMode] = useState(developmentTestMode),
     [notice, setNotice] = useState("");
   const [clientLanguage, setClientLanguage] = useState<ClientLanguage>("en");
   const identity = useRef<string | null>(null);
@@ -138,7 +140,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
     try {
       const c = db();
       const results = await Promise.all([
-        c.from("lj_profiles").select("*").eq("id", customerId).maybeSingle(),
+        c.rpc("lj_my_profile"),
         c
           .from("lj_calendar")
           .select("*")
@@ -224,6 +226,20 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       active = false;
     };
   }, [customerId, refreshPrivate]);
+  useEffect(() => {
+    if (!supabase || !customerId) return;
+    const channel = supabase
+      .channel(`lj-account-${customerId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "lj_profiles", filter: `id=eq.${customerId}` },
+        () => void refreshPrivate(),
+      )
+      .subscribe();
+    return () => {
+      void supabase?.removeChannel(channel);
+    };
+  }, [customerId, refreshPrivate]);
   useForegroundRefresh(async () => {
     await Promise.all([refresh(), refreshPrivate()]);
   }, authReady);
@@ -267,7 +283,11 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         setSelected,
         demoOwner,
         setDemoOwner,
-        testMode: developmentTestMode,
+        testMode,
+        exitTestMode: () => {
+          setTestMode(false);
+          setDemoOwner(false);
+        },
         refresh,
         refreshPrivate,
         notice,
