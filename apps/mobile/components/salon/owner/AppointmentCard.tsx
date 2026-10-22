@@ -33,12 +33,34 @@ export default function AppointmentCard({
         ? c.paymentDeposit
         : c.paymentPending;
   return (
-    <Card style={{ padding: 0, marginBottom: 14, overflow: "hidden", borderColor: a.is_vip ? "#7543B8" : c.border, borderWidth: a.is_vip ? 2 : 1 }}>
+    <Card
+      style={{
+        padding: 0,
+        marginBottom: 14,
+        overflow: "hidden",
+        borderColor: a.is_vip ? "#7543B8" : c.border,
+        borderWidth: a.is_vip ? 2 : 1,
+      }}
+    >
       {a.is_vip && (
-        <View style={{ backgroundColor: "#7543B8", minHeight: 46, paddingHorizontal: 14, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View
+          style={{
+            backgroundColor: "#7543B8",
+            minHeight: 46,
+            paddingHorizontal: 14,
+            paddingVertical: 9,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
           <Icon name="Crown" size={20} color="#C49A36" />
-          <Txt bold color="#FFFFFF" style={{ flex: 1 }}>VIP Access +{a.vip_percentage}%</Txt>
-          <Txt size={13} bold color="#FFFFFF">{a.approval_status === "pending" ? "Pending Approval" : a.approval_status}</Txt>
+          <Txt bold color="#FFFFFF" style={{ flex: 1 }}>
+            VIP Access +{a.vip_percentage}%
+          </Txt>
+          <Txt size={13} bold color="#FFFFFF">
+            {a.approval_status === "pending" ? "Pending Approval" : a.approval_status}
+          </Txt>
         </View>
       )}
       <View
@@ -171,6 +193,15 @@ export default function AppointmentCard({
             {a.kind === "appointment" &&
               (
                 [
+                  ...(a.is_vip
+                    ? ([
+                        ["Base Price", money(Number(a.total) - Number(a.vip_premium || 0))],
+                        [
+                          `VIP Surcharge (+${a.vip_percentage || 0}%)`,
+                          money(Number(a.vip_premium || 0)),
+                        ],
+                      ] as const)
+                    : []),
                   ["Total", money(a.total)],
                   [
                     payment.received > a.deposit ? "Total Paid" : "Deposit Paid",

@@ -53,7 +53,7 @@ export function ownerAttention(
   return [
     {
       key: "payments",
-      title: "Outstanding payments",
+      title: "Payments to Verify",
       detail:
         payments.length +
         (payments.length === 1 ? " payment needs verification." : " payments need verification."),
@@ -62,14 +62,14 @@ export function ownerAttention(
     },
     {
       key: "refunds",
-      title: "Review refunds due",
+      title: "Refunds to Record",
       detail: "Record each refund after you have returned the funds.",
       section: "Payments",
       count: refunds.length,
     },
     {
       key: "balances",
-      title: "Settle completed visits",
+      title: "Balances to Collect",
       detail:
         money(balances.reduce((sum, a) => sum + appointmentPayment(a, transactions).remaining, 0)) +
         " remains to be recorded.",
@@ -78,28 +78,28 @@ export function ownerAttention(
     },
     {
       key: "orders",
-      title: "Prepare or hand over orders",
+      title: "Orders to Prepare",
       detail: "Paid orders awaiting preparation, delivery or collection.",
       section: "Orders",
       count: orders.length,
     },
     {
       key: "stock",
-      title: "Product inventory low",
+      title: "Low Stock",
       detail: low.map((product) => product.name + " · " + product.stock + " left").join(", "),
       section: "Products",
       count: low.length,
     },
     {
       key: "waitlist",
-      title: "Review the waitlist",
+      title: "Waitlist Requests",
       detail: "Clients hoping for a time on an upcoming salon day.",
       section: "Waitlist",
       count: waiting.filter((w) => w.status === "waiting").length,
     },
     {
       key: "messages",
-      title: "Check email delivery",
+      title: "Email Delivery Issues",
       detail: "Messages need review before they can be sent.",
       section: "Automation",
       count: failedMessages,

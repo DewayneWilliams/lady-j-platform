@@ -199,6 +199,9 @@ export default function ClientMediaGallery({
     if (viewer && !items.some((m) => m.id === viewer)) setViewer(undefined);
     setSelection((old) => old.filter((id) => items.some((m) => m.id === id)));
   }, [items, viewer]);
+  useEffect(() => {
+    if (!owner && !scope && clientContacts.length === 1) setScope(clientContacts[0].id);
+  }, [clientContacts, owner, scope]);
   const client = clients.find((v) => v.id === scope);
   const selected = items.filter((m) => selection.includes(m.id));
   const ready = items.filter((m) => m.status === "ready");
@@ -435,7 +438,7 @@ export default function ClientMediaGallery({
                   Filters{filterCount ? " (" + filterCount + ")" : ""}
                 </Txt>
               </Pressable>
-              {owner && (
+              {(owner || (!!scope && !demo)) && (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Add media"
@@ -750,7 +753,7 @@ export default function ClientMediaGallery({
                   action={
                     query || filterCount ? (
                       <OwnerButton label="Clear filters" secondary onPress={reset} />
-                    ) : owner ? (
+                    ) : owner || (!!scope && !demo) ? (
                       <OwnerButton
                         label="Add first photo or video"
                         icon="ImagePlus"
@@ -1014,6 +1017,7 @@ export default function ClientMediaGallery({
       )}
       {panel === "upload" && (
         <MediaUpload
+          minimal={!owner}
           clients={clients}
           clientId={scope || undefined}
           appointmentId={filters.appointment || undefined}
@@ -1126,6 +1130,27 @@ export default function ClientMediaGallery({
                   }
                 }}
               />
+            ) : ready[viewerIndex].client_uploaded ? (
+              <View style={{ gap: 8 }}>
+                <MediaAccessToggle
+                  key={ready[viewerIndex].id}
+                  item={ready[viewerIndex]}
+                  clientMode
+                  disabled={busy}
+                  onSaved={load}
+                />
+                <OwnerButton
+                  label="Delete this file"
+                  destructive
+                  disabled={busy}
+                  onPress={() =>
+                    void act(async () => {
+                      await deleteMedia([ready[viewerIndex]]);
+                      setViewer(undefined);
+                    })
+                  }
+                />
+              </View>
             ) : undefined
           }
           onClose={() => setViewer(undefined)}

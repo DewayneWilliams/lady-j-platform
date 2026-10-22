@@ -1,20 +1,24 @@
 import SalonLocation from "./SalonLocation";
-import GoogleReviews from "./GoogleReviews";
 import { formatDuration } from "@/lib/salon/duration";
 import React, { useEffect, useState } from "react";
-import { View, useWindowDimensions } from "react-native";
+import { Linking, View, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { money } from "@/lib/salon/types";
 import CatalogGallery from "./CatalogGallery";
+import { whatsappContactUrl } from "@/lib/salon/whatsapp";
 import Shell, { useNav } from "./Shell";
-import { Txt, Action, Heading, Photo, Card, useColors, shared } from "./ui";
+import { Txt, Action, Heading, Photo, Card, useColors } from "./ui";
 export default function HomeScreen() {
   const c = useColors(),
     go = useNav(),
     { width } = useWindowDimensions(),
     s = useSalon();
   const desktop = width >= 850;
+  const consultationUrl = whatsappContactUrl(
+    s.settings?.whatsapp_phone,
+    "Hello LADY J SALON & DAY SPA! I'd like to request a complimentary 15-minute consultation to discuss your services. Please let me know your available days and times. Thank you!",
+  );
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const next = Math.min(
@@ -139,21 +143,37 @@ export default function HomeScreen() {
             you leave the chair.
           </Txt>
           <Action
-            label="BOOK YOUR APPOINTMENT"
-            onPress={() =>
-              go(
-                s.session || s.testMode ? "booking" : "register",
-                s.session || s.testMode ? {} : { next: "booking" },
-              )
-            }
-            style={{ alignSelf: "stretch" }}
+            label={"Request Your Free Consultation\n15 Minutes • Complimentary"}
+            shimmer
+            shimmerInterval={9000}
+            onPress={() => {
+              if (!consultationUrl) {
+                s.notify(
+                  "The salon’s WhatsApp number is awaiting setup. Please use Contact for now.",
+                );
+                return;
+              }
+              void Linking.openURL(consultationUrl).catch(() =>
+                s.notify("WhatsApp could not open. Please use the salon contact details."),
+              );
+            }}
+            style={{
+              alignSelf: "center",
+              width: "100%",
+              maxWidth: 520,
+              borderRadius: 16,
+              backgroundColor: "#2563EB",
+              borderColor: "#2563EB",
+              borderWidth: 1,
+            }}
           />
-          <Txt size={14} color={c.mutedForeground}>
-            Start with a conversation. Leave with a plan that feels right.
+          <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
+            {consultationUrl
+              ? "Choose a time with the owner through WhatsApp."
+              : "Consultation requests will open when the salon’s WhatsApp number is configured."}
           </Txt>
         </View>
       </View>
-      <GoogleReviews />
       <SalonLocation />
     </Shell>
   );

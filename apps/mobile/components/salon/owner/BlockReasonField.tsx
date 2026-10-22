@@ -1,11 +1,8 @@
 import React from "react";
-import { ScrollView, View } from "react-native";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { Pressable, ScrollView, View } from "react-native";
 import { blockReasons, allBlockReasons } from "@/lib/salon/calendarActivity";
-import { fonts } from "@/lib/salon/design";
 import { ButtonLabel, useColors } from "../ui";
 import { OwnerText } from "./OwnerUI";
-import { ownerEditorPortal } from "./OwnerEditorPortal";
 
 export default function BlockReasonField({
   value,
@@ -27,47 +24,45 @@ export default function BlockReasonField({
   return (
     <View style={{ gap: 10, marginBottom: 18 }}>
       <OwnerText bold>Reason</OwnerText>
-      <Select
-        value={{ value: selected.value, label: selected.label }}
-        onValueChange={(option) => {
-          if (option && !disabled) onChange(option.value);
-        }}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+        accessibilityLabel="Block time reasons"
       >
-        <SelectTrigger
-          disabled={disabled}
-          accessibilityLabel="Reason"
-          style={{
-            minHeight: 58,
-            height: "auto",
-            paddingHorizontal: 12,
-            paddingVertical: 12,
-            borderRadius: 12,
-            borderColor: c.border,
-            backgroundColor: c.background,
-          }}
-        >
-          <ButtonLabel size={20} color={colors[selected.color]}>
-            {selected.label}
-          </ButtonLabel>
-        </SelectTrigger>
-        <SelectContent
-          portalHost={ownerEditorPortal}
-          position="popper"
-          insets={{ top: 20, bottom: 20, left: 20, right: 20 }}
-        >
-          <ScrollView style={{ maxHeight: 330 }} keyboardShouldPersistTaps="handled">
-            {blockReasons.map((reason) => (
-              <SelectItem
-                key={reason.value}
-                value={reason.value}
-                label={reason.label}
-                style={{ minHeight: 58 }}
-                textStyle={{ color: colors[reason.color], fontSize: 20, fontFamily: fonts.action }}
-              />
-            ))}
-          </ScrollView>
-        </SelectContent>
-      </Select>
+        {blockReasons.map((reason) => {
+          const active = reason.value === selected.value;
+          return (
+            <Pressable
+              key={reason.value}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: active, disabled }}
+              accessibilityLabel={reason.label}
+              disabled={disabled}
+              onPress={() => onChange(reason.value)}
+              style={({ pressed }) => ({
+                minHeight: 54,
+                justifyContent: "center",
+                paddingHorizontal: 14,
+                paddingVertical: 11,
+                borderRadius: 12,
+                borderWidth: active ? 2 : 1,
+                borderColor: active ? colors[reason.color] : c.border,
+                backgroundColor: active ? c.brandAccentSurface : c.background,
+                opacity: disabled ? 0.55 : pressed ? 0.82 : 1,
+              })}
+            >
+              <ButtonLabel
+                singleLine
+                size={18}
+                color={active ? colors[reason.color] : c.foreground}
+              >
+                {reason.label}
+              </ButtonLabel>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }

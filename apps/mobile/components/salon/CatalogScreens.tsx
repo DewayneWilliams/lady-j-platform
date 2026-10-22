@@ -69,6 +69,7 @@ export function ServicesScreen() {
   const [query, setQuery] = useState(""),
     [category, setCategory] = useState("Hair");
   const [page, setPage] = useState(0);
+  const [topRevision, setTopRevision] = useState(0);
   const desktop = width > 850;
   const filtered = s.services.filter(
     (v) =>
@@ -78,7 +79,7 @@ export function ServicesScreen() {
   const pages = Math.max(1, Math.ceil(filtered.length / 12));
   const currentPage = Math.min(page, pages - 1);
   return (
-    <Shell scrollRevision={currentPage}>
+    <Shell scrollRevision={`${currentPage}-${topRevision}`}>
       <Heading sub="Expert hands. Thoughtful treatments. Care that feels like you.">
         Find your kind of beautiful
       </Heading>
@@ -90,7 +91,6 @@ export function ServicesScreen() {
             backgroundColor: c.goldSurface,
             borderColor: c.goldBorder,
           }}
-          className={"h-64 lg:mb-0 lg:pb-0"}
         >
           <Txt size={16} color={c.mutedForeground} className={""}>
             Create a free account when you are ready to choose a time and book.
@@ -228,6 +228,13 @@ export function ServicesScreen() {
         </Txt>
         <LinkText onPress={() => go("booking")}>Explore your options ↗</LinkText>
       </Card>
+      <Action
+        label="Return to Top"
+        icon="ArrowUp"
+        secondary
+        onPress={() => setTopRevision((value) => value + 1)}
+        style={{ alignSelf: "center", marginTop: 18 }}
+      />
     </Shell>
   );
 }
@@ -344,10 +351,19 @@ export function DetailScreen({ kind, id }: { kind: "product" | "workshop"; id: s
                 provided
               </Txt>
               <Action
-                label="Register for this workshop"
+                label={s.workshopCart.includes(v.id) ? "Workshop in bag" : "Add workshop to bag"}
                 gold
-                onPress={() => go("checkout", { kind: "workshop", id: v.id })}
+                disabled={s.workshopCart.includes(v.id)}
+                onPress={() => {
+                  if (!s.session && !s.testMode) {
+                    go("register", { next: "workshop?id=" + v.id });
+                    return;
+                  }
+                  s.setWorkshopCart((old) => (old.includes(v.id) ? old : [...old, v.id]));
+                  s.notify("Workshop added to your bag.");
+                }}
               />
+              <LinkText onPress={() => go("bag")}>View shopping bag</LinkText>
             </>
           )}
           <Card>

@@ -61,6 +61,7 @@ const calendar = compile("components/salon/owner/CalendarTools.tsx", {
   "./CalendarActivityDot": dot,
   "./CalendarLegend": () => null,
   "./BlockTimeMenu": () => null,
+  "./CurrentDateOutline": () => null,
 }).default;
 const base = {
   id: "a",

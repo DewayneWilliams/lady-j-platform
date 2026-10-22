@@ -24,28 +24,28 @@ export default function BusinessOverview({
   const c = useColors();
   const rows: { title: string; section: string; detail: string; icon: IconName }[] = [
     {
-      title: "Client Photos & Videos",
-      section: "Media",
-      detail: "Private client photos, videos and albums",
-      icon: "Images",
-    },
-    {
-      title: "Services and Pricing",
+      title: "Services & Pricing",
       section: "Services",
       detail: `${services} services`,
       icon: "Scissors",
     },
     {
-      title: "Products and Inventory",
+      title: "Products & Inventory",
       section: "Products",
       detail: `${products} products`,
       icon: "Package",
     },
     {
-      title: "Workshops and Enrollment",
+      title: "Workshops & Enrollment",
       section: "Workshops",
       detail: `${workshops} workshops`,
       icon: "GraduationCap",
+    },
+    {
+      title: "Client Photos & Videos",
+      section: "Media",
+      detail: "Private client photos, videos and albums",
+      icon: "Images",
     },
     {
       title: "Download Reports",

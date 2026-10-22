@@ -57,6 +57,7 @@ export type Appointment = {
   is_vip?: boolean;
   vip_percentage?: 25 | 35 | null;
   vip_premium?: number;
+  vip_reason?: string | null;
   approval_status?: "not_required" | "pending" | "approved" | "declined";
   payment_selection?: "full" | "deposit";
   block_reason?: string;

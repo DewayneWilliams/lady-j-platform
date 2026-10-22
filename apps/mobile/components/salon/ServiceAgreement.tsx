@@ -33,12 +33,17 @@ export async function openAgreementPdf(path: string) {
   await Linking.openURL(result.signedUrl);
 }
 export function AppointmentAgreement({ appointmentId }: { appointmentId: string }) {
+  const validAppointmentId =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      appointmentId,
+    );
   const [agreement, setAgreement] = useState<Pick<
     SignedAgreement,
     "object_path" | "signed_at"
   > | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
+    if (!validAppointmentId) return;
     let active = true;
     void (async () => {
       try {
@@ -69,7 +74,8 @@ export function AppointmentAgreement({ appointmentId }: { appointmentId: string 
     return () => {
       active = false;
     };
-  }, [appointmentId]);
+  }, [appointmentId, validAppointmentId]);
+  if (!validAppointmentId) return null;
   if (!agreement) return error ? <ErrorBox message={error} /> : null;
   return (
     <Action

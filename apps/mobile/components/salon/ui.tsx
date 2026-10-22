@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import Icon, { IconName } from "@/lib/icons/LucideIcon";
 import { fonts, fieldLabel } from "@/lib/salon/design";
 import { catalogPhotoSource } from "@/lib/salon/images";
+import SubtleShimmer from "./SubtleShimmer";
 export function useColors() {
   return useTheme().theme.colors;
 }
@@ -115,11 +116,17 @@ export function Heading({
   children,
   sub,
   action,
+  compact = false,
+  singleLine = false,
 }: {
   children: React.ReactNode;
   sub?: string;
   action?: React.ReactNode;
+  compact?: boolean;
+  singleLine?: boolean;
 }) {
+  const { theme } = useTheme();
+  const headingSize = Number.parseFloat(theme.typography.h1?.fontSize || "43");
   return (
     <View
       style={{
@@ -127,14 +134,22 @@ export function Heading({
         justifyContent: "space-between",
         alignItems: "center",
         gap: 16,
-        marginBottom: 22,
+        marginBottom: compact ? 8 : 22,
       }}
     >
-      <View style={{ flex: 1 }}>
-        <Txt serif className={"justify-center text-base w-full items-center"}>
+      <View style={{ flex: 1, minWidth: 0, gap: sub ? 5 : 0 }}>
+        <Txt
+          serif
+          size={headingSize}
+          accessibilityRole="header"
+          numberOfLines={singleLine ? 1 : undefined}
+          adjustsFontSizeToFit={singleLine}
+          minimumFontScale={singleLine ? 0.62 : undefined}
+          style={{ lineHeight: headingSize * 1.16 }}
+        >
           {children}
         </Txt>
-        {sub && null}
+        {!!sub && <Txt color={theme.colors.mutedForeground}>{sub}</Txt>}
       </View>
       {action}
     </View>
@@ -151,7 +166,10 @@ export function Action({
   iconColor,
   disabled = false,
   busy = false,
+  shimmer = false,
+  shimmerInterval = 9000,
   style,
+  id,
 }: {
   label: string;
   onPress: () => void;
@@ -163,7 +181,10 @@ export function Action({
   iconColor?: string;
   disabled?: boolean;
   busy?: boolean;
+  shimmer?: boolean;
+  shimmerInterval?: number;
   style?: ViewStyle;
+  id?: string;
 }) {
   const c = useColors();
   const contentColor =
@@ -173,11 +194,19 @@ export function Action({
         ? c.foreground
         : inverted
           ? c.background
-        : gold
-          ? c.tertiaryForeground
-          : c.primaryForeground;
+          : gold
+            ? c.tertiaryForeground
+            : c.primaryForeground;
   return (
     <Button
+      accessibilityLabel={label}
+      testID={
+        id ||
+        `action-${label
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")}`
+      }
       variant={secondary ? "outline" : "default"}
       disabled={disabled || busy}
       onPress={onPress}
@@ -196,6 +225,7 @@ export function Action({
           alignItems: "center",
           justifyContent: "center",
           alignSelf: "flex-start",
+          overflow: "hidden",
           opacity: 1,
         },
         gold && !secondary
@@ -209,6 +239,9 @@ export function Action({
       ]}
       className={"lg:items-center lg:justify-center"}
     >
+      {shimmer && !disabled && !busy && (
+        <SubtleShimmer interval={shimmerInterval} travelDistance={620} borderRadius={11} />
+      )}
       {busy && <ActivityIndicator color={contentColor} />}
       <ButtonLabel size={prominent ? 22 : secondary ? 18 : 20} color={contentColor}>
         {label}
@@ -286,7 +319,9 @@ export function Card({
           borderWidth: 1,
           borderColor: c.border,
           borderRadius: 16,
-          padding: 22,
+          padding: 18,
+          height: "auto",
+          minHeight: 0,
         },
         style,
       ]}
@@ -343,6 +378,10 @@ export function Field({
       </Txt>
       <TextInput
         accessibilityLabel={fieldLabel(label)}
+        testID={`field-${label
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")}`}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

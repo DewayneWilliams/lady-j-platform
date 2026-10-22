@@ -33,6 +33,7 @@ export function OwnerButton({
   fill = false,
   busy = false,
   payment = false,
+  id,
 }: {
   label: string;
   onPress: () => void;
@@ -45,6 +46,7 @@ export function OwnerButton({
   fill?: boolean;
   busy?: boolean;
   payment?: boolean;
+  id?: string;
 }) {
   const c = useColors();
   const color = payment
@@ -58,6 +60,14 @@ export function OwnerButton({
           : c.tertiaryForeground;
   return (
     <Button
+      accessibilityLabel={label}
+      testID={
+        id ||
+        `owner-action-${label
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")}`
+      }
       onPress={onPress}
       disabled={disabled || busy}
       variant={secondary || destructive ? "outline" : "default"}

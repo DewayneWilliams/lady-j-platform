@@ -14,6 +14,9 @@ function localMinutes(iso: string) {
 }
 
 export function vipRequiresApproval(startsAt: string) {
-  const minutes = localMinutes(startsAt);
-  return minutes < 10 * 60 || minutes >= 18 * 60;
+  return Boolean(startsAt);
+}
+
+export function isSpecialVipRequest(startsAt: string) {
+  return localMinutes(startsAt) > 19 * 60;
 }

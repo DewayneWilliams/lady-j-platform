@@ -21,6 +21,8 @@ export type MediaItem = {
   display_date: string;
   favorite?: boolean;
   allow_client?: boolean;
+  allow_owner?: boolean;
+  client_uploaded?: boolean;
   status: "uploading" | "ready";
   album_name: string | null;
   service_name: string | null;

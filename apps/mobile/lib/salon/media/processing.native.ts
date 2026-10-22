@@ -54,7 +54,6 @@ export async function prepareMedia(
       "react-native-compressor"
     );
     const metadata = await getVideoMetaData(asset.uri);
-    if (metadata.duration > 180) throw new Error("Choose a video of 3 minutes or less.");
     let cancellationId: string | undefined;
     const abort = () => {
       if (cancellationId) Video.cancelCompression(cancellationId);
@@ -87,8 +86,8 @@ export async function prepareMedia(
       format: SaveFormat.JPEG,
     });
     generated.push(thumb.uri);
-    if (new File(uri).size > 50 * 1024 * 1024)
-      throw new Error("This video is still over 50 MB. Choose a shorter clip.");
+    if (new File(uri).size > 500 * 1024 * 1024)
+      throw new Error("This file exceeds the 500 MB private media limit.");
     return {
       uri,
       thumbnail: thumb.uri,

@@ -41,6 +41,7 @@ Owner catalog tools support public photo galleries, combined service specials wi
 - Client media uses private per-item permissions and separately recorded consent; albums never grant access, owner notes remain private, and capture never saves to the device gallery.
 
 - Owner custom discounts include 100% with confirmation above 25%; receipt references are automatic, and Google review cards display only authorized provider data.
+- Client Home keeps the verified map but omits the intermediate Google rating/review block and profile-link copy.
 
 - The supplied 129-entry service catalog is live without duplicate regular rows; a separate zero-cost consultation supports the homepage CTA, incomplete Makeup stays unpublished, and add-ons/N/A-duration services remain non-bookable.
 
@@ -48,3 +49,5 @@ Owner catalog tools support public photo galleries, combined service specials wi
 - Home’s post-map footer is limited to opening hours and Terms/Privacy; Products follow the service-card grid, Workshops is an editorial Academy introduction, Contact uses an original representative reception image, and one DEVELOPMENT-only flag controls isolated login-free client/owner UI testing.
 - VIP Access exposes cleanup-aware 15-minute availability from 6:00 AM–7:00 PM up to six months ahead, applies one server-authoritative morning/evening premium, and reserves approval for morning/evening starts while extended daytime visits use normal checkout.
 - Development Test Mode uses original local profile imagery and schedules 30 varied Witcher-character appointments across the next Tuesday–Saturday without writing demo contacts or bookings to Supabase.
+- The shared shopping bag uses an edge-snapping black-and-champagne control with restrained, reduced-motion-aware interaction feedback.
+- Client-owned private media adds resumable uploads up to 500 MB and an off-by-default, server-enforced Lady J access permission; Google ratings render only from an address-validated Places response.

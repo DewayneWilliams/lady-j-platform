@@ -5,7 +5,7 @@ import { formatDuration, serviceDurationLabel } from "@/lib/salon/duration";
 import { useLocalSearchParams } from "expo-router";
 import { validReportDate } from "@/lib/salon/revenueReport";
 import { useForegroundRefresh } from "@/lib/salon/useForegroundRefresh";
-import { vipRequiresApproval } from "@/lib/salon/vipAccess";
+import { isSpecialVipRequest, vipRequiresApproval } from "@/lib/salon/vipAccess";
 import ServiceAgreement, { type GuestAgreementDraft } from "./ServiceAgreement";
 import ServiceCategories from "./ServiceCategories";
 import CompletionCelebration from "./owner/CompletionCelebration";
@@ -212,9 +212,15 @@ export function PaymentChoice({
                         }}
                       >
                         <Txt bold>{option.title}</Txt>
-                        <Txt size={13} bold color={c.brandAccent}>{option.headline}</Txt>
-                        <Txt size={12} color={c.mutedForeground}>{option.body}</Txt>
-                        <Txt size={16} bold>Pay {money(option.amount)} Today</Txt>
+                        <Txt size={13} bold color={c.brandAccent}>
+                          {option.headline}
+                        </Txt>
+                        <Txt size={12} color={c.mutedForeground}>
+                          {option.body}
+                        </Txt>
+                        <Txt size={16} bold>
+                          Pay {money(option.amount)} Today
+                        </Txt>
                       </Pressable>
                     );
                   })}
@@ -273,9 +279,16 @@ export function PaymentChoice({
                     placeholder="YYYY-MM-DD"
                   />
                   <Txt bold>Upload Proof of Payment</Txt>
-                  <Txt size={12} color={c.mutedForeground}>Upload your bank transfer proof here.</Txt>
+                  <Txt size={12} color={c.mutedForeground}>
+                    Upload your bank transfer proof here.
+                  </Txt>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                    <Action label="Take Photo" secondary icon="Camera" onPress={() => chooseReceipt("camera")} />
+                    <Action
+                      label="Take Photo"
+                      secondary
+                      icon="Camera"
+                      onPress={() => chooseReceipt("camera")}
+                    />
                     <Action
                       label={receipt ? "Change Photo" : "Photo Library"}
                       secondary
@@ -324,6 +337,7 @@ export default function BookingScreen() {
     [method, setMethod] = useState("bank"),
     [paymentSelection, setPaymentSelection] = useState<"full" | "deposit">("full"),
     [reference, setReference] = useState(""),
+    [vipReason, setVipReason] = useState(""),
     [paymentDate, setPaymentDate] = useState(todayKey()),
     [receipt, setReceipt] = useState<ImagePicker.ImagePickerAsset | null>(null),
     [policy, setPolicy] = useState(false),
@@ -377,8 +391,10 @@ export default function BookingScreen() {
     !agreementId ||
     !policy ||
     !pricing.ready ||
+    (requiresApproval && vipReason.trim().length < 8) ||
     (requiresApproval && !s.session) ||
-    (!requiresApproval && !noPaymentRequired &&
+    (!requiresApproval &&
+      !noPaymentRequired &&
       (method !== "bank" ||
         !s.session ||
         reference.trim().length < 3 ||
@@ -393,9 +409,9 @@ export default function BookingScreen() {
     setSlotLoading(true);
     setError("");
     try {
-      const data = check(await db().rpc("lj_available_v2", { p_date: date, p_duration: duration })) as
-        | AvailableSlot[]
-        | null;
+      const data = check(
+        await db().rpc("lj_available_v2", { p_date: date, p_duration: duration }),
+      ) as AvailableSlot[] | null;
       if (generation !== slotGeneration.current) return;
       const next = data || [];
       setSlots(next);
@@ -434,15 +450,22 @@ export default function BookingScreen() {
     try {
       if (source === "camera") {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) throw new Error("Camera permission is required to photograph your proof of payment.");
+        if (!permission.granted)
+          throw new Error("Camera permission is required to photograph your proof of payment.");
       } else {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permission.granted) throw new Error("Photo library permission is required to select your proof of payment.");
+        if (!permission.granted)
+          throw new Error("Photo library permission is required to select your proof of payment.");
       }
-      const options = { mediaTypes: ["images"] as ImagePicker.MediaType[], quality: 0.85, base64: true };
-      const result = source === "camera"
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options);
+      const options = {
+        mediaTypes: ["images"] as ImagePicker.MediaType[],
+        quality: 0.85,
+        base64: true,
+      };
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync(options)
+          : await ImagePicker.launchImageLibraryAsync(options);
       if (result.canceled) return;
       let asset = result.assets?.[0];
       if (!asset) return;
@@ -490,45 +513,46 @@ export default function BookingScreen() {
       if (s.session && requiresApproval) {
         id = check(
           await db().rpc("lj_request_vip", {
-              p_services: selected.map((v) => v.id),
-              p_start: time,
-              p_policy: policy,
-              p_code: pricing.code,
-              p_agreement: agreementId,
-              p_request_key: bookingRequestKey.current,
-              p_payment_selection: paymentSelection,
+            p_services: selected.map((v) => v.id),
+            p_start: time,
+            p_policy: policy,
+            p_code: pricing.code,
+            p_agreement: agreementId,
+            p_request_key: bookingRequestKey.current,
+            p_payment_selection: paymentSelection,
+            p_reason: vipReason.trim(),
           }),
         );
       } else if (s.session) {
         id = check(
           await db().rpc("lj_book_checkout_v2", {
-              p_services: selected.map((v) => v.id),
-              p_start: time,
-              p_reference: reference,
-              p_policy: policy,
-              p_code: pricing.code,
-              p_agreement: agreementId,
-              p_payment_date: noPaymentRequired ? null : paymentDate,
-              p_receipt_path: receiptPath,
-              p_receipt_filename: receipt?.fileName || null,
-              p_receipt_mime: receipt?.mimeType || (receipt ? "image/jpeg" : null),
-              p_request_key: bookingRequestKey.current,
-              p_payment_selection: paymentSelection,
+            p_services: selected.map((v) => v.id),
+            p_start: time,
+            p_reference: reference,
+            p_policy: policy,
+            p_code: pricing.code,
+            p_agreement: agreementId,
+            p_payment_date: noPaymentRequired ? null : paymentDate,
+            p_receipt_path: receiptPath,
+            p_receipt_filename: receipt?.fileName || null,
+            p_receipt_mime: receipt?.mimeType || (receipt ? "image/jpeg" : null),
+            p_request_key: bookingRequestKey.current,
+            p_payment_selection: paymentSelection,
           }),
         );
       } else {
         id = check(
           await db().rpc("lj_guest_book", {
-              p_name: guestName.trim(),
-              p_email: guestEmail.trim(),
-              p_phone: guestPhone.trim(),
-              p_services: selected.map((v) => v.id),
-              p_start: time,
-              p_reference: reference,
-              p_policy: policy,
-              p_code: pricing.code,
-              p_signature: guestAgreement?.signature || [],
-              p_version: guestAgreement?.version || "",
+            p_name: guestName.trim(),
+            p_email: guestEmail.trim(),
+            p_phone: guestPhone.trim(),
+            p_services: selected.map((v) => v.id),
+            p_start: time,
+            p_reference: reference,
+            p_policy: policy,
+            p_code: pricing.code,
+            p_signature: guestAgreement?.signature || [],
+            p_version: guestAgreement?.version || "",
           }),
         );
       }
@@ -637,7 +661,10 @@ export default function BookingScreen() {
     return (
       <Shell>
         {celebrationRevision > 0 && (
-          <CompletionCelebration onStart={() => undefined} onDone={() => setCelebrationRevision(0)} />
+          <CompletionCelebration
+            onStart={() => undefined}
+            onDone={() => setCelebrationRevision(0)}
+          />
         )}
         <View style={{ maxWidth: 640, alignSelf: "center", width: "100%", paddingVertical: 35 }}>
           <Card style={{ alignItems: "center", padding: 35, gap: 18 }}>
@@ -669,8 +696,8 @@ export default function BookingScreen() {
               {requiresApproval
                 ? "No payment was collected. The salon must approve this VIP time before you complete payment."
                 : noPaymentRequired
-                ? "Your appointment is confirmed. No payment or deposit is required."
-                : "Your transfer proof was saved securely. The appointment remains pending until the owner verifies funds received; uploaded proof is not a verified payment."}
+                  ? "Your appointment is confirmed. No payment or deposit is required."
+                  : "Your transfer proof was saved securely. The appointment remains pending until the owner verifies funds received; uploaded proof is not a verified payment."}
             </Txt>
             {s.session ? (
               <Action label="View my appointments" onPress={() => go("appointments")} />
@@ -694,7 +721,7 @@ export default function BookingScreen() {
       </Shell>
     );
   return (
-    <Shell footer={false} bottomBar={bookingBar}>
+    <Shell footer={false} bottomBar={bookingBar} scrollRevision={step}>
       <View
         accessibilityLiveRegion="polite"
         accessibilityRole="progressbar"
@@ -851,8 +878,8 @@ export default function BookingScreen() {
         </View>
       )}
       {step === 2 && (
-        <View style={{ flexDirection: width > 800 ? "row" : "column", gap: 26 }}>
-          <Card style={{ flex: 1 }}>
+        <View style={{ flexDirection: width > 800 ? "row" : "column", gap: width > 800 ? 20 : 10 }}>
+          <Card style={{ flex: width > 800 ? 1 : undefined, paddingBottom: 8 }}>
             {!!s.settings?.max_daily_bookings_per_client && (
               <Txt color={c.mutedForeground} style={{ marginBottom: 16 }}>
                 Up to {s.settings.max_daily_bookings_per_client} appointment
@@ -861,95 +888,161 @@ export default function BookingScreen() {
               </Txt>
             )}
             <CalendarPicker value={date} onChange={setDate} />
-            <Txt size={12} color={c.mutedForeground} style={{ marginTop: 16, textAlign: "center" }}>
-              Tuesday–Saturday · Regular and VIP times · 15-minute starts{`\n`}Up to 6 months ahead · Trinidad time (GMT−4)
+            <Txt size={12} color={c.mutedForeground} style={{ marginTop: 8, textAlign: "center" }}>
+              Tuesday–Saturday · Regular and VIP times · 15-minute starts{`\n`}Up to 6 months ahead
+              · Trinidad time (GMT−4)
             </Txt>
           </Card>
-          <Card style={{ flex: 1 }}>
+          <Card style={{ flex: width > 800 ? 1 : undefined }}>
             <Txt serif size={27} style={{ textAlign: "center" }}>
               Make time for yourself
             </Txt>
-            <Txt size={14} color={c.mutedForeground} style={{ marginVertical: 12, textAlign: "center" }}>
+            <Txt
+              size={14}
+              color={c.mutedForeground}
+              style={{ marginVertical: 6, textAlign: "center" }}
+            >
               {dateLabel(`${date}T12:00:00Z`)} · {formatDuration(duration)}
             </Txt>
             {slotLoading ? (
               <ActivityIndicator color={c.brandAccent} style={{ margin: 35 }} />
             ) : (
-              <View style={{ gap: 22 }}>
+              <View style={{ gap: 12 }}>
                 {!!slots.some((slot) => slot.is_vip) && (
                   <View style={{ gap: 10 }}>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                      }}
+                    >
                       <Icon name="Crown" size={20} color={c.vipText} />
-                      <Txt size={20} bold color={c.vipText} style={{ textAlign: "center" }}>Your Time. Your Beauty. Your Privilege.</Txt>
+                      <Txt size={20} bold color={c.vipText} style={{ textAlign: "center" }}>
+                        Your Time. Your Beauty. Your Privilege.
+                      </Txt>
                     </View>
                     <Txt size={13} color={c.mutedForeground} style={{ textAlign: "center" }}>
-                      Your schedule deserves more than ordinary hours. Enjoy exclusive access to appointments designed around your lifestyle—because luxury is having the freedom to choose when you shine.
+                      Your schedule deserves more than ordinary hours. Enjoy exclusive access to
+                      appointments designed around your lifestyle—because luxury is having the
+                      freedom to choose when you shine.
                     </Txt>
                     <Txt size={12} color={c.mutedForeground} style={{ textAlign: "center" }}>
-                      Exclusive appointment times • Limited availability • Premium rates apply • Subject to approval.
+                      Exclusive appointment times • Limited availability • Premium rates apply •
+                      Subject to approval.
                     </Txt>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 10 }}>
-                      {slots.filter((slot) => slot.is_vip).map((slot) => (
-                        <Pressable
-                          key={slot.starts_at}
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: time === slot.starts_at }}
-                          onPress={() => setTime(slot.starts_at)}
-                          style={{
-                            width: width < 390 ? "46%" : 140,
-                            maxWidth: 160,
-                            minWidth: 0,
-                            flexGrow: 1,
-                            minHeight: 64,
-                            paddingHorizontal: 14,
-                            paddingVertical: 9,
-                            borderRadius: 13,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            backgroundColor: c.vipFill,
-                            borderWidth: time === slot.starts_at ? 3 : 1,
-                            borderColor: time === slot.starts_at ? c.tertiary : c.vipFill,
-                          }}
-                        >
-                          <Txt bold color={c.vipForeground} style={{ textAlign: "center" }}>{timeLabel(slot.starts_at)}</Txt>
-                          <Txt size={12} bold color={c.vipForeground} style={{ textAlign: "center" }}>+{slot.vip_percentage}% VIP</Txt>
-                          <Txt size={11} color={c.vipForeground} style={{ textAlign: "center" }}>
-                            {vipRequiresApproval(slot.starts_at) ? "Approval required" : "Extended-hours care"}
-                          </Txt>
-                        </Pressable>
-                      ))}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        justifyContent: "center",
+                        gap: 8,
+                      }}
+                    >
+                      {slots
+                        .filter((slot) => slot.is_vip)
+                        .map((slot) => (
+                          <Pressable
+                            key={slot.starts_at}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: time === slot.starts_at }}
+                            onPress={() => setTime(slot.starts_at)}
+                            style={{
+                              width: width < 600 ? "22%" : 140,
+                              maxWidth: 160,
+                              minWidth: 0,
+                              flexGrow: width < 600 ? 0 : 1,
+                              minHeight: 58,
+                              paddingHorizontal: width < 600 ? 4 : 12,
+                              paddingVertical: 8,
+                              borderRadius: 13,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              backgroundColor: c.vipFill,
+                              borderWidth: time === slot.starts_at ? 3 : 1,
+                              borderColor: time === slot.starts_at ? c.tertiary : c.vipFill,
+                            }}
+                          >
+                            <Txt bold color={c.vipForeground} style={{ textAlign: "center" }}>
+                              {timeLabel(slot.starts_at)}
+                            </Txt>
+                            <Txt
+                              size={12}
+                              bold
+                              color={c.vipForeground}
+                              style={{ textAlign: "center" }}
+                            >
+                              +{slot.vip_percentage}% VIP
+                            </Txt>
+                            {isSpecialVipRequest(slot.starts_at) && (
+                              <Txt
+                                size={10}
+                                color={c.vipForeground}
+                                style={{ textAlign: "center" }}
+                              >
+                                Special request
+                              </Txt>
+                            )}
+                          </Pressable>
+                        ))}
                     </View>
                   </View>
                 )}
                 <View style={{ gap: 10 }}>
-                  <Txt bold style={{ textAlign: "center" }}>Regular appointment times</Txt>
-                  <View style={[shared.wrap, { justifyContent: "center" }]}>
-                    {slots.filter((slot) => !slot.is_vip).map((slot) => (
-                      <View key={slot.starts_at} style={{ width: 112 }}>
-                        <Chip
-                          label={timeLabel(slot.starts_at)}
-                          selected={time === slot.starts_at}
-                          onPress={() => setTime(slot.starts_at)}
-                        />
-                      </View>
-                    ))}
+                  <Txt bold style={{ textAlign: "center" }}>
+                    Regular appointment times
+                  </Txt>
+                  <View style={[shared.wrap, { justifyContent: "center", gap: 8 }]}>
+                    {slots
+                      .filter((slot) => !slot.is_vip)
+                      .map((slot) => (
+                        <View
+                          key={slot.starts_at}
+                          style={{ width: width < 600 ? "22%" : 112, minWidth: 0 }}
+                        >
+                          <Chip
+                            label={timeLabel(slot.starts_at)}
+                            selected={time === slot.starts_at}
+                            onPress={() => setTime(slot.starts_at)}
+                          />
+                        </View>
+                      ))}
                   </View>
                 </View>
                 {isVip && (
-                  <Card style={{ gap: 6, alignItems: "center", borderColor: c.vipFill, backgroundColor: c.vipSurface }}>
-                    <Txt bold color={c.vipText} style={{ textAlign: "center" }}>VIP Access +{vipPercentage}%</Txt>
-                    <Txt style={{ textAlign: "center" }}>Priority time access: {money(vipPremium)}</Txt>
-                    <Txt size={18} bold style={{ textAlign: "center" }}>Your total: {money(total)}</Txt>
+                  <Card
+                    style={{
+                      gap: 6,
+                      alignItems: "center",
+                      borderColor: c.vipFill,
+                      backgroundColor: c.vipSurface,
+                    }}
+                  >
+                    <Txt bold color={c.vipText} style={{ textAlign: "center" }}>
+                      VIP Access +{vipPercentage}%
+                    </Txt>
+                    <Txt style={{ textAlign: "center" }}>
+                      Priority time access: {money(vipPremium)}
+                    </Txt>
+                    <Txt size={18} bold style={{ textAlign: "center" }}>
+                      Your total: {money(total)}
+                    </Txt>
                     <Txt size={12} color={c.mutedForeground} style={{ textAlign: "center" }}>
-                      {requiresApproval ? "Request only · Owner approval required before payment." : "Your extended-hours VIP pricing is included upfront."}
+                      {requiresApproval
+                        ? "Request only · Owner approval required before payment."
+                        : "Your extended-hours VIP pricing is included upfront."}
                     </Txt>
                   </Card>
                 )}
               </View>
             )}
-            {!slotLoading && !slots.length && (
+            {!slotLoading && !slots.length && !error && (
               <View style={{ alignItems: "center", paddingVertical: 24, gap: 4 }}>
-                <Txt bold style={{ textAlign: "center" }}>Fully Booked</Txt>
+                <Txt bold style={{ textAlign: "center" }}>
+                  Fully Booked
+                </Txt>
                 <Txt size={13} color={c.mutedForeground} style={{ textAlign: "center" }}>
                   Choose another date to see available regular and VIP times.
                 </Txt>
@@ -1095,6 +1188,26 @@ export default function BookingScreen() {
               </View>
             ))}
           </Card>
+          {isVip && (
+            <Card
+              style={{ padding: 18, gap: 8, borderColor: c.vipFill, backgroundColor: c.vipSurface }}
+            >
+              <Txt size={18} bold color={c.vipText} style={{ textAlign: "center" }}>
+                Your VIP request
+              </Txt>
+              <Field
+                label="Why do you need this VIP time?"
+                value={vipReason}
+                onChangeText={setVipReason}
+                multiline
+                placeholder="Share a short reason for the owner to review"
+              />
+              <Txt size={12} color={c.mutedForeground} style={{ textAlign: "center" }}>
+                Required · 8–300 characters · Your request stays pending until the owner approves
+                it.
+              </Txt>
+            </Card>
+          )}
           <Card style={{ padding: 18, gap: 13 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <Icon name="WalletCards" size={23} color={c.brandAccent} />
@@ -1109,9 +1222,12 @@ export default function BookingScreen() {
             </View>
             {requiresApproval ? (
               <View style={{ gap: 6 }}>
-                <Txt bold color={c.vipText}>Payment begins after owner approval.</Txt>
+                <Txt bold color={c.vipText}>
+                  Payment begins after owner approval.
+                </Txt>
                 <Txt size={13} color={c.mutedForeground}>
-                  No payment is collected with this VIP request. You will be invited to complete your selected payment after approval.
+                  No payment is collected with this VIP request. You will be invited to complete
+                  your selected payment after approval.
                 </Txt>
               </View>
             ) : noPaymentRequired ? (
@@ -1145,10 +1261,32 @@ export default function BookingScreen() {
               ["Service Subtotal", money(serviceSubtotal)],
               ...(isVip ? [[`VIP Access (+${vipPercentage}%)`, money(vipPremium)]] : []),
               ["Total Price", money(total)],
-              ["Selected Payment", money(requiresApproval || noPaymentRequired ? 0 : selectedPaymentAmount)],
-              ["Remaining Balance", money(requiresApproval ? total : noPaymentRequired ? 0 : total - selectedPaymentAmount)],
-              ["Selected Method", requiresApproval ? "After owner approval" : noPaymentRequired ? "No payment required" : "Bank transfer"],
-              ["Payment Status", requiresApproval ? "Pending Owner Approval" : noPaymentRequired ? "No payment due" : "Pending Verification"],
+              [
+                "Selected Payment",
+                money(requiresApproval || noPaymentRequired ? 0 : selectedPaymentAmount),
+              ],
+              [
+                "Remaining Balance",
+                money(
+                  requiresApproval ? total : noPaymentRequired ? 0 : total - selectedPaymentAmount,
+                ),
+              ],
+              [
+                "Selected Method",
+                requiresApproval
+                  ? "After owner approval"
+                  : noPaymentRequired
+                    ? "No payment required"
+                    : "Bank transfer",
+              ],
+              [
+                "Payment Status",
+                requiresApproval
+                  ? "Pending Owner Approval"
+                  : noPaymentRequired
+                    ? "No payment due"
+                    : "Pending Verification",
+              ],
             ].map(([label, value], index) => (
               <View
                 key={label}
@@ -1192,17 +1330,34 @@ export default function BookingScreen() {
                 body: "Tell the salon about relevant allergies or sensitivities. Follow product directions and seek appropriate professional advice for medical concerns.",
               },
             ].map((item) => (
-              <View key={item.id} style={{ borderBottomWidth: item.id === "services" ? 1 : 0, borderColor: c.border, paddingBottom: 8 }}>
+              <View
+                key={item.id}
+                style={{
+                  borderBottomWidth: item.id === "services" ? 1 : 0,
+                  borderColor: c.border,
+                  paddingBottom: 8,
+                }}
+              >
                 <Pressable
                   accessibilityRole="button"
                   accessibilityState={{ expanded: openDisclaimer === item.id }}
                   onPress={() => setOpenDisclaimer(openDisclaimer === item.id ? null : item.id)}
                   style={{ minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10 }}
                 >
-                  <Txt bold style={{ flex: 1 }}>{item.title}</Txt>
-                  <Icon name={openDisclaimer === item.id ? "ChevronUp" : "ChevronDown"} size={19} color={c.brandAccent} />
+                  <Txt bold style={{ flex: 1 }}>
+                    {item.title}
+                  </Txt>
+                  <Icon
+                    name={openDisclaimer === item.id ? "ChevronUp" : "ChevronDown"}
+                    size={19}
+                    color={c.brandAccent}
+                  />
                 </Pressable>
-                {openDisclaimer === item.id && <Txt size={13} color={c.mutedForeground}>{item.body}</Txt>}
+                {openDisclaimer === item.id && (
+                  <Txt size={13} color={c.mutedForeground}>
+                    {item.body}
+                  </Txt>
+                )}
               </View>
             ))}
           </Card>
@@ -1240,7 +1395,11 @@ export default function BookingScreen() {
             </LinkText>
             {policyOpen && (
               <Txt size={13} color={c.mutedForeground}>
-                A 50% minimum deposit secures an appointment only after the salon verifies payment. Morning and evening VIP Access requests require owner approval before payment; extended appointments display their VIP pricing before checkout. Cancellations made at least 24 hours before the visit are eligible for owner-reviewed deposit refund; later cancellations and no-shows follow the salon cancellation policy.
+                A 50% minimum deposit secures an appointment only after the salon verifies payment.
+                Morning and evening VIP Access requests require owner approval before payment;
+                extended appointments display their VIP pricing before checkout. Cancellations made
+                at least 24 hours before the visit are eligible for owner-reviewed deposit refund;
+                later cancellations and no-shows follow the salon cancellation policy.
               </Txt>
             )}
           </Card>

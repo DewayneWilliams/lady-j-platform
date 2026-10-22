@@ -43,7 +43,8 @@ export default function ClientsPanel({
           notes: "",
           client: v,
           profile: undefined as Profile | undefined,
-          photoPath: v.use_owner_photo && v.owner_photo_path ? v.owner_photo_path : v.client_photo_path,
+          photoPath:
+            v.use_owner_photo && v.owner_photo_path ? v.owner_photo_path : v.client_photo_path,
           photoUpdatedAt: v.profile_photo_updated_at,
         }))
       : profiles.map((v) => ({
@@ -90,7 +91,9 @@ export default function ClientsPanel({
               marginBottom: 22,
             }}
           >
-            <OwnerButton label="Add client" icon="UserPlus" accent onPress={onAdd} />
+            <View style={{ width: "100%", maxWidth: 260 }}>
+              <OwnerButton label="Add Client" icon="UserPlus" accent fill onPress={onAdd} />
+            </View>
           </View>
 
           <View

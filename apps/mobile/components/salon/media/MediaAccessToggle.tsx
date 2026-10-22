@@ -10,12 +10,14 @@ export default function MediaAccessToggle({
   compact = false,
   onSaved,
   onConsent,
+  clientMode = false,
 }: {
   item: MediaItem;
   disabled?: boolean;
   compact?: boolean;
   onSaved: () => Promise<void>;
   onConsent?: () => void;
+  clientMode?: boolean;
 }) {
   const c = useColors();
   const lock = useRef(false);
@@ -27,7 +29,7 @@ export default function MediaAccessToggle({
     setSaving(true);
     setError("");
     try {
-      await changeMedia([item.id], { allow_client: allow });
+      await changeMedia([item.id], { [clientMode ? "allow_owner" : "allow_client"]: allow });
       await onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to change access. Please retry.");
@@ -47,15 +49,15 @@ export default function MediaAccessToggle({
         }}
       >
         <Txt size={compact ? 13 : 17} bold style={{ textAlign: compact ? "center" : "left" }}>
-          Allow Client Access
+          {clientMode ? "Allow Access to Lady J" : "Allow Client Access"}
         </Txt>
         <View style={{ minHeight: 44, justifyContent: "center", alignItems: "center" }}>
           {saving ? (
             <ActivityIndicator accessibilityLabel="Saving client access" color={c.brandAccent} />
           ) : (
             <Switch
-              accessibilityLabel={"Allow Client Access: " + item.name}
-              value={!!item.allow_client}
+              accessibilityLabel={`${clientMode ? "Allow Access to Lady J" : "Allow Client Access"}: ${item.name}`}
+              value={clientMode ? !!item.allow_owner : !!item.allow_client}
               disabled={disabled || item.status !== "ready"}
               onValueChange={(value) => void update(value)}
               trackColor={{ false: c.mutedForeground, true: c.brandAccentFill }}

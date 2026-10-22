@@ -6,6 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import type { ClientLanguage } from "./clientLanguage";
 import { supabase, db, check } from "./client";
 import { developmentTestMode } from "./testMode";
+import { sessionStorage } from "./sessionStorage";
 import {
   Service,
   Product,
@@ -41,6 +42,8 @@ interface SalonState {
   setCart: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   selected: string[];
   setSelected: React.Dispatch<React.SetStateAction<string[]>>;
+  workshopCart: string[];
+  setWorkshopCart: React.Dispatch<React.SetStateAction<string[]>>;
   demoOwner: boolean;
   setDemoOwner: (v: boolean) => void;
   testMode: boolean;
@@ -70,6 +73,8 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
     [credits, setCredits] = useState<Credit[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({}),
     [selected, setSelected] = useState<string[]>([]),
+    [workshopCart, setWorkshopCart] = useState<string[]>([]),
+    [bagReady, setBagReady] = useState(false),
     [demoOwner, setDemoOwner] = useState(developmentTestMode),
     [testMode, setTestMode] = useState(developmentTestMode),
     [notice, setNotice] = useState("");
@@ -80,6 +85,47 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
   const privateGeneration = useRef(0);
   const catalogGeneration = useRef(0);
   const notify = useCallback((message: string) => setNotice(message), []);
+  useEffect(() => {
+    let active = true;
+    void sessionStorage
+      .getItem("lady-j-shopping-bag-v1")
+      .then((raw) => {
+        if (!active || !raw) return;
+        const saved = JSON.parse(raw) as {
+          products?: Record<string, number>;
+          services?: string[];
+          workshops?: string[];
+        };
+        if (saved.products && typeof saved.products === "object") {
+          const products = Object.fromEntries(
+            Object.entries(saved.products).filter(
+              ([id, quantity]) => Boolean(id) && Number.isInteger(quantity) && quantity > 0,
+            ),
+          );
+          setCart(products);
+        }
+        if (Array.isArray(saved.services))
+          setSelected([...new Set(saved.services.filter(Boolean))].slice(0, 10));
+        if (Array.isArray(saved.workshops))
+          setWorkshopCart([...new Set(saved.workshops.filter(Boolean))]);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setBagReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!bagReady) return;
+    void sessionStorage
+      .setItem(
+        "lady-j-shopping-bag-v1",
+        JSON.stringify({ products: cart, services: selected, workshops: workshopCart }),
+      )
+      .catch(() => undefined);
+  }, [bagReady, cart, selected, workshopCart]);
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(""), 6500);
@@ -192,8 +238,6 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         setTransactions([]);
         setCredits([]);
         setDemoOwner(developmentTestMode);
-        setCart({});
-        setSelected([]);
         setOwner(false);
         setAuthReady(!s);
         setServices([]);
@@ -281,6 +325,8 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         setCart,
         selected,
         setSelected,
+        workshopCart,
+        setWorkshopCart,
         demoOwner,
         setDemoOwner,
         testMode,

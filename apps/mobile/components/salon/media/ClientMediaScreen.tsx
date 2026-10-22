@@ -9,7 +9,7 @@ export default function ClientMediaScreen() {
   const go = useNav();
   return (
     <Shell>
-      <Heading sub="Photos and videos shared privately with you.">My media</Heading>
+      <Heading sub="Photos & videos shared privately with you.">My media</Heading>
       <Txt>
         Your gallery is read-only. Only items Lady J has approved for your account appear here.
       </Txt>

@@ -23,7 +23,7 @@ export default function BlockTimeEditor({
   block: Appointment | null;
   live: boolean;
   initialReason?: string;
-  onSaved: () => Promise<void>;
+  onSaved: (date: string) => Promise<void>;
   onBusyChange: (busy: boolean) => void;
   onDemoSave: (block: Appointment) => void;
 }) {
@@ -94,7 +94,7 @@ export default function BlockTimeEditor({
         });
       }
       s.notify(live ? "Time blocked." : "Time blocked.");
-      await onSaved();
+      await onSaved(from.slice(0, 10));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save block.");
     } finally {
@@ -133,7 +133,14 @@ export default function BlockTimeEditor({
           {error}
         </Txt>
       )}
-      <OwnerButton label={busy ? "Saving" : "Save"} disabled={busy} onPress={() => void save()} />
+      <OwnerButton
+        label={busy ? "Saving Block" : "Save Block"}
+        disabled={busy}
+        busy={busy}
+        accent
+        fill
+        onPress={() => void save()}
+      />
     </View>
   );
 }

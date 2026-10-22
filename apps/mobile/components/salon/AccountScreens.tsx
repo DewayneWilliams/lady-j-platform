@@ -2,6 +2,7 @@ import { MyWaitlist } from "./Waitlist";
 import { DateField } from "./DateFields";
 import React, { useState, useEffect } from "react";
 import { View, Pressable, Linking } from "react-native";
+import { useRouter } from "expo-router";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { db, check } from "@/lib/salon/client";
@@ -44,6 +45,59 @@ const pronounOptions = [
 function visiblePronouns(value?: string | null) {
   if (!value || value === "prefer_not") return "";
   return pronounOptions.find(([key]) => key === value)?.[1] || "";
+}
+
+let accountForwardTarget: string | null = null;
+function AccountHistoryControls({ currentPage }: { currentPage: string }) {
+  const router = useRouter();
+  const go = useNav();
+  const c = useColors();
+  const canGoBack = router.canGoBack();
+  const canGoForward = Boolean(accountForwardTarget && accountForwardTarget !== currentPage);
+  return (
+    <View
+      accessibilityLabel="Account navigation history"
+      style={{
+        flexDirection: "row",
+        gap: 8,
+        justifyContent: "flex-end",
+        marginBottom: currentPage === "account" ? 4 : 12,
+      }}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        accessibilityState={{ disabled: !canGoBack }}
+        disabled={!canGoBack}
+        onPress={() => {
+          if (!router.canGoBack()) return;
+          accountForwardTarget = currentPage;
+          router.back();
+        }}
+        style={({ pressed }) => ({ opacity: !canGoBack ? 0.35 : pressed ? 0.6 : 1, padding: 10 })}
+      >
+        <Icon name="ArrowLeft" size={22} color={c.foreground} />
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Go forward"
+        accessibilityState={{ disabled: !canGoForward }}
+        disabled={!canGoForward}
+        onPress={() => {
+          const target = accountForwardTarget;
+          if (!target) return;
+          accountForwardTarget = null;
+          go(target);
+        }}
+        style={({ pressed }) => ({
+          opacity: !canGoForward ? 0.35 : pressed ? 0.6 : 1,
+          padding: 10,
+        })}
+      >
+        <Icon name="ArrowRight" size={22} color={c.foreground} />
+      </Pressable>
+    </View>
+  );
 }
 export function AuthScreen({
   mode,
@@ -389,16 +443,24 @@ export function AccountScreen() {
     ["UserRound", "Profile", "Personal details and preferences", "profile"],
     ["CalendarDays", "Appointments", "Upcoming bookings and service history", "appointments"],
     ["Wallet", "Orders & Payments", "Purchases, deposits, credits and balances", "payments"],
-    ["GraduationCap", "Beauty Academy", "Courses, workshops and learning materials", "my-workshops"],
+    [
+      "GraduationCap",
+      "Beauty Academy",
+      "Courses, workshops and learning materials",
+      "my-workshops",
+    ],
     ["Images", "Photos & Videos", "Privately share your beauty inspiration", "my-media"],
-    ["FileText", "Policies & Agreements", "Booking policies and signed consent forms", "agreements"],
+    [
+      "FileText",
+      "Policies & Agreements",
+      "Booking policies and signed consent forms",
+      "agreements",
+    ],
   ] as const;
   return (
-    <Shell footer={false}>
+    <Shell footer={false} contentTopPadding={8}>
       <View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
-        <Txt serif size={34} style={{ marginBottom: 22 }}>
-          Account
-        </Txt>
+        <AccountHistoryControls currentPage="account" />
         <View
           style={{
             flexDirection: "row",
@@ -411,7 +473,8 @@ export function AccountScreen() {
             name={name}
             mode="client"
             clientPath={
-              s.profile?.profile_photo_path || (!s.session && s.testMode ? demoTestClientPhotoPath : null)
+              s.profile?.profile_photo_path ||
+              (!s.session && s.testMode ? demoTestClientPhotoPath : null)
             }
             displayPath={s.profile?.display_profile_photo_path}
             updatedAt={s.profile?.profile_photo_updated_at}
@@ -443,46 +506,46 @@ export function AccountScreen() {
           }}
         >
           {rows.map(([icon, title, desc, page], index) => (
-          <Pressable
-            key={page}
-            onPress={() => go(page)}
-            accessibilityRole="button"
-            accessibilityLabel={`${title}. ${desc}`}
-            style={({ pressed }) => ({
-              minHeight: 76,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 14,
-              paddingVertical: 12,
-              paddingHorizontal: 4,
-              borderTopWidth: index ? 1 : 0,
-              borderColor: c.border,
-              opacity: pressed ? 0.62 : 1,
-            })}
-          >
-            <View
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 11,
+            <Pressable
+              key={page}
+              onPress={() => go(page)}
+              accessibilityRole="button"
+              accessibilityLabel={`${title}. ${desc}`}
+              style={({ pressed }) => ({
+                minHeight: 76,
+                flexDirection: "row",
                 alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: c.goldSurface,
-              }}
+                gap: 14,
+                paddingVertical: 12,
+                paddingHorizontal: 4,
+                borderTopWidth: index ? 1 : 0,
+                borderColor: c.border,
+                opacity: pressed ? 0.62 : 1,
+              })}
             >
-              <Icon name={icon} size={21} color={c.brandAccent} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-              <Txt size={17} bold>
-                {title}
-              </Txt>
-              <Txt size={13} color={c.mutedForeground}>
-                {desc}
-              </Txt>
-            </View>
-            <Icon name="ChevronRight" size={20} color={c.mutedForeground} />
-          </Pressable>
-        ))}
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 11,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: c.goldSurface,
+                }}
+              >
+                <Icon name={icon} size={21} color={c.brandAccent} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                <Txt size={17} bold>
+                  {title}
+                </Txt>
+                <Txt size={13} color={c.mutedForeground}>
+                  {desc}
+                </Txt>
+              </View>
+              <Icon name="ChevronRight" size={20} color={c.mutedForeground} />
+            </Pressable>
+          ))}
         </View>
         <Action
           label="Book an Appointment"
@@ -543,6 +606,7 @@ export function ProfileScreen() {
     [medicalConditions, setMedicalConditions] = useState(s.profile?.medical_conditions || ""),
     [pronouns, setPronouns] = useState(s.profile?.pronouns || null),
     [consent, setConsent] = useState(s.profile?.marketing_consent || false),
+    [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const name = `${firstName.trim()} ${lastName.trim()}`.trim();
@@ -554,6 +618,7 @@ export function ProfileScreen() {
     }
     if (s.testMode && !s.session) {
       s.notify("Test profile updated locally. No client record was created.");
+      setEditing(false);
       return;
     }
     if (!s.session) return;
@@ -581,6 +646,7 @@ export function ProfileScreen() {
           }),
       );
       await s.refreshPrivate();
+      setEditing(false);
       s.notify("Your private profile has been saved.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save.");
@@ -588,8 +654,29 @@ export function ProfileScreen() {
       setBusy(false);
     }
   }
+  function cancelEdit() {
+    const savedFull = s.profile?.full_name || s.session?.user?.user_metadata?.full_name || "";
+    setFirstName(s.profile?.first_name || savedFull.split(" ")[0] || (s.testMode ? "Test" : ""));
+    setLastName(
+      s.profile?.last_name ||
+        savedFull.split(" ").slice(1).join(" ") ||
+        (s.testMode ? "Client" : ""),
+    );
+    setEmail(
+      s.profile?.email || s.session?.user?.email || (s.testMode ? "test@example.invalid" : ""),
+    );
+    setPhone(s.profile?.phone || "");
+    setBirthday(s.profile?.birthday || "");
+    setPreferences(s.profile?.preferences || "");
+    setMedicalConditions(s.profile?.medical_conditions || "");
+    setPronouns(s.profile?.pronouns || null);
+    setConsent(s.profile?.marketing_consent || false);
+    setError("");
+    setEditing(false);
+  }
   return (
     <Shell>
+      <AccountHistoryControls currentPage="profile" />
       <Heading sub="Only you and the salon owner can access your details.">My profile</Heading>
       {!s.session && !s.testMode ? (
         <Empty
@@ -598,7 +685,7 @@ export function ProfileScreen() {
           action={<Action label="Sign in" onPress={() => go("login", { next: "profile" })} />}
         />
       ) : (
-        <Card style={{ maxWidth: 650, width: "100%" }}>
+        <View style={{ maxWidth: 650, width: "100%", alignSelf: "center", gap: 14 }}>
           {s.testMode && !s.session && <Tag>Development Test Mode · Local fields only</Tag>}
           {!!error && <ErrorBox message={error} />}
           <View style={{ alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -606,7 +693,8 @@ export function ProfileScreen() {
               name={name || "Client"}
               mode="client"
               clientPath={
-                s.profile?.profile_photo_path || (!s.session && s.testMode ? demoTestClientPhotoPath : null)
+                s.profile?.profile_photo_path ||
+                (!s.session && s.testMode ? demoTestClientPhotoPath : null)
               }
               displayPath={s.profile?.display_profile_photo_path}
               updatedAt={s.profile?.profile_photo_updated_at}
@@ -617,76 +705,137 @@ export function ProfileScreen() {
               Tap to update your private profile photo
             </Txt>
           </View>
-          <Txt size={18} bold>
-            Name
-          </Txt>
-          <Field label="First name" value={firstName} onChangeText={setFirstName} />
-          <Field label="Last name" value={lastName} onChangeText={setLastName} />
-          <Txt size={14} bold style={{ marginTop: 4 }}>
-            Pronouns (optional)
-          </Txt>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-            {pronounOptions.map(([value, label]) => {
-              const selected = pronouns === value;
-              return (
-                <Pressable
-                  key={value}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected }}
-                  onPress={() => setPronouns(selected ? null : value)}
+          {editing ? (
+            <>
+              <Txt size={18} bold>
+                Name
+              </Txt>
+              <Field label="First name" value={firstName} onChangeText={setFirstName} />
+              <Field label="Last name" value={lastName} onChangeText={setLastName} />
+              <Txt size={14} bold style={{ marginTop: 4 }}>
+                Pronouns (optional)
+              </Txt>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                {pronounOptions.map(([value, label]) => {
+                  const selected = pronouns === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      onPress={() => setPronouns(selected ? null : value)}
+                      style={{
+                        minHeight: 44,
+                        justifyContent: "center",
+                        paddingHorizontal: 14,
+                        borderRadius: 22,
+                        borderWidth: 1,
+                        borderColor: selected ? c.brandAccent : c.border,
+                        backgroundColor: selected ? c.brandAccentSurface : c.card,
+                      }}
+                    >
+                      <Txt bold={selected} color={selected ? c.brandAccent : c.foreground}>
+                        {label}
+                      </Txt>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Field
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+              />
+              <Field
+                label="Phone / WhatsApp"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+              />
+              <DateField
+                label="Date of birth (optional)"
+                value={birthday}
+                onChange={setBirthday}
+                birthday
+                optional
+              />
+              <Field
+                label="Preferences or relevant sensitivities (optional)"
+                value={preferences}
+                onChangeText={setPreferences}
+                multiline
+              />
+              <Field
+                label="Medical Conditions"
+                value={medicalConditions}
+                onChangeText={setMedicalConditions}
+                multiline
+              />
+              <Check
+                label="I consent to receive optional offers and birthday messages."
+                checked={consent}
+                onPress={() => setConsent(!consent)}
+              />
+              <Txt color={c.mutedForeground} size={12} style={{ marginBottom: 18 }}>
+                Notification providers are not connected yet. You can update your consent at any
+                time.
+              </Txt>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Action
+                    label="Cancel"
+                    secondary
+                    onPress={cancelEdit}
+                    style={{ alignSelf: "stretch" }}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Action
+                    label="Save"
+                    onPress={() => void save()}
+                    busy={busy}
+                    style={{ alignSelf: "stretch" }}
+                  />
+                </View>
+              </View>
+            </>
+          ) : (
+            <View style={{ gap: 0 }}>
+              {[
+                ["Name", name || "Not provided"],
+                ["Pronouns", visiblePronouns(pronouns) || "Not provided"],
+                ["Email", email || "Not provided"],
+                ["Phone / WhatsApp", phone || "Not provided"],
+                ["Date of Birth", birthday || "Not provided"],
+                ["Preferences or Sensitivities", preferences || "Not provided"],
+                ["Medical Conditions", medicalConditions || "Not provided"],
+                ["Optional Offers", consent ? "Allowed" : "Not allowed"],
+              ].map(([label, value], index) => (
+                <View
+                  key={label}
                   style={{
-                    minHeight: 44,
-                    justifyContent: "center",
-                    paddingHorizontal: 14,
-                    borderRadius: 22,
-                    borderWidth: 1,
-                    borderColor: selected ? c.brandAccent : c.border,
-                    backgroundColor: selected ? c.brandAccentSurface : c.card,
+                    paddingVertical: 14,
+                    borderTopWidth: index ? 1 : 0,
+                    borderColor: c.border,
+                    gap: 4,
                   }}
                 >
-                  <Txt bold={selected} color={selected ? c.brandAccent : c.foreground}>
+                  <Txt size={13} bold color={c.mutedForeground}>
                     {label}
                   </Txt>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
-          <Field
-            label="Phone / WhatsApp"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-          />
-          <DateField
-            label="Date of birth (optional)"
-            value={birthday}
-            onChange={setBirthday}
-            birthday
-            optional
-          />
-          <Field
-            label="Preferences or relevant sensitivities (optional)"
-            value={preferences}
-            onChangeText={setPreferences}
-            multiline
-          />
-          <Field
-            label="Medical Conditions"
-            value={medicalConditions}
-            onChangeText={setMedicalConditions}
-            multiline
-          />
-          <Check
-            label="I consent to receive optional offers and birthday messages."
-            checked={consent}
-            onPress={() => setConsent(!consent)}
-          />
-          <Txt color={c.mutedForeground} size={12} style={{ marginBottom: 18 }}>
-            Notification providers are not connected yet. You can update your consent at any time.
-          </Txt>
-          <Action label="Save my profile" onPress={() => void save()} busy={busy} />
-        </Card>
+                  <Txt>{value}</Txt>
+                </View>
+              ))}
+              <Action
+                label="Edit Profile"
+                icon="Pencil"
+                onPress={() => setEditing(true)}
+                style={{ alignSelf: "stretch", marginTop: 14 }}
+              />
+            </View>
+          )}
+        </View>
       )}
     </Shell>
   );
@@ -754,6 +903,7 @@ export function RecordsScreen({ page }: { page: string }) {
   }
   return (
     <Shell>
+      <AccountHistoryControls currentPage={page} />
       <Heading sub="Private records, clearly organised.">{title}</Heading>
       {!s.session && !s.testMode ? (
         <Empty
@@ -985,7 +1135,9 @@ export function RecordsScreen({ page }: { page: string }) {
           {page === "payments" && (
             <>
               <Card style={{ gap: 12 }}>
-                <Txt bold size={18}>Purchases</Txt>
+                <Txt bold size={18}>
+                  Purchases
+                </Txt>
                 <Txt color={c.mutedForeground}>
                   Review boutique purchases, fulfillment and unpaid requests.
                 </Txt>

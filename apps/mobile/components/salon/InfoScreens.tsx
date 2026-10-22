@@ -87,7 +87,10 @@ export default function InfoScreen({ page }: { page: string }) {
               employee.
             </Txt>
           </View>
-          <Card style={{ flex: 0.9, gap: 16, justifyContent: "center", padding: 24 }}>
+          <View
+            accessibilityLabel="Lady J contact information"
+            style={{ flex: 0.9, gap: 16, justifyContent: "center", paddingVertical: 24 }}
+          >
             <Txt serif size={30}>
               Lady J Salon & Day Spa
             </Txt>
@@ -119,7 +122,7 @@ export default function InfoScreen({ page }: { page: string }) {
             </View>
             <SupportContact />
             <Action gold label="Book your appointment" onPress={() => go("booking")} />
-          </Card>
+          </View>
         </View>
         <View
           style={{
@@ -134,7 +137,7 @@ export default function InfoScreen({ page }: { page: string }) {
             gap: 16,
           }}
         >
-          <Txt serif size={28}>
+          <Txt serif size={40} style={{ textAlign: "center" }}>
             Connect With Us
           </Txt>
           <View
@@ -160,15 +163,16 @@ export default function InfoScreen({ page }: { page: string }) {
                   style={({ pressed }) => ({
                     width: socialColumns === 4 ? "23.5%" : socialColumns === 2 ? "48%" : "100%",
                     maxWidth: socialColumns === 1 ? 440 : undefined,
-                    height: 76,
+                    minHeight: 96,
                     borderWidth: 1,
                     borderColor: c.goldBorder,
                     borderRadius: 14,
                     paddingHorizontal: 16,
                     paddingVertical: 11,
-                    flexDirection: "row",
+                    flexDirection: "column",
                     alignItems: "center",
-                    gap: 12,
+                    justifyContent: "center",
+                    gap: 6,
                     opacity: available ? (pressed ? 0.72 : 1) : 0.55,
                     backgroundColor: c.card,
                   })}
@@ -189,11 +193,11 @@ export default function InfoScreen({ page }: { page: string }) {
                       color={available ? c.brandAccent : c.mutedForeground}
                     />
                   </View>
-                  <View style={{ flex: 1, minWidth: 0, justifyContent: "center" }}>
-                    <Txt size={14} bold numberOfLines={1}>
+                  <View style={{ minWidth: 0, alignItems: "center", justifyContent: "center" }}>
+                    <Txt size={14} bold style={{ textAlign: "center" }}>
                       {platform.label}
                     </Txt>
-                    <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
+                    <Txt size={12} color={c.mutedForeground} style={{ textAlign: "center" }}>
                       @LadyJSalon
                     </Txt>
                   </View>

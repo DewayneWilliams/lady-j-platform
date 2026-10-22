@@ -19,6 +19,8 @@ import { useTheme } from "@/theming/ThemeProvider";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { Txt, ButtonLabel, useColors, shared, LinkText, ErrorBox } from "./ui";
+import FloatingBag from "./FloatingBag";
+import SubtleShimmer from "./SubtleShimmer";
 export function useNav() {
   const router = useRouter();
   return (page: string, params: Record<string, string> = {}) => {
@@ -99,12 +101,16 @@ export default function Shell({
   footer = false,
   scrollRevision,
   bottomBar,
+  headerAction,
+  contentTopPadding,
 }: {
   children?: React.ReactNode;
   wide?: boolean;
   footer?: boolean;
   scrollRevision?: string | number;
   bottomBar?: React.ReactNode;
+  headerAction?: { label: string; onPress: () => void };
+  contentTopPadding?: number;
 }) {
   const c = useColors(),
     { width } = useWindowDimensions(),
@@ -161,16 +167,19 @@ export default function Shell({
           <HeaderLanguageSelector compact={compact} />
           <ThemeToggle color={c.headerInk} label={copy.theme} />
           <Button
-            accessibilityLabel={copy.booking}
-            onPress={() =>
-              go(
-                s.session || s.testMode ? "booking" : "register",
-                s.session || s.testMode ? {} : { next: "booking" },
-              )
+            accessibilityLabel={headerAction?.label || copy.booking}
+            onPress={
+              headerAction?.onPress ||
+              (() =>
+                go(
+                  s.session || s.testMode ? "booking" : "register",
+                  s.session || s.testMode ? {} : { next: "booking" },
+                ))
             }
             style={{
-              backgroundColor: c.primary,
+              backgroundColor: headerAction ? "#000000" : c.primary,
               borderRadius: 14,
+              overflow: "hidden",
               minHeight: 48,
               height: "auto",
               paddingHorizontal: compact ? 7 : 12,
@@ -182,8 +191,12 @@ export default function Shell({
               maxWidth: "100%",
             }}
           >
-            <ButtonLabel size={compact ? 11 : 20} color={c.primaryForeground}>
-              {copy.booking}
+            <SubtleShimmer interval={headerAction ? 8000 : 6500} travelDistance={280} />
+            <ButtonLabel
+              size={compact ? 11 : 20}
+              color={headerAction ? "#FFFFFF" : c.primaryForeground}
+            >
+              {headerAction?.label || copy.booking}
             </ButtonLabel>
           </Button>
         </View>
@@ -251,7 +264,7 @@ export default function Shell({
               {
                 maxWidth: wide ? 1280 : 1200,
                 paddingHorizontal: desktop ? 32 : 20,
-                paddingTop: desktop ? 32 : 24,
+                paddingTop: contentTopPadding ?? (desktop ? 32 : 24),
               },
             ]}
           >
@@ -329,6 +342,7 @@ export default function Shell({
           )}
         </ScrollView>
         {bottomBar}
+        <FloatingBag />
       </View>
       {!!s.notice && <StatusNotice message={s.notice} onDismiss={() => s.notify("")} />}
     </SafeAreaView>

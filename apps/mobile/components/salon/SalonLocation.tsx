@@ -1,6 +1,5 @@
 import React from "react";
 import { Linking, useWindowDimensions, View } from "react-native";
-import { GOOGLE_BUSINESS } from "@/supabase/functions/_shared/googleBusiness";
 import { salonDirectionsUrl } from "@/lib/salon/location";
 import SalonMap from "./SalonMap";
 import { Action, Heading, Txt, useColors } from "./ui";
@@ -9,8 +8,10 @@ export default function SalonLocation() {
   const c = useColors();
   const { width } = useWindowDimensions();
   return (
-    <View style={{ marginTop: 34, gap: 14 }}>
-      <Heading>Find Lady J Salon & Day Spa</Heading>
+    <View style={{ marginTop: 8, gap: 10 }}>
+      <Heading compact singleLine>
+        Find Lady J Salon & Day Spa
+      </Heading>
       <View accessibilityLabel="Lady J Salon & Day Spa address" style={{ alignItems: "center" }}>
         <Txt bold numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
           On My Way Plaza
@@ -21,7 +22,7 @@ export default function SalonLocation() {
           adjustsFontSizeToFit
           minimumFontScale={0.72}
         >
-          Petit Valley, Trinidad and Tobago
+          West Hills, Morne Coco Road, Petit Valley
         </Txt>
       </View>
       <View
@@ -44,16 +45,6 @@ export default function SalonLocation() {
         onPress={() => void Linking.openURL(salonDirectionsUrl)}
         style={{ alignSelf: "stretch" }}
       />
-      <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
-        <Txt
-          accessibilityRole="link"
-          onPress={() => void Linking.openURL(GOOGLE_BUSINESS.reviewUrl)}
-          bold
-          color={c.brandAccent}
-        >
-          Read Reviews
-        </Txt>
-      </View>
     </View>
   );
 }

@@ -149,7 +149,6 @@ export default function MediaUpload({
         quality: 0.9,
         videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
         videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
-        videoMaxDuration: 180,
         preferredAssetRepresentationMode:
           ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       };

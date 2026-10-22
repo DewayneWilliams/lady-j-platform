@@ -87,8 +87,8 @@ export async function prepareMedia(
     });
     if (signal?.aborted) throw new Error("Upload cancelled.");
     const duration = video.duration;
-    if (!Number.isFinite(duration) || duration > 180)
-      throw new Error("Choose a video of 3 minutes or less.");
+    if (!Number.isFinite(duration))
+      throw new Error("This video does not contain a valid duration.");
     const canvas = globalThis.document.createElement("canvas");
     const scale = Math.min(1, 1280 / Math.max(video.videoWidth, video.videoHeight));
     canvas.width = Math.max(2, Math.round((video.videoWidth * scale) / 2) * 2);
@@ -106,6 +106,7 @@ export async function prepareMedia(
     let mime = asset.mimeType || asset.file?.type || "video/mp4";
     let warning: string | undefined;
     const outputType =
+      (asset.file?.size || asset.fileSize || 0) > 50 * 1024 * 1024 ||
       typeof MediaRecorder === "undefined"
         ? ""
         : [
@@ -182,19 +183,15 @@ export async function prepareMedia(
         urls.push(uri);
         mime = compressed.type;
       }
-    } else
-      warning =
-        "This browser cannot compress video. The original will be uploaded (50 MB maximum).";
+    } else warning = "The original video will use a resumable private upload.";
     const size =
       uri === asset.uri
         ? asset.file?.size || asset.fileSize || 0
         : await fetch(uri)
             .then((r) => r.blob())
             .then((b) => b.size);
-    if (size > 50 * 1024 * 1024)
-      throw new Error(
-        "Video exceeds 50 MB. Choose a shorter clip or use a browser that supports compression.",
-      );
+    if (size > 500 * 1024 * 1024)
+      throw new Error("This file exceeds the 500 MB private media limit.");
     if (!["video/mp4", "video/quicktime", "video/webm"].includes(mime))
       throw new Error("Choose an MP4, MOV or WebM video.");
     progress(1);

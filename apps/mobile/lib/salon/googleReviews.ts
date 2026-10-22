@@ -13,12 +13,18 @@ export type GoogleReview = {
 };
 export type GoogleReviewsResult = {
   status: "ready" | "unavailable";
+  rating: number | null;
+  userRatingCount: number | null;
+  address?: string;
+  location?: { latitude: number; longitude: number } | null;
   reviews: GoogleReview[];
   googleMapsUri: string | null;
   attributions?: { provider?: string; providerUri?: string }[];
 };
 export const unavailableReviews: GoogleReviewsResult = {
   status: "unavailable",
+  rating: null,
+  userRatingCount: null,
   reviews: [],
   googleMapsUri: GOOGLE_BUSINESS.profileUrl,
 };

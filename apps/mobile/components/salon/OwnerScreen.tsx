@@ -22,6 +22,7 @@ import CalendarDashboard from "./owner/CalendarDashboard";
 import BlockTimeEditor from "./owner/BlockTimeEditor";
 import { formatDuration, serviceDurationLabel } from "@/lib/salon/duration";
 import ServiceCategoryField from "./owner/ServiceCategoryField";
+import ServiceCategories from "./ServiceCategories";
 import OwnerEditorPortal from "./owner/OwnerEditorPortal";
 import { useBottomNavigationSpacing } from "./BottomNavigation";
 import { AgreementList, AppointmentAgreement } from "./ServiceAgreement";
@@ -55,6 +56,7 @@ import {
   money,
   servicePriceLabel,
   dateLabel,
+  timeLabel,
 } from "@/lib/salon/types";
 import { demoClients, demoAppointments, demoTransactions } from "@/lib/salon/demo";
 import { createOwnerDemoCommerce } from "@/lib/salon/ownerDemo";
@@ -104,6 +106,7 @@ function OF({
   multiline = false,
   keyboardType = "default",
   readOnly = false,
+  disabled = false,
   wrap = false,
 }: {
   label: string;
@@ -111,6 +114,7 @@ function OF({
   onChange: (s: string) => void;
   multiline?: boolean;
   readOnly?: boolean;
+  disabled?: boolean;
   wrap?: boolean;
   keyboardType?: "default" | "email-address" | "phone-pad";
 }) {
@@ -141,6 +145,7 @@ function OF({
           <TextInput
             accessibilityLabel={fieldLabel(label)}
             value={value}
+            editable={!disabled}
             onChangeText={wrap ? (text) => onChange(text.replace(/\r?\n/g, "")) : onChange}
             multiline={multiline || wrap}
             scrollEnabled={!(multiline || wrap)}
@@ -261,6 +266,7 @@ export default function OwnerScreen() {
     [start, setStart] = useState(`${todayKey()}T10:00`),
     [note, setNote] = useState(""),
     [serviceId, setServiceId] = useState(""),
+    [ownerServiceCategory, setOwnerServiceCategory] = useState("All"),
     [customerId, setCustomerId] = useState(""),
     [newClientName, setNewClientName] = useState(""),
     [newClientEmail, setNewClientEmail] = useState(""),
@@ -425,8 +431,10 @@ export default function OwnerScreen() {
     if (!allowed || demo) return;
     const channel = db()
       .channel("lj-owner-client-profiles")
-      .on("postgres_changes", { event: "*", schema: "public", table: "lj_profiles" }, () =>
-        void load(true),
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "lj_profiles" },
+        () => void load(true),
       )
       .on(
         "postgres_changes",
@@ -1169,8 +1177,15 @@ export default function OwnerScreen() {
     >
       {a.is_vip && a.approval_status === "pending" && (
         <View style={{ gap: 10 }}>
-          <OT bold>VIP request · +{a.vip_percentage}% · {money(a.vip_premium || 0)} premium</OT>
-          <OT muted>Approve only after rechecking the requested morning time. Payment has not been collected.</OT>
+          <OT bold>
+            VIP request · +{a.vip_percentage}% · {money(a.vip_premium || 0)} premium
+          </OT>
+          <OT muted>
+            Requested time: {dateLabel(a.starts_at, { year: "numeric" })} at{" "}
+            {timeLabel(a.starts_at)}
+          </OT>
+          <OT bold>Reason: {a.vip_reason || "No reason supplied"}</OT>
+          <OT muted>Pending owner approval. Payment has not been collected.</OT>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
               <OA
@@ -1180,10 +1195,17 @@ export default function OwnerScreen() {
                 disabled={busy || demo}
                 onPress={() => {
                   setBusy(true);
-                  void (async () => check(await db().rpc("lj_review_vip_request", { p_id: a.id, p_approve: false })))()
+                  void (async () =>
+                    check(
+                      await db().rpc("lj_review_vip_request", { p_id: a.id, p_approve: false }),
+                    ))()
                     .then(() => load())
                     .then(() => s.notify("VIP request declined."))
-                    .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to decline VIP request."))
+                    .catch((reason: unknown) =>
+                      setError(
+                        reason instanceof Error ? reason.message : "Unable to decline VIP request.",
+                      ),
+                    )
                     .finally(() => setBusy(false));
                 }}
               />
@@ -1196,10 +1218,17 @@ export default function OwnerScreen() {
                 disabled={busy || demo}
                 onPress={() => {
                   setBusy(true);
-                  void (async () => check(await db().rpc("lj_review_vip_request", { p_id: a.id, p_approve: true })))()
+                  void (async () =>
+                    check(
+                      await db().rpc("lj_review_vip_request", { p_id: a.id, p_approve: true }),
+                    ))()
                     .then(() => load())
                     .then(() => s.notify("VIP request approved. Payment remains outstanding."))
-                    .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to approve VIP request."))
+                    .catch((reason: unknown) =>
+                      setError(
+                        reason instanceof Error ? reason.message : "Unable to approve VIP request.",
+                      ),
+                    )
                     .finally(() => setBusy(false));
                 }}
               />
@@ -1289,72 +1318,76 @@ export default function OwnerScreen() {
           onPress={() => setDiscountTarget({ kind: "appointment", record: a })}
         />
       )}
-      {a.kind === "appointment" && a.approval_status !== "pending" && ["pending", "confirmed"].includes(a.status) && (
-        <View style={{ gap: 12 }}>
-          <OA
-            fill
-            label="Service Complete"
-            secondary
-            onPress={() =>
-              setConfirm({
-                text: "Complete this service?",
-                detail: "Payment is recorded separately.",
-                actionLabel: "Confirm Complete Service",
-                run: async () => {
-                  setConfirm(null);
-                  setCelebration(a);
-                },
-              })
-            }
-          />
-          <OA
-            fill
-            label="Cancel / No-Show"
-            secondary
-            onPress={() =>
-              setConfirm({
-                text:
-                  new Date(a.starts_at) > new Date()
-                    ? "Cancel this appointment? Verified deposits follow the cancellation policy."
-                    : "Mark as no-show? The verified deposit is forfeited.",
-                run: async () => {
-                  if (new Date(a.starts_at) <= new Date()) await complete(a, "no_show");
-                  else if (demo) {
-                    setAppointments((old) =>
-                      old.map((v) => (v.id === a.id ? { ...v, status: "cancelled" } : v)),
-                    );
-                    s.notify("Appointment cancelled.");
-                  } else {
-                    const message = check(await db().rpc("lj_cancel", { p_id: a.id }));
-                    await load();
-                    s.notify(message);
-                  }
-                },
-              })
-            }
-          />
-        </View>
-      )}
-      {a.kind === "appointment" && a.approval_status !== "pending" && ["pending", "confirmed", "completed"].includes(a.status) && (
-        <View style={{ gap: 12 }}>
-          <OA
-            fill
-            payment
-            label="Payment Complete"
-            icon="Wallet"
-            disabled={appointmentPayment(a, transactions).remaining <= 0}
-            onPress={() => {
-              setError("");
-              setPaymentAppointment(a);
-            }}
-          />
-          <OT muted>
-            {appointmentPayment(a, transactions).remaining <= 0
-              ? "The full payment is already recorded."
-              : "Record money received. Service completion is separate."}
-          </OT>
-        </View>
-      )}
+      {a.kind === "appointment" &&
+        a.approval_status !== "pending" &&
+        ["pending", "confirmed"].includes(a.status) && (
+          <View style={{ gap: 12 }}>
+            <OA
+              fill
+              label="Service Complete"
+              secondary
+              onPress={() =>
+                setConfirm({
+                  text: "Complete this service?",
+                  detail: "Payment is recorded separately.",
+                  actionLabel: "Confirm Complete Service",
+                  run: async () => {
+                    setConfirm(null);
+                    setCelebration(a);
+                  },
+                })
+              }
+            />
+            <OA
+              fill
+              label="Cancel / No-Show"
+              secondary
+              onPress={() =>
+                setConfirm({
+                  text:
+                    new Date(a.starts_at) > new Date()
+                      ? "Cancel this appointment? Verified deposits follow the cancellation policy."
+                      : "Mark as no-show? The verified deposit is forfeited.",
+                  run: async () => {
+                    if (new Date(a.starts_at) <= new Date()) await complete(a, "no_show");
+                    else if (demo) {
+                      setAppointments((old) =>
+                        old.map((v) => (v.id === a.id ? { ...v, status: "cancelled" } : v)),
+                      );
+                      s.notify("Appointment cancelled.");
+                    } else {
+                      const message = check(await db().rpc("lj_cancel", { p_id: a.id }));
+                      await load();
+                      s.notify(message);
+                    }
+                  },
+                })
+              }
+            />
+          </View>
+        )}
+      {a.kind === "appointment" &&
+        a.approval_status !== "pending" &&
+        ["pending", "confirmed", "completed"].includes(a.status) && (
+          <View style={{ gap: 12 }}>
+            <OA
+              fill
+              payment
+              label="Payment Complete"
+              icon="Wallet"
+              disabled={appointmentPayment(a, transactions).remaining <= 0}
+              onPress={() => {
+                setError("");
+                setPaymentAppointment(a);
+              }}
+            />
+            <OT muted>
+              {appointmentPayment(a, transactions).remaining <= 0
+                ? "The full payment is already recorded."
+                : "Record money received. Service completion is separate."}
+            </OT>
+          </View>
+        )}
       {a.kind === "block" && a.status !== "cancelled" && (
         <OA fill label="Delete Block" secondary onPress={() => editBlock(a)} />
       )}
@@ -2652,8 +2685,11 @@ export default function OwnerScreen() {
                             block,
                           ]);
                         }}
-                        onSaved={async () => {
+                        onSaved={async (savedDate) => {
                           await load(true);
+                          setCalendarDate(savedDate);
+                          setCalendarSelected(true);
+                          setCalendarView("Day");
                           setCalendarForm(null);
                           setEditingBlock(null);
                         }}
@@ -2667,9 +2703,22 @@ export default function OwnerScreen() {
                         {calendarForm === "appointment" && (
                           <>
                             <OT bold>Choose One Service</OT>
+                            <ServiceCategories
+                              booking
+                              value={ownerServiceCategory}
+                              onChange={setOwnerServiceCategory}
+                              interactiveArrows
+                            />
                             <View style={{ gap: 10, marginVertical: 18 }}>
                               {services
-                                .filter((v) => v.active && v.bookable !== false)
+                                .filter(
+                                  (v) =>
+                                    v.active &&
+                                    v.bookable !== false &&
+                                    (ownerServiceCategory === "All" ||
+                                      (v.is_special ? "Specials" : v.category) ===
+                                        ownerServiceCategory),
+                                )
                                 .map((v) => (
                                   <OA
                                     key={v.id}
@@ -2762,61 +2811,86 @@ export default function OwnerScreen() {
                                 ? "Client photo selected"
                                 : "Default avatar"}
                           </OT>
-                          {!!selectedClient.pronouns && selectedClient.pronouns !== "prefer_not" && (
-                            <OT muted>
-                              {selectedClient.pronouns === "she_her"
-                                ? "She/Her"
-                                : selectedClient.pronouns === "he_him"
-                                  ? "He/Him"
-                                  : "They/Them"}
-                            </OT>
-                          )}
+                          {!!selectedClient.pronouns &&
+                            selectedClient.pronouns !== "prefer_not" && (
+                              <OT muted>
+                                {selectedClient.pronouns === "she_her"
+                                  ? "She/Her"
+                                  : selectedClient.pronouns === "he_him"
+                                    ? "He/Him"
+                                    : "They/Them"}
+                              </OT>
+                            )}
                         </View>
-                        <OF
-                          label="First Name"
-                          wrap
-                          readOnly={!editingContact || busy}
-                          value={
-                            selectedClient.first_name ?? selectedClient.full_name.split(" ")[0]
-                          }
-                          onChange={(first_name) =>
-                            setSelectedClient({ ...selectedClient, first_name })
-                          }
-                        />
-                        <OF
-                          label="Last Name"
-                          wrap
-                          readOnly={!editingContact || busy}
-                          value={
-                            selectedClient.last_name ??
-                            selectedClient.full_name.split(" ").slice(1).join(" ")
-                          }
-                          onChange={(last_name) =>
-                            setSelectedClient({ ...selectedClient, last_name })
-                          }
-                        />
+                        {editingContact ? (
+                          <>
+                            <OF
+                              label="First Name"
+                              wrap
+                              disabled={busy}
+                              value={
+                                selectedClient.first_name ?? selectedClient.full_name.split(" ")[0]
+                              }
+                              onChange={(first_name) =>
+                                setSelectedClient({ ...selectedClient, first_name })
+                              }
+                            />
+                            <OF
+                              label="Last Name"
+                              wrap
+                              disabled={busy}
+                              value={
+                                selectedClient.last_name ??
+                                selectedClient.full_name.split(" ").slice(1).join(" ")
+                              }
+                              onChange={(last_name) =>
+                                setSelectedClient({ ...selectedClient, last_name })
+                              }
+                            />
+                          </>
+                        ) : (
+                          <View style={{ gap: 6 }}>
+                            <OT bold>Client</OT>
+                            <OT>{selectedClient.full_name}</OT>
+                          </View>
+                        )}
                         <OT>
                           DOB:{" "}
                           {selectedClient.birthday
                             ? dateLabel(selectedClient.birthday + "T12:00:00Z", { year: "numeric" })
                             : "Not provided"}
                         </OT>
-                        <OF
-                          label="Email"
-                          wrap
-                          readOnly={!editingContact || busy}
-                          keyboardType="email-address"
-                          value={selectedClient.email}
-                          onChange={(email) => setSelectedClient({ ...selectedClient, email })}
-                        />
-                        <OF
-                          label="Mobile Number"
-                          wrap
-                          readOnly={!editingContact || busy}
-                          keyboardType="phone-pad"
-                          value={selectedClient.phone}
-                          onChange={(phone) => setSelectedClient({ ...selectedClient, phone })}
-                        />
+                        {editingContact ? (
+                          <>
+                            <OF
+                              label="Email"
+                              wrap
+                              disabled={busy}
+                              keyboardType="email-address"
+                              value={selectedClient.email}
+                              onChange={(email) => setSelectedClient({ ...selectedClient, email })}
+                            />
+                            <OF
+                              label="Mobile Number"
+                              wrap
+                              disabled={busy}
+                              keyboardType="phone-pad"
+                              value={selectedClient.phone}
+                              onChange={(phone) => setSelectedClient({ ...selectedClient, phone })}
+                            />
+                          </>
+                        ) : (
+                          <View style={{ gap: 10 }}>
+                            <View style={{ gap: 4 }}>
+                              <OT bold>Email</OT>
+                              <OT>{selectedClient.email || "Not provided"}</OT>
+                            </View>
+                            <View style={{ gap: 4 }}>
+                              <OT bold>Mobile Number</OT>
+                              <OT>{selectedClient.phone || "Not provided"}</OT>
+                            </View>
+                          </View>
+                        )}
                         <OA
                           label="Message Client"
                           icon="MessageCircle"
@@ -2862,15 +2936,22 @@ export default function OwnerScreen() {
                               "None recorded",
                           )}
                         </OT>
-                        <OF
-                          label="Notes"
-                          readOnly={!editingContact || busy}
-                          value={selectedClient.private_notes || ""}
-                          multiline
-                          onChange={(private_notes) =>
-                            setSelectedClient({ ...selectedClient, private_notes })
-                          }
-                        />
+                        {editingContact ? (
+                          <OF
+                            label="Notes"
+                            disabled={busy}
+                            value={selectedClient.private_notes || ""}
+                            multiline
+                            onChange={(private_notes) =>
+                              setSelectedClient({ ...selectedClient, private_notes })
+                            }
+                          />
+                        ) : (
+                          <View style={{ gap: 4 }}>
+                            <OT bold>Notes</OT>
+                            <OT>{selectedClient.private_notes || "None recorded"}</OT>
+                          </View>
+                        )}
                         <ClientPurchaseHistory
                           customerId={selectedClient.customer_id || selectedClient.id}
                           appointments={appointments}

@@ -33,7 +33,7 @@ export async function handleReviews(
   if (!["POST", "GET"].includes(req.method))
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers });
   const key = env("GOOGLE_PLACES_API_KEY");
-  const placeId = GOOGLE_BUSINESS.placeId;
+  const placeId = env("GOOGLE_PLACE_ID")?.trim();
   const profile = GOOGLE_BUSINESS.profileUrl;
   const empty = (status = "unavailable") =>
     new Response(JSON.stringify({ status, reviews: [], googleMapsUri: profile }), { headers });
@@ -66,7 +66,8 @@ export async function handleReviews(
       {
         headers: {
           "X-Goog-Api-Key": key,
-          "X-Goog-FieldMask": "id,displayName,googleMapsUri,reviews,attributions",
+          "X-Goog-FieldMask":
+            "id,displayName,formattedAddress,location,rating,userRatingCount,googleMapsUri,reviews,attributions",
         },
         signal: AbortSignal.timeout(10000),
       },
@@ -74,6 +75,12 @@ export async function handleReviews(
     if (!response.ok) return empty();
     const data = object(await response.json());
     if (data.id !== placeId) return empty();
+    const address = string(data.formattedAddress);
+    if (!/trinidad/i.test(address) || !/(petit valley|morne coco|west hills)/i.test(address))
+      return empty("location_mismatch");
+    const rating = Number(data.rating);
+    const userRatingCount = Number(data.userRatingCount);
+    const location = object(data.location);
     const reviews = (Array.isArray(data.reviews) ? data.reviews : []).flatMap((raw: unknown) => {
       const item = object(raw),
         author = object(item.authorAttribution),
@@ -109,6 +116,14 @@ export async function handleReviews(
     return new Response(
       JSON.stringify({
         status: "ready",
+        rating: Number.isFinite(rating) && rating >= 1 && rating <= 5 ? rating : null,
+        userRatingCount:
+          Number.isInteger(userRatingCount) && userRatingCount >= 0 ? userRatingCount : null,
+        address,
+        location:
+          Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))
+            ? { latitude: Number(location.latitude), longitude: Number(location.longitude) }
+            : null,
         reviews,
         googleMapsUri: googleLink(data.googleMapsUri) || profile,
         attributions: Array.isArray(data.attributions) ? data.attributions : [],

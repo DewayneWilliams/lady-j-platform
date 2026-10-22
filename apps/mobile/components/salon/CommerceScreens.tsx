@@ -30,7 +30,13 @@ export function BagScreen() {
     go = useNav(),
     c = useColors();
   const items = s.products.filter((v) => s.cart[v.id] > 0),
-    total = items.reduce((n, v) => n + Number(v.price) * s.cart[v.id], 0);
+    services = s.services.filter((v) => s.selected.includes(v.id)),
+    workshops = s.workshops.filter((v) => s.workshopCart.includes(v.id)),
+    total =
+      items.reduce((n, v) => n + Number(v.price) * s.cart[v.id], 0) +
+      services.reduce((n, v) => n + Number(v.price), 0) +
+      workshops.reduce((n, v) => n + Number(v.price), 0),
+    hasItems = items.length > 0 || services.length > 0 || workshops.length > 0;
   const update = (id: string, qty: number) =>
     s.setCart((old) => {
       const copy = { ...old };
@@ -41,7 +47,7 @@ export function BagScreen() {
   return (
     <Shell>
       <Heading sub="A little Lady J, for your everyday.">Your shopping bag</Heading>
-      {!items.length ? (
+      {!hasItems ? (
         <Empty
           title="Make your routine a little more beautiful"
           body="Explore our thoughtful collection of hair, skin and body essentials."
@@ -50,6 +56,77 @@ export function BagScreen() {
       ) : (
         <View style={{ maxWidth: 850, gap: 16 }}>
           <Tag>Sample data</Tag>
+          {!!services.length && (
+            <Card style={{ gap: 14 }}>
+              <Txt serif size={25}>
+                Appointments
+              </Txt>
+              {services.map((service) => (
+                <View
+                  key={service.id}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Txt bold>{service.name}</Txt>
+                    <Txt size={13} color={c.mutedForeground}>
+                      {money(service.price)}
+                    </Txt>
+                  </View>
+                  <LinkText
+                    onPress={() => s.setSelected((old) => old.filter((id) => id !== service.id))}
+                  >
+                    Remove
+                  </LinkText>
+                </View>
+              ))}
+              <Action
+                label="Choose Appointment Time"
+                icon="CalendarDays"
+                onPress={() => go("booking")}
+                style={{ alignSelf: "stretch" }}
+              />
+            </Card>
+          )}
+          {!!workshops.length && (
+            <Card style={{ gap: 14 }}>
+              <Txt serif size={25}>
+                Workshops
+              </Txt>
+              {workshops.map((workshop) => (
+                <View
+                  key={workshop.id}
+                  style={{ gap: 8, borderTopWidth: 1, borderColor: c.border, paddingTop: 12 }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Txt bold>{workshop.name}</Txt>
+                      <Txt size={13} color={c.mutedForeground}>
+                        {money(workshop.price)}
+                      </Txt>
+                    </View>
+                    <LinkText
+                      onPress={() =>
+                        s.setWorkshopCart((old) => old.filter((id) => id !== workshop.id))
+                      }
+                    >
+                      Remove
+                    </LinkText>
+                  </View>
+                  <Action
+                    label="Register"
+                    gold
+                    onPress={() => go("checkout", { kind: "workshop", id: workshop.id })}
+                    style={{ alignSelf: "stretch" }}
+                  />
+                </View>
+              ))}
+            </Card>
+          )}
+          {!!items.length && (
+            <Txt serif size={25}>
+              Products
+            </Txt>
+          )}
           {items.map((v) => (
             <Card key={v.id} style={{ flexDirection: "row", gap: 18, padding: 17 }}>
               <Photo name={v.image} style={{ width: 85, height: 105, borderRadius: 10 }} />
@@ -80,7 +157,7 @@ export function BagScreen() {
           ))}
           <Card style={{ gap: 15 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Txt size={20}>Subtotal</Txt>
+              <Txt size={20}>Bag total</Txt>
               <Txt size={23} bold>
                 {money(total)}
               </Txt>
@@ -88,12 +165,14 @@ export function BagScreen() {
             <Txt size={12} color={c.mutedForeground}>
               Pickup is complimentary. Any delivery fee is shown before you submit your order.
             </Txt>
-            <Action
-              label="Continue to checkout"
-              icon="ArrowRight"
-              onPress={() => go("checkout", { kind: "product" })}
-              style={{ alignSelf: "stretch" }}
-            />
+            {!!items.length && (
+              <Action
+                label="Checkout Products"
+                icon="ArrowRight"
+                onPress={() => go("checkout", { kind: "product" })}
+                style={{ alignSelf: "stretch" }}
+              />
+            )}
           </Card>
         </View>
       )}
@@ -160,7 +239,11 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
         }),
       );
       setDone(String(result));
-      if (!isWorkshop) s.setCart({});
+      if (isWorkshop && workshop) {
+        s.setWorkshopCart((old) => old.filter((workshopId) => workshopId !== workshop.id));
+      } else {
+        s.setCart({});
+      }
       await Promise.all([s.refreshPrivate(), s.refresh()]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "We couldn’t save your request.");

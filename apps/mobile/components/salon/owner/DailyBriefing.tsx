@@ -4,7 +4,6 @@ import Icon from "@/lib/icons/LucideIcon";
 import { AttentionItem } from "@/lib/salon/ownerAssistant";
 import { Card, Txt, ButtonLabel, useColors } from "../ui";
 import AttentionCard from "./AttentionCard";
-import { OwnerText } from "./OwnerUI";
 export default function DailyBriefing({
   items,
   onOpen,
@@ -16,19 +15,24 @@ export default function DailyBriefing({
   const [expanded, setExpanded] = useState(false);
   const content = (
     <View style={{ gap: 4 }}>
-      <OwnerText size={25} bold>
-        {items.length ? "Needs attention" : "You’re up to date"}
-      </OwnerText>
+      <ButtonLabel singleLine size={25} style={{ textAlign: "left" }}>
+        {items.length ? "Needs Attention" : "You’re Up to Date"}
+      </ButtonLabel>
       {!items.length && (
-        <OwnerText muted>
-          No payments, balances, orders or stock alerts need your attention in the loaded records.
-        </OwnerText>
+        <Txt
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.78}
+          color={c.mutedForeground}
+        >
+          Nothing needs your attention.
+        </Txt>
       )}
       {(expanded ? items : items.slice(0, 3)).map((item) => (
         <Pressable
           key={item.key}
           accessibilityRole="button"
-          accessibilityLabel={item.count + " · " + item.title + ". " + item.detail}
+          accessibilityLabel={item.count + " " + item.title + ". " + item.detail}
           onPress={() => onOpen(item)}
           style={({ pressed }) => ({
             flexDirection: "row",
@@ -55,12 +59,9 @@ export default function DailyBriefing({
               {item.count}
             </Txt>
           </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <OwnerText bold>{item.title}</OwnerText>
-            <OwnerText size={17} muted>
-              {item.detail}
-            </OwnerText>
-          </View>
+          <ButtonLabel singleLine size={19} style={{ flex: 1, textAlign: "left" }}>
+            {item.title}
+          </ButtonLabel>
           <Icon name="ChevronRight" size={20} color={c.mutedForeground} />
         </Pressable>
       ))}

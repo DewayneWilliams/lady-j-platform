@@ -18,6 +18,7 @@ export default function ProductStore() {
   const [brand, setBrand] = useState("All brands");
   const [category, setCategory] = useState("All products");
   const [sort, setSort] = useState("Name A–Z");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [page, setPage] = useState(0);
   const desktop = width > 850;
   const filtered = s.products
@@ -39,7 +40,11 @@ export default function ProductStore() {
   const pages = Math.max(1, Math.ceil(filtered.length / 24));
   const currentPage = Math.min(page, pages - 1);
   return (
-    <Shell wide scrollRevision={currentPage}>
+    <Shell
+      wide
+      scrollRevision={currentPage}
+      headerAction={{ label: "EXPLORE PRODUCTS", onPress: () => go("boutique") }}
+    >
       <View
         style={{
           flexDirection: "row",
@@ -58,12 +63,7 @@ export default function ProductStore() {
             Professional care for your everyday routine.
           </Txt>
         </View>
-        <Action
-          label="Buy Products"
-          icon="ShoppingBag"
-          inverted
-          onPress={() => go("bag")}
-        />
+        <Action label="Buy Products" icon="ShoppingBag" inverted onPress={() => go("bag")} />
       </View>
       <Card
         style={{
@@ -120,47 +120,6 @@ export default function ProductStore() {
           }}
         />
       </View>
-      <Txt size={18} bold style={{ marginBottom: 12 }}>
-        Shop by brand
-      </Txt>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, paddingBottom: 24 }}>
-        {[
-          "All brands",
-          ...new Set([...productBrands, ...s.products.map((v) => v.brand || "").filter(Boolean)]),
-        ].map((value) => (
-          <Chip
-            key={value}
-            label={value}
-            selected={brand === value}
-            onPress={() => {
-              setBrand(value);
-              setPage(0);
-            }}
-          />
-        ))}
-      </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, paddingBottom: 24 }}>
-        {[
-          "All products",
-          ...new Set([
-            "Shampoo",
-            "Conditioner",
-            "Treatments",
-            "Styling",
-            ...s.products.map((v) => v.category),
-          ]),
-        ].map((value) => (
-          <Chip
-            key={value}
-            label={value}
-            selected={category === value}
-            onPress={() => {
-              setCategory(value);
-              setPage(0);
-            }}
-          />
-        ))}
-      </View>
       <View
         style={{
           flexDirection: "row",
@@ -172,21 +131,109 @@ export default function ProductStore() {
         }}
       >
         <Txt color={c.mutedForeground}>{filtered.length} products</Txt>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {["Name A–Z", "Price low–high", "Price high–low"].map((value) => (
-            <Chip
-              key={value}
-              label={value}
-              selected={sort === value}
+        <Action
+          label={`Filter${brand !== "All brands" || category !== "All products" ? " · Active" : ""}`}
+          icon="SlidersHorizontal"
+          secondary
+          onPress={() => setFiltersOpen((value) => !value)}
+          style={{ minHeight: 46, paddingVertical: 8 }}
+        />
+      </View>
+      {filtersOpen && (
+        <Card style={{ gap: 18, marginBottom: 24, padding: 18 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <Txt size={20} bold>
+              Filter products
+            </Txt>
+            <LinkText
               onPress={() => {
-                setSort(value);
+                setBrand("All brands");
+                setCategory("All products");
+                setSort("Name A–Z");
                 setPage(0);
               }}
-            />
-          ))}
-        </View>
-      </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, alignItems: "stretch" }}>
+            >
+              Clear all
+            </LinkText>
+          </View>
+          <View style={{ gap: 9 }}>
+            <Txt bold>Brand</Txt>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {[
+                "All brands",
+                ...new Set([
+                  ...productBrands,
+                  ...s.products.map((v) => v.brand || "").filter(Boolean),
+                ]),
+              ].map((value) => (
+                <Chip
+                  key={value}
+                  label={value}
+                  selected={brand === value}
+                  onPress={() => {
+                    setBrand(value);
+                    setPage(0);
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+          <View style={{ gap: 9 }}>
+            <Txt bold>Category</Txt>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {[
+                "All products",
+                ...new Set([
+                  "Shampoo",
+                  "Conditioner",
+                  "Treatments",
+                  "Styling",
+                  ...s.products.map((v) => v.category),
+                ]),
+              ].map((value) => (
+                <Chip
+                  key={value}
+                  label={value}
+                  selected={category === value}
+                  onPress={() => {
+                    setCategory(value);
+                    setPage(0);
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+          <View style={{ gap: 9 }}>
+            <Txt bold>Sort by</Txt>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {["Name A–Z", "Price low–high", "Price high–low"].map((value) => (
+                <Chip
+                  key={value}
+                  label={value}
+                  selected={sort === value}
+                  onPress={() => {
+                    setSort(value);
+                    setPage(0);
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+          <Action
+            label={`Show ${filtered.length} products`}
+            onPress={() => setFiltersOpen(false)}
+            style={{ alignSelf: "stretch" }}
+          />
+        </Card>
+      )}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, alignItems: "flex-start" }}>
         {filtered.slice(currentPage * 24, currentPage * 24 + 24).map((v) => (
           <Card
             key={v.id}
@@ -194,7 +241,6 @@ export default function ProductStore() {
               padding: 0,
               overflow: "hidden",
               width: desktop ? "31%" : "100%",
-              flexGrow: 1,
               maxWidth: desktop ? "33%" : undefined,
             }}
           >
