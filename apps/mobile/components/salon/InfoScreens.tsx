@@ -58,7 +58,7 @@ export default function InfoScreen({ page }: { page: string }) {
     );
   if (page === "contact")
     return (
-      <Shell>
+      <Shell footer>
         <View style={{ alignItems: "center", marginBottom: 30 }}>
           <Txt serif size={40} style={{ textAlign: "center" }}>
             Let’s connect
@@ -94,13 +94,6 @@ export default function InfoScreen({ page }: { page: string }) {
             <View style={{ gap: 3 }}>
               <Txt>On My Way Plaza</Txt>
               <Txt>Petit Valley, Trinidad and Tobago</Txt>
-            </View>
-            <View style={{ gap: 3 }}>
-              <Txt bold>Tuesday – Saturday</Txt>
-              <Txt>10:00 AM – 6:00 PM</Txt>
-              <Txt color={c.mutedForeground} size={13}>
-                Sunday & Monday · Closed
-              </Txt>
             </View>
             <View style={{ gap: 8, alignItems: "flex-start" }}>
               {s.settings?.contact_phone ? (

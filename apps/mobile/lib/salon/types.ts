@@ -53,6 +53,12 @@ export type Workshop = {
   is_demo: boolean;
 };
 export type Appointment = {
+  cleanup_minutes?: number;
+  is_vip?: boolean;
+  vip_percentage?: 25 | 35 | null;
+  vip_premium?: number;
+  approval_status?: "not_required" | "pending" | "approved" | "declined";
+  payment_selection?: "full" | "deposit";
   block_reason?: string;
   block_description?: string;
   all_day?: boolean;
@@ -123,6 +129,7 @@ export type Transaction = {
   created_at: string;
 };
 export type Profile = {
+  pronouns?: "she_her" | "he_him" | "they_them" | "prefer_not" | null;
   profile_photo_path?: string | null;
   display_profile_photo_path?: string | null;
   profile_photo_updated_at?: string | null;
@@ -138,6 +145,7 @@ export type Profile = {
   marketing_consent: boolean;
 };
 export type Client = {
+  pronouns?: "she_her" | "he_him" | "they_them" | "prefer_not" | null;
   client_photo_path?: string | null;
   owner_photo_path?: string | null;
   use_owner_photo?: boolean;
@@ -164,6 +172,7 @@ export type Client = {
   photo_consent: boolean;
 };
 export type Settings = {
+  cleanup_buffer_minutes?: number;
   max_daily_bookings_per_client?: number;
   id: string;
   business_name: string;

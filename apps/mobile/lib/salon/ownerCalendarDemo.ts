@@ -2,7 +2,7 @@ import { Appointment } from "./types";
 import { addCalendarDays } from "./calendarActivity";
 /** Fictional blocked periods only; never inserted into Supabase. */
 export function createOwnerCalendarDemo(day: string): Appointment[] {
-  return [0, 3, 8, 12].map((offset) => {
+  return [0, 3, 12, 14].map((offset) => {
     const date = addCalendarDays(day, offset);
     return {
       id: "demo-calendar-block-" + offset,

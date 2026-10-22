@@ -46,3 +46,5 @@ Owner catalog tools support public photo galleries, combined service specials wi
 
 - Calendar marks the current salon-local date with a fast outline-only pulse; Reduce Motion keeps it steady and background/unmount stops animation.
 - Home’s post-map footer is limited to opening hours and Terms/Privacy; Products follow the service-card grid, Workshops is an editorial Academy introduction, Contact uses an original representative reception image, and one DEVELOPMENT-only flag controls isolated login-free client/owner UI testing.
+- VIP Access exposes cleanup-aware 15-minute availability from 6:00 AM–7:00 PM up to six months ahead, applies one server-authoritative morning/evening premium, and reserves approval for morning/evening starts while extended daytime visits use normal checkout.
+- Development Test Mode uses original local profile imagery and schedules 30 varied Witcher-character appointments across the next Tuesday–Saturday without writing demo contacts or bookings to Supabase.

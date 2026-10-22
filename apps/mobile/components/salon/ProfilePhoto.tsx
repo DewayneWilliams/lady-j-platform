@@ -10,6 +10,7 @@ import {
   signedProfilePhoto,
   uploadProfilePhoto,
 } from "@/lib/salon/profilePhotos";
+import { demoProfilePhoto } from "@/lib/salon/demoProfilePhotos";
 import { Txt, ErrorBox, useColors } from "./ui";
 
 export function ProfileAvatar({
@@ -25,9 +26,11 @@ export function ProfileAvatar({
 }) {
   const c = useColors();
   const [url, setUrl] = useState<string | null>(null);
+  const demoPhoto = demoProfilePhoto(path);
   useEffect(() => {
     let active = true;
     setUrl(null);
+    if (demoProfilePhoto(path)) return () => { active = false; };
     void signedProfilePhoto(path)
       .then((value) => active && setUrl(value))
       .catch(() => active && setUrl(null));
@@ -56,7 +59,21 @@ export function ProfileAvatar({
         borderColor: c.goldBorder,
       }}
     >
-      {url ? (
+      {demoPhoto?.atlasIndex != null ? (
+        <Image
+          source={demoPhoto.source}
+          contentFit="fill"
+          style={{
+            position: "absolute",
+            width: size * 4,
+            height: size * 4,
+            left: -(demoPhoto.atlasIndex % 4) * size,
+            top: -Math.floor(demoPhoto.atlasIndex / 4) * size,
+          }}
+        />
+      ) : demoPhoto ? (
+        <Image source={demoPhoto.source} contentFit="cover" style={{ width: size, height: size }} />
+      ) : url ? (
         <Image source={{ uri: url }} contentFit="cover" style={{ width: size, height: size }} />
       ) : initials ? (
         <Txt bold size={Math.max(16, size * 0.29)} color={c.brandAccent}>

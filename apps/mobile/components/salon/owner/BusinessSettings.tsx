@@ -43,6 +43,7 @@ export default function BusinessSettings({
     contact_email: settings?.contact_email || "",
     contact_phone: settings?.contact_phone || "",
     address: settings?.address || "",
+    cleanup_buffer_minutes: String(settings?.cleanup_buffer_minutes ?? 15),
   });
   const [delivery, setDelivery] = useState<Delivery | null>(null),
     [busy, setBusy] = useState(false),
@@ -96,6 +97,12 @@ export default function BusinessSettings({
           onChangeText={(address) => setForm({ ...form, address })}
           multiline
         />
+        <Field
+          label="Appointment cleanup buffer (minutes)"
+          keyboardType="numeric"
+          value={form.cleanup_buffer_minutes}
+          onChangeText={(cleanup_buffer_minutes) => setForm({ ...form, cleanup_buffer_minutes })}
+        />
         <OwnerButton
           label={busy ? "Saving" : "Save settings"}
           disabled={busy}
@@ -114,10 +121,15 @@ export default function BusinessSettings({
             }
             setBusy(true);
             void (async () => {
+              const cleanup = Number(form.cleanup_buffer_minutes);
+              if (!Number.isInteger(cleanup) || cleanup < 0 || cleanup > 120) {
+                throw new Error("Cleanup buffer must be a whole number from 0 to 120 minutes.");
+              }
               const values = {
                 ...form,
                 business_name: form.business_name.trim(),
                 contact_email: form.contact_email.trim(),
+                cleanup_buffer_minutes: cleanup,
               };
               if (demo)
                 onDemoSave({ ...settings, ...values, id: settings?.id || "business" } as Settings);
@@ -140,6 +152,12 @@ export default function BusinessSettings({
               .finally(() => setBusy(false));
           }}
         />
+      </Card>
+      <Card style={{ gap: 12 }}>
+        <OwnerText bold>VIP Access</OwnerText>
+        <OwnerText size={16} muted>
+          Available VIP times appear automatically in 15-minute intervals when the calendar is open. Morning starts from 6:00–9:45 AM and evening starts from 6:00–7:00 PM require your approval. Appointments extending to 6:15 PM or later include VIP pricing without an approval step.
+        </OwnerText>
       </Card>
       <Card style={{ gap: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>

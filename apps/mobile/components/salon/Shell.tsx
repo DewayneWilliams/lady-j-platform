@@ -96,11 +96,11 @@ export function Brand({
 export default function Shell({
   children,
   wide = false,
-  footer = true,
+  footer = false,
   scrollRevision,
   bottomBar,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   wide?: boolean;
   footer?: boolean;
   scrollRevision?: string | number;

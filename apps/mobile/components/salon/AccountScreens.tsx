@@ -17,6 +17,8 @@ import {
 import { AccountTrust } from "./AccountGate";
 import Shell, { useNav } from "./Shell";
 import { ProfilePhotoEditor } from "./ProfilePhoto";
+import { demoTestClientPhotoPath } from "@/lib/salon/demoProfilePhotos";
+import VipPaymentPanel from "./VipPaymentPanel";
 import {
   Txt,
   Action,
@@ -31,6 +33,18 @@ import {
   useColors,
   shared,
 } from "./ui";
+
+const pronounOptions = [
+  ["she_her", "She/Her"],
+  ["he_him", "He/Him"],
+  ["they_them", "They/Them"],
+  ["prefer_not", "Prefer Not to Say"],
+] as const;
+
+function visiblePronouns(value?: string | null) {
+  if (!value || value === "prefer_not") return "";
+  return pronounOptions.find(([key]) => key === value)?.[1] || "";
+}
 export function AuthScreen({
   mode,
   next,
@@ -396,7 +410,9 @@ export function AccountScreen() {
           <ProfilePhotoEditor
             name={name}
             mode="client"
-            clientPath={s.profile?.profile_photo_path}
+            clientPath={
+              s.profile?.profile_photo_path || (!s.session && s.testMode ? demoTestClientPhotoPath : null)
+            }
             displayPath={s.profile?.display_profile_photo_path}
             updatedAt={s.profile?.profile_photo_updated_at}
             disabled={!s.session}
@@ -407,6 +423,11 @@ export function AccountScreen() {
               Welcome Back, {firstName}
             </Txt>
             <Txt color={c.mutedForeground}>Your personal beauty experience</Txt>
+            {!!visiblePronouns(s.profile?.pronouns) && (
+              <Txt size={13} color={c.mutedForeground}>
+                {visiblePronouns(s.profile?.pronouns)}
+              </Txt>
+            )}
             {!s.session && s.testMode && (
               <Txt size={12} color={c.mutedForeground}>
                 Development Test Mode · profile uploads require sign-in
@@ -463,6 +484,11 @@ export function AccountScreen() {
           </Pressable>
         ))}
         </View>
+        <Action
+          label="Book an Appointment"
+          onPress={() => go("booking")}
+          style={{ alignSelf: "center", marginTop: 24 }}
+        />
         <Pressable
           accessibilityRole="button"
           onPress={() => {
@@ -515,6 +541,7 @@ export function ProfileScreen() {
     [birthday, setBirthday] = useState(s.profile?.birthday || ""),
     [preferences, setPreferences] = useState(s.profile?.preferences || ""),
     [medicalConditions, setMedicalConditions] = useState(s.profile?.medical_conditions || ""),
+    [pronouns, setPronouns] = useState(s.profile?.pronouns || null),
     [consent, setConsent] = useState(s.profile?.marketing_consent || false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -549,6 +576,7 @@ export function ProfileScreen() {
             birthday: birthday || null,
             preferences,
             medical_conditions: medicalConditions.trim(),
+            pronouns,
             marketing_consent: consent,
           }),
       );
@@ -577,7 +605,9 @@ export function ProfileScreen() {
             <ProfilePhotoEditor
               name={name || "Client"}
               mode="client"
-              clientPath={s.profile?.profile_photo_path}
+              clientPath={
+                s.profile?.profile_photo_path || (!s.session && s.testMode ? demoTestClientPhotoPath : null)
+              }
               displayPath={s.profile?.display_profile_photo_path}
               updatedAt={s.profile?.profile_photo_updated_at}
               disabled={!s.session}
@@ -592,6 +622,35 @@ export function ProfileScreen() {
           </Txt>
           <Field label="First name" value={firstName} onChangeText={setFirstName} />
           <Field label="Last name" value={lastName} onChangeText={setLastName} />
+          <Txt size={14} bold style={{ marginTop: 4 }}>
+            Pronouns (optional)
+          </Txt>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+            {pronounOptions.map(([value, label]) => {
+              const selected = pronouns === value;
+              return (
+                <Pressable
+                  key={value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => setPronouns(selected ? null : value)}
+                  style={{
+                    minHeight: 44,
+                    justifyContent: "center",
+                    paddingHorizontal: 14,
+                    borderRadius: 22,
+                    borderWidth: 1,
+                    borderColor: selected ? c.brandAccent : c.border,
+                    backgroundColor: selected ? c.brandAccentSurface : c.card,
+                  }}
+                >
+                  <Txt bold={selected} color={selected ? c.brandAccent : c.foreground}>
+                    {label}
+                  </Txt>
+                </Pressable>
+              );
+            })}
+          </View>
           <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
           <Field
             label="Phone / WhatsApp"
@@ -784,6 +843,9 @@ export function RecordsScreen({ page }: { page: string }) {
                           </LinkText>
                         )}
                       </View>
+                    )}
+                    {a.is_vip && a.approval_status === "approved" && !payment && (
+                      <VipPaymentPanel appointment={a} />
                     )}
                     {["pending", "confirmed"].includes(a.status) &&
                       new Date(a.starts_at) > new Date() &&

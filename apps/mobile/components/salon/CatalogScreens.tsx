@@ -2,7 +2,7 @@ import { serviceDurationLabel } from "@/lib/salon/duration";
 import CatalogGallery from "./CatalogGallery";
 import ServiceCategories from "./ServiceCategories";
 import React, { useState } from "react";
-import { View, Pressable, TextInput, useWindowDimensions } from "react-native";
+import { Image, View, Pressable, TextInput, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { money, servicePriceLabel, dateLabel, timeLabel } from "@/lib/salon/types";
@@ -259,6 +259,12 @@ export function WorkshopsScreen() {
           professional expertise and prepare them for real-world opportunities in the beauty
           industry.
         </Txt>
+        <Image
+          source={require("../../assets/salon/workshop-students.png")}
+          accessibilityLabel="Diverse cosmetology students receiving hands-on instruction in a beauty school"
+          resizeMode="cover"
+          style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 16 }}
+        />
       </View>
     </Shell>
   );

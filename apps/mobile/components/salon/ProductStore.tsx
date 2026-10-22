@@ -38,7 +38,6 @@ export default function ProductStore() {
     );
   const pages = Math.max(1, Math.ceil(filtered.length / 24));
   const currentPage = Math.min(page, pages - 1);
-  const bagCount = Object.values(s.cart).reduce((total, quantity) => total + quantity, 0);
   return (
     <Shell wide scrollRevision={currentPage}>
       <View
@@ -60,9 +59,9 @@ export default function ProductStore() {
           </Txt>
         </View>
         <Action
-          label={"Bag (" + bagCount + ")"}
+          label="Buy Products"
           icon="ShoppingBag"
-          secondary
+          inverted
           onPress={() => go("bag")}
         />
       </View>

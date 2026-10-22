@@ -10,7 +10,7 @@ export default function ClientTabs() {
   const items = [
     { key: "home", label: copy.home, icon: "HouseHeart" as const },
     { key: "services", label: copy.services, icon: "Scissors" as const },
-    { key: "boutique", label: copy.products, icon: "ShoppingBasket" as const },
+    { key: "boutique", label: copy.products, icon: "SprayCanClean" as const },
     { key: "workshops", label: copy.workshops, icon: "BookOpenCheck" as const },
     { key: "contact", label: copy.contact, icon: "MessagesSquare" as const },
     { key: "account", label: copy.account, icon: "CircleUserRound" as const },

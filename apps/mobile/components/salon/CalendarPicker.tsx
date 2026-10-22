@@ -14,6 +14,12 @@ export default function CalendarPicker({
 }) {
   const c = useColors();
   const [month, setMonth] = useState(() => new Date(`${value || todayKey()}T12:00:00Z`));
+  const today = todayKey();
+  const currentMonth = new Date(`${today.slice(0, 7)}-01T12:00:00Z`);
+  const lastDate = new Date(`${today}T12:00:00Z`);
+  lastDate.setUTCMonth(lastDate.getUTCMonth() + 6);
+  const lastKey = lastDate.toISOString().slice(0, 10);
+  const lastMonth = new Date(Date.UTC(lastDate.getUTCFullYear(), lastDate.getUTCMonth(), 1));
   const year = month.getUTCFullYear(),
     m = month.getUTCMonth(),
     days = new Date(Date.UTC(year, m + 1, 0)).getUTCDate(),
@@ -31,6 +37,8 @@ export default function CalendarPicker({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Previous month"
+          disabled={!unrestricted && month <= currentMonth}
+          accessibilityState={{ disabled: !unrestricted && month <= currentMonth }}
           onPress={() => setMonth(new Date(Date.UTC(year, m - 1, 1)))}
           style={{ padding: 14 }}
         >
@@ -42,6 +50,8 @@ export default function CalendarPicker({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Next month"
+          disabled={!unrestricted && month >= lastMonth}
+          accessibilityState={{ disabled: !unrestricted && month >= lastMonth }}
           onPress={() => setMonth(new Date(Date.UTC(year, m + 1, 1)))}
           style={{ padding: 14 }}
         >
@@ -62,7 +72,7 @@ export default function CalendarPicker({
           const n = i - offset + 1;
           const key = `${year}-${String(m + 1).padStart(2, "0")}-${String(n).padStart(2, "0")}`;
           const day = i % 7,
-            disabled = n < 1 || (!unrestricted && (key < todayKey() || day === 0 || day === 1));
+            disabled = n < 1 || (!unrestricted && (key < today || key > lastKey || day === 0 || day === 1));
           return (
             <Pressable
               key={i}

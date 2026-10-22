@@ -1167,6 +1167,46 @@ export default function OwnerScreen() {
       expanded={expandedAppointment === a.id}
       onToggle={() => setExpandedAppointment(expandedAppointment === a.id ? "" : a.id)}
     >
+      {a.is_vip && a.approval_status === "pending" && (
+        <View style={{ gap: 10 }}>
+          <OT bold>VIP request · +{a.vip_percentage}% · {money(a.vip_premium || 0)} premium</OT>
+          <OT muted>Approve only after rechecking the requested morning time. Payment has not been collected.</OT>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <OA
+                fill
+                label="Decline"
+                secondary
+                disabled={busy || demo}
+                onPress={() => {
+                  setBusy(true);
+                  void (async () => check(await db().rpc("lj_review_vip_request", { p_id: a.id, p_approve: false })))()
+                    .then(() => load())
+                    .then(() => s.notify("VIP request declined."))
+                    .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to decline VIP request."))
+                    .finally(() => setBusy(false));
+                }}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <OA
+                fill
+                label="Approve"
+                accent
+                disabled={busy || demo}
+                onPress={() => {
+                  setBusy(true);
+                  void (async () => check(await db().rpc("lj_review_vip_request", { p_id: a.id, p_approve: true })))()
+                    .then(() => load())
+                    .then(() => s.notify("VIP request approved. Payment remains outstanding."))
+                    .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to approve VIP request."))
+                    .finally(() => setBusy(false));
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      )}
       {a.kind === "appointment" &&
         transactions
           .filter((transaction) => transaction.appointment_id === a.id)
@@ -1249,7 +1289,7 @@ export default function OwnerScreen() {
           onPress={() => setDiscountTarget({ kind: "appointment", record: a })}
         />
       )}
-      {a.kind === "appointment" && ["pending", "confirmed"].includes(a.status) && (
+      {a.kind === "appointment" && a.approval_status !== "pending" && ["pending", "confirmed"].includes(a.status) && (
         <View style={{ gap: 12 }}>
           <OA
             fill
@@ -1295,7 +1335,7 @@ export default function OwnerScreen() {
           />
         </View>
       )}
-      {a.kind === "appointment" && ["pending", "confirmed", "completed"].includes(a.status) && (
+      {a.kind === "appointment" && a.approval_status !== "pending" && ["pending", "confirmed", "completed"].includes(a.status) && (
         <View style={{ gap: 12 }}>
           <OA
             fill
@@ -2722,6 +2762,15 @@ export default function OwnerScreen() {
                                 ? "Client photo selected"
                                 : "Default avatar"}
                           </OT>
+                          {!!selectedClient.pronouns && selectedClient.pronouns !== "prefer_not" && (
+                            <OT muted>
+                              {selectedClient.pronouns === "she_her"
+                                ? "She/Her"
+                                : selectedClient.pronouns === "he_him"
+                                  ? "He/Him"
+                                  : "They/Them"}
+                            </OT>
+                          )}
                         </View>
                         <OF
                           label="First Name"

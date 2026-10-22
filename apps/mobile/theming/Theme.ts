@@ -36,6 +36,10 @@ export interface Theme {
     brandAccent?: string;
     brandAccentFill?: string;
     brandAccentSurface?: string;
+    vipFill?: string;
+    vipForeground?: string;
+    vipText?: string;
+    vipSurface?: string;
     balanceDueInk?: string;
     balanceDueSurface?: string;
     attentionBorder?: string;

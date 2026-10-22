@@ -44,7 +44,7 @@ export default function HomeScreen() {
     )
     .slice(0, 2);
   return (
-    <Shell wide>
+    <Shell wide footer>
       <View
         style={{
           borderWidth: 1,
@@ -59,41 +59,6 @@ export default function HomeScreen() {
       >
         <View style={{ flex: 1, minHeight: desktop ? 450 : 320 }}>
           <Photo name="hero" style={{ height: "100%", minHeight: desktop ? 450 : 320 }} />
-          <View
-            style={{
-              position: "absolute",
-              right: 21,
-              bottom: 21,
-              backgroundColor: c.card,
-              borderRadius: 12,
-              paddingHorizontal: 18,
-              paddingVertical: 13,
-              flexDirection: "row",
-              gap: 12,
-              alignItems: "center",
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: c.secondary,
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Icon name="Flower2" size={20} color={c.secondaryForeground} />
-            </View>
-            <View>
-              <Txt size={12} bold>
-                A little time, fully yours
-              </Txt>
-              <Txt size={10} color={c.mutedForeground}>
-                Lady J Salon & Day Spa
-              </Txt>
-            </View>
-          </View>
         </View>
       </View>
       <View

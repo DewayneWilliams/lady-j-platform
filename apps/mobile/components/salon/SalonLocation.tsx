@@ -1,6 +1,7 @@
 import React from "react";
 import { Linking, useWindowDimensions, View } from "react-native";
 import { GOOGLE_BUSINESS } from "@/supabase/functions/_shared/googleBusiness";
+import { salonDirectionsUrl } from "@/lib/salon/location";
 import SalonMap from "./SalonMap";
 import { Action, Heading, Txt, useColors } from "./ui";
 
@@ -26,7 +27,7 @@ export default function SalonLocation() {
       <View
         accessibilityLabel="Google Map showing Lady J Salon & Day Spa"
         style={{
-          height: width < 480 ? 300 : 360,
+          height: width < 480 ? 350 : 420,
           width: "100%",
           overflow: "hidden",
           backgroundColor: c.muted,
@@ -38,12 +39,21 @@ export default function SalonLocation() {
         <SalonMap />
       </View>
       <Action
-        label="Open in Google Maps"
-        secondary
+        label="Get Driving Directions"
         icon="MapPinned"
-        onPress={() => void Linking.openURL(GOOGLE_BUSINESS.profileUrl)}
-        style={{ alignSelf: "center" }}
+        onPress={() => void Linking.openURL(salonDirectionsUrl)}
+        style={{ alignSelf: "stretch" }}
       />
+      <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
+        <Txt
+          accessibilityRole="link"
+          onPress={() => void Linking.openURL(GOOGLE_BUSINESS.reviewUrl)}
+          bold
+          color={c.brandAccent}
+        >
+          Read Reviews
+        </Txt>
+      </View>
     </View>
   );
 }

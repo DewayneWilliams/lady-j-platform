@@ -145,6 +145,7 @@ export function Action({
   onPress,
   secondary = false,
   gold = false,
+  inverted = false,
   prominent = false,
   icon,
   iconColor,
@@ -156,6 +157,7 @@ export function Action({
   onPress: () => void;
   secondary?: boolean;
   gold?: boolean;
+  inverted?: boolean;
   prominent?: boolean;
   icon?: IconName;
   iconColor?: string;
@@ -169,6 +171,8 @@ export function Action({
       ? c.mutedForeground
       : secondary
         ? c.foreground
+        : inverted
+          ? c.background
         : gold
           ? c.tertiaryForeground
           : c.primaryForeground;
@@ -196,6 +200,9 @@ export function Action({
         },
         gold && !secondary
           ? { backgroundColor: c.tertiary, borderColor: c.tertiary, borderWidth: 1 }
+          : undefined,
+        inverted && !secondary
+          ? { backgroundColor: c.foreground, borderColor: c.foreground, borderWidth: 1 }
           : undefined,
         style,
         (disabled || busy) && { backgroundColor: c.muted, borderColor: c.border, borderWidth: 1 },

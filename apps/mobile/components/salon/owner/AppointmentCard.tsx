@@ -33,12 +33,19 @@ export default function AppointmentCard({
         ? c.paymentDeposit
         : c.paymentPending;
   return (
-    <Card style={{ padding: 0, marginBottom: 14, overflow: "hidden" }}>
+    <Card style={{ padding: 0, marginBottom: 14, overflow: "hidden", borderColor: a.is_vip ? "#7543B8" : c.border, borderWidth: a.is_vip ? 2 : 1 }}>
+      {a.is_vip && (
+        <View style={{ backgroundColor: "#7543B8", minHeight: 46, paddingHorizontal: 14, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Icon name="Crown" size={20} color="#C49A36" />
+          <Txt bold color="#FFFFFF" style={{ flex: 1 }}>VIP Access +{a.vip_percentage}%</Txt>
+          <Txt size={13} bold color="#FFFFFF">{a.approval_status === "pending" ? "Pending Approval" : a.approval_status}</Txt>
+        </View>
+      )}
       <View
         testID={"appointment-" + a.id}
         style={{
           borderLeftWidth: 7,
-          borderColor: a.kind === "block" ? c.mutedForeground : paymentColor,
+          borderColor: a.is_vip ? "#7543B8" : a.kind === "block" ? c.mutedForeground : paymentColor,
           padding: 16,
           gap: 14,
         }}
