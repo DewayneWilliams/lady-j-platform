@@ -1,8 +1,7 @@
 import React from "react";
 import { Pressable } from "react-native";
-import { ButtonLabel, useColors } from "../ui";
+import { ButtonLabel } from "../ui";
 export default function BlockTimeMenu({ onSelect }: { onSelect: (reason: string) => void }) {
-  const c = useColors();
   return (
     <Pressable
       accessibilityRole="button"
@@ -12,8 +11,8 @@ export default function BlockTimeMenu({ onSelect }: { onSelect: (reason: string)
         minHeight: 80,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: c.brandAccent,
-        backgroundColor: c.brandAccentSurface,
+        borderColor: "#000000",
+        backgroundColor: "#000000",
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: 12,
@@ -24,7 +23,7 @@ export default function BlockTimeMenu({ onSelect }: { onSelect: (reason: string)
         opacity: pressed ? 0.98 : 1,
       })}
     >
-      <ButtonLabel size={20} color={c.brandAccent}>
+      <ButtonLabel size={20} color="#FFFFFF">
         Block Time
       </ButtonLabel>
     </Pressable>

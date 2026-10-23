@@ -8,18 +8,27 @@ import { OwnerStatus, OwnerText } from "./OwnerUI";
 
 export default function ClientPurchaseHistory({
   customerId,
+  clientId,
   appointments,
   transactions,
 }: {
   customerId: string;
+  clientId?: string;
   appointments: Appointment[];
   transactions: Transaction[];
 }) {
   const c = useColors();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const entries = appointments
-    .filter((v) => v.customer_id === customerId && v.kind !== "block")
+    .filter(
+      (v) =>
+        (v.customer_id === customerId || (!!clientId && v.client_id === clientId)) &&
+        v.kind !== "block" &&
+        (new Date(v.starts_at).getTime() < Date.now() || ["completed", "cancelled", "no_show"].includes(v.status)),
+    )
     .sort((a, b) => b.starts_at.localeCompare(a.starts_at) || a.id.localeCompare(b.id));
+  const visibleEntries = showAll ? entries : entries.slice(0, 3);
 
   return (
     <View style={{ gap: 12, marginTop: 12, marginBottom: 12 }}>
@@ -27,7 +36,7 @@ export default function ClientPurchaseHistory({
         Service History
       </OwnerText>
       {entries.length === 0 && <OwnerText muted>No services recorded.</OwnerText>}
-      {entries.map((entry) => {
+      {visibleEntries.map((entry) => {
         const open = expanded === entry.id;
         const service = entry.services.map((item) => item.name).join(", ");
         const payments = transactions.filter(
@@ -103,6 +112,15 @@ export default function ClientPurchaseHistory({
           </Card>
         );
       })}
+      {entries.length > 3 && !showAll && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setShowAll(true)}
+          style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}
+        >
+          <OwnerText bold>Full Appointment History</OwnerText>
+        </Pressable>
+      )}
     </View>
   );
 }

@@ -19,6 +19,7 @@ import {
   Profile,
   Promotion,
 } from "./types";
+import { emptyRewardSummary, RewardSummary } from "./loyalty";
 interface SalonState {
   clientLanguage: ClientLanguage;
   setClientLanguage: (language: ClientLanguage) => void;
@@ -38,6 +39,7 @@ interface SalonState {
   purchases: Purchase[];
   transactions: Transaction[];
   credits: Credit[];
+  rewards: RewardSummary;
   cart: Record<string, number>;
   setCart: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   selected: string[];
@@ -70,7 +72,8 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]),
     [purchases, setPurchases] = useState<Purchase[]>([]),
     [transactions, setTransactions] = useState<Transaction[]>([]),
-    [credits, setCredits] = useState<Credit[]>([]);
+    [credits, setCredits] = useState<Credit[]>([]),
+    [rewards, setRewards] = useState<RewardSummary>(emptyRewardSummary);
   const [cart, setCart] = useState<Record<string, number>>({}),
     [selected, setSelected] = useState<string[]>([]),
     [workshopCart, setWorkshopCart] = useState<string[]>([]),
@@ -181,6 +184,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       setPurchases([]);
       setTransactions([]);
       setCredits([]);
+      setRewards(emptyRewardSummary);
       return;
     }
     try {
@@ -203,6 +207,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
           .eq("customer_id", customerId)
           .order("created_at", { ascending: false }),
         c.from("lj_credits").select("*").eq("customer_id", customerId),
+        c.rpc("lj_my_rewards"),
       ]);
       if (generation !== privateGeneration.current) return;
       setProfile(check(results[0]) as Profile | null);
@@ -210,6 +215,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       setPurchases(check(results[2]) as Purchase[]);
       setTransactions(check(results[3]) as Transaction[]);
       setCredits(check(results[4]) as Credit[]);
+      setRewards(check(results[5]) as RewardSummary);
     } catch (e) {
       if (generation === privateGeneration.current)
         notify(e instanceof Error ? e.message : "Unable to load your account.");
@@ -237,6 +243,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         setPurchases([]);
         setTransactions([]);
         setCredits([]);
+        setRewards(emptyRewardSummary);
         setDemoOwner(developmentTestMode);
         setOwner(false);
         setAuthReady(!s);
@@ -277,6 +284,11 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "lj_profiles", filter: `id=eq.${customerId}` },
+        () => void refreshPrivate(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "lj_reward_balances", filter: `customer_id=eq.${customerId}` },
         () => void refreshPrivate(),
       )
       .subscribe();
@@ -321,6 +333,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         purchases,
         transactions,
         credits,
+        rewards: testMode && !session ? { ...emptyRewardSummary, points: 1240, value_ttd: 62 } : rewards,
         cart,
         setCart,
         selected,

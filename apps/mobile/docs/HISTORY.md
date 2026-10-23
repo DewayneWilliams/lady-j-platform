@@ -51,3 +51,6 @@ Owner catalog tools support public photo galleries, combined service specials wi
 - Development Test Mode uses original local profile imagery and schedules 30 varied Witcher-character appointments across the next Tuesday–Saturday without writing demo contacts or bookings to Supabase.
 - The shared shopping bag uses an edge-snapping black-and-champagne control with restrained, reduced-motion-aware interaction feedback.
 - Client-owned private media adds resumable uploads up to 500 MB and an off-by-default, server-enforced Lady J access permission; Google ratings render only from an address-validated Places response.
+- The active standalone service catalog and homepage hero use unique, commercially licensed imports with source evidence and responsive WebP variants.
+- Detangling gained server-priced duration choices and custom owner approval; Business settings now consolidate hours, booking, payment, reminder and owner-only celebration-sound preferences.
+- Lady J Rewards uses a server-audited, non-expiring verified-payment ledger with configurable privileges, Trinidad-named redemption milestones and immediate owner/client balance refreshes; owner client profiles were reshaped around current care, secure media and concise history.

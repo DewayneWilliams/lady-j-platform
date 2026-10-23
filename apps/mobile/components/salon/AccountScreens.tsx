@@ -20,6 +20,8 @@ import Shell, { useNav } from "./Shell";
 import { ProfilePhotoEditor } from "./ProfilePhoto";
 import { demoTestClientPhotoPath } from "@/lib/salon/demoProfilePhotos";
 import VipPaymentPanel from "./VipPaymentPanel";
+import LoyaltyHeader from "./LoyaltyHeader";
+import LoyaltyActions from "./LoyaltyActions";
 import {
   Txt,
   Action,
@@ -460,7 +462,7 @@ export function AccountScreen() {
   return (
     <Shell footer={false} contentTopPadding={8}>
       <View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
-        <AccountHistoryControls currentPage="account" />
+        <LoyaltyHeader rewards={s.rewards} />
         <View
           style={{
             flexDirection: "row",
@@ -483,7 +485,7 @@ export function AccountScreen() {
           />
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
             <Txt size={24} bold>
-              Welcome Back, {firstName}
+              Welcome back, {firstName}!
             </Txt>
             <Txt color={c.mutedForeground}>Your personal beauty experience</Txt>
             {!!visiblePronouns(s.profile?.pronouns) && (
@@ -498,6 +500,7 @@ export function AccountScreen() {
             )}
           </View>
         </View>
+        <LoyaltyActions rewards={s.rewards} appointments={s.appointments} onChanged={s.refreshPrivate} />
         <View
           style={{
             borderTopWidth: 1,
@@ -904,7 +907,32 @@ export function RecordsScreen({ page }: { page: string }) {
   return (
     <Shell>
       <AccountHistoryControls currentPage={page} />
-      <Heading sub="Private records, clearly organised.">{title}</Heading>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <Icon
+          name={
+            page === "appointments"
+              ? "CalendarDays"
+              : page === "my-workshops"
+                ? "GraduationCap"
+                : "Wallet"
+          }
+          size={30}
+          color={c.brandAccent}
+        />
+        <Txt
+          serif
+          size={32}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.72}
+          style={{ flex: 1 }}
+        >
+          {title}
+        </Txt>
+      </View>
+      <Txt color={c.mutedForeground} style={{ marginBottom: 12 }}>
+        Private records, clearly organised.
+      </Txt>
       {!s.session && !s.testMode ? (
         <Empty
           title="A private space, just for you"
@@ -994,9 +1022,9 @@ export function RecordsScreen({ page }: { page: string }) {
                         )}
                       </View>
                     )}
-                    {a.is_vip && a.approval_status === "approved" && !payment && (
-                      <VipPaymentPanel appointment={a} />
-                    )}
+                    {(a.is_vip || a.custom_approval) &&
+                      a.approval_status === "approved" &&
+                      !payment && <VipPaymentPanel appointment={a} />}
                     {["pending", "confirmed"].includes(a.status) &&
                       new Date(a.starts_at) > new Date() &&
                       (confirm === a.id ? (

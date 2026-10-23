@@ -54,7 +54,13 @@ export default function AuthCallback() {
           {error ||
             "Your account is opened only after the sign-in response is verified. If the original window was closed, please start again."}
         </Txt>
-        {!waiting && <Action label="Back to sign-in" onPress={() => router.replace("/login")} />}
+        {!waiting && (
+          <Action
+            label="Back to sign-in"
+            onPress={() => router.replace("/login")}
+            style={{ alignSelf: "center" }}
+          />
+        )}
       </View>
     </SafeAreaView>
   );

@@ -1,6 +1,18 @@
-import type { ImageSourcePropType } from "react-native";
+import { Dimensions, PixelRatio, type ImageSourcePropType } from "react-native";
 import { supabase } from "./client";
+
+const HOMEPAGE_HERO =
+  "catalogset:automated-photo-import-20261023-complete/homepage-hero/pexels-33515386";
+
 export function catalogPhotoSource(name: string): ImageSourcePropType {
+  if (name === "hero") return catalogPhotoSource(HOMEPAGE_HERO);
+  if (name.startsWith("catalogset:")) {
+    const targetWidth = Dimensions.get("window").width * PixelRatio.get();
+    const width = targetWidth <= 1200 ? 1200 : targetWidth <= 1800 ? 1800 : 2400;
+    const path = `${name.slice(11)}-${width}.webp`;
+    const uri = supabase?.storage.from("lj-catalog-media").getPublicUrl(path).data.publicUrl;
+    return uri ? { uri } : photos.salon;
+  }
   if (name.startsWith("catalog:")) {
     const uri = supabase?.storage.from("lj-catalog-media").getPublicUrl(name.slice(8))
       .data.publicUrl;

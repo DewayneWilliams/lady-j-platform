@@ -421,7 +421,7 @@ export function AgreementList({
         <Txt size={18} bold>
           {title || "Service agreements"}
         </Txt>
-        <Txt>No signed agreements yet.</Txt>
+        <Txt>Signature status: Not signed.</Txt>
       </Card>
     );
   return (
@@ -436,7 +436,7 @@ export function AgreementList({
         <Txt>Loading signed agreements</Txt>
       ) : !rows.length ? (
         <Card>
-          <Txt>No signed agreements yet.</Txt>
+          <Txt>Signature status: Not signed.</Txt>
           <Txt color={c.mutedForeground}>
             Your dated PDF appears here after you sign in booking Step 3.
           </Txt>
@@ -453,7 +453,7 @@ export function AgreementList({
               {row.appointment_id ? "Linked to appointment" : "Ready for booking"}
             </Txt>
             <Action
-              label="Download signed PDF"
+              label="View Agreement"
               secondary
               onPress={() => {
                 void openAgreementPdf(row.object_path).catch((e) => setError(e.message));

@@ -1,5 +1,6 @@
 import { displayDate } from "./dates";
 export type Service = {
+  requires_owner_approval?: boolean;
   duration_label?: string | null;
   price_label?: string | null;
   price_kind?: "fixed" | "from" | "per_item" | null;
@@ -53,6 +54,7 @@ export type Workshop = {
   is_demo: boolean;
 };
 export type Appointment = {
+  custom_approval?: boolean;
   cleanup_minutes?: number;
   is_vip?: boolean;
   vip_percentage?: 25 | 35 | null;
@@ -146,6 +148,7 @@ export type Profile = {
   marketing_consent: boolean;
 };
 export type Client = {
+  created_at?: string;
   pronouns?: "she_her" | "he_him" | "they_them" | "prefer_not" | null;
   client_photo_path?: string | null;
   owner_photo_path?: string | null;
@@ -173,7 +176,31 @@ export type Client = {
   photo_consent: boolean;
 };
 export type Settings = {
+  loyalty_enabled?: boolean;
+  loyalty_points_per_ttd?: number;
+  loyalty_redemption_points?: number;
+  loyalty_redemption_value?: number;
+  loyalty_welcome_credit?: number;
+  loyalty_birthday_credit?: number;
+  loyalty_referrer_points?: number;
+  loyalty_friend_points?: number;
+  loyalty_minimum_spend?: number;
+  loyalty_allow_discount_stacking?: boolean;
+  loyalty_birthday_gift_enabled?: boolean;
+  loyalty_birthday_gift_note?: string;
   cleanup_buffer_minutes?: number;
+  opens_at?: string;
+  closes_at?: string;
+  vip_before_start?: string;
+  vip_after_end?: string;
+  email_reminders_enabled?: boolean;
+  whatsapp_reminders_enabled?: boolean;
+  sms_reminders_enabled?: boolean;
+  voice_announcements_enabled?: boolean;
+  service_completion_sound?: string;
+  service_completion_volume?: number;
+  payment_confirmation_sound?: string;
+  payment_confirmation_volume?: number;
   max_daily_bookings_per_client?: number;
   id: string;
   business_name: string;

@@ -31,6 +31,7 @@ export function OwnerButton({
   accent = false,
   compact = false,
   fill = false,
+  centered = false,
   busy = false,
   payment = false,
   id,
@@ -44,6 +45,7 @@ export function OwnerButton({
   accent?: boolean;
   compact?: boolean;
   fill?: boolean;
+  centered?: boolean;
   busy?: boolean;
   payment?: boolean;
   id?: string;
@@ -73,7 +75,7 @@ export function OwnerButton({
       variant={secondary || destructive ? "outline" : "default"}
       style={{
         minHeight: 58,
-        alignSelf: fill ? "stretch" : "flex-start",
+        alignSelf: fill ? "stretch" : centered ? "center" : "flex-start",
         width: fill ? "100%" : undefined,
         maxWidth: "100%",
         minWidth: 0,

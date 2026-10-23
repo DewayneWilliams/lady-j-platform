@@ -61,13 +61,36 @@ export default function TodayDashboard({
       ListHeaderComponent={
         <View style={{ gap: 24 }}>
           {notice}
-          <Txt size={24} bold style={{ textAlign: "center", width: "100%" }}>
-            {headerDate(day + "T12:00:00-04:00")}
-          </Txt>
+          <View style={{ alignItems: "center", gap: width < 390 ? 4 : 7, width: "100%" }}>
+            <Txt
+              size={width < 390 ? 36 : 46}
+              bold
+              style={{ width: "100%", textAlign: "center", letterSpacing: -1.2 }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}
+            >
+              {new Date(day + "T12:00:00-04:00")
+                .toLocaleDateString("en-TT", {
+                  weekday: "long",
+                  timeZone: "America/Port_of_Spain",
+                })
+                .toUpperCase()}
+            </Txt>
+            <Txt
+              size={width < 390 ? 23 : 28}
+              serif
+              style={{ width: "100%", textAlign: "center" }}
+            >
+              {headerDate(day + "T12:00:00-04:00")}
+            </Txt>
+          </View>
           <View
             accessibilityLabel="Daily Bible verse"
             style={{
               maxWidth: 740,
+              alignSelf: "center",
+              alignItems: "center",
               gap: 8,
             }}
           >
@@ -81,7 +104,7 @@ export default function TodayDashboard({
               }}
               style={{ minHeight: 44, justifyContent: "center" }}
             >
-              <Txt size={18}>
+              <Txt size={18} style={{ textAlign: "center" }}>
                 “{verse.text}”{" "}
                 <Txt size={16} color={c.mutedForeground}>
                   {verse.reference}

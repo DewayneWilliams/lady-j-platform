@@ -44,7 +44,19 @@ export default function MediaUpload({
   onDone: (complete: boolean) => void;
 }) {
   const c = useColors();
-  const [selectedClient, setSelectedClient] = useState(retry?.client_id || clientId || "");
+  const linkedAppointment = appointments.find(
+    (item) => item.id === (retry?.appointment_id || appointmentId),
+  );
+  const linkedClient = linkedAppointment
+    ? clients.find(
+        (item) =>
+          item.id === linkedAppointment.client_id ||
+          (!!item.customer_id && item.customer_id === linkedAppointment.customer_id),
+      )
+    : undefined;
+  const [selectedClient, setSelectedClient] = useState(
+    retry?.client_id || linkedClient?.id || clientId || "",
+  );
   const [clientQuery, setClientQuery] = useState("");
   const [appointment, setAppointment] = useState(retry?.appointment_id || appointmentId || "");
   const [service, setService] = useState(retry?.service_id || "");

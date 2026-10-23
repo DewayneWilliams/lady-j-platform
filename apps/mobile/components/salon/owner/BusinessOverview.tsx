@@ -8,7 +8,6 @@ export default function BusinessOverview({
   products,
   workshops,
   onOpen,
-  specials,
   onMedia,
 }: {
   services: number;
@@ -18,7 +17,6 @@ export default function BusinessOverview({
   orders: number;
   bankReady: boolean;
   onOpen: (section: string) => void;
-  specials?: React.ReactNode;
   onMedia: () => void;
 }) {
   const c = useColors();
@@ -62,7 +60,6 @@ export default function BusinessOverview({
   ];
   return (
     <View style={{ gap: 28 }}>
-      {specials}
       {rows.map((row) => (
         <View key={row.section} style={{ gap: 24 }}>
           <Pressable

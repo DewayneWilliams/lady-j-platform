@@ -8,3 +8,7 @@
 The fanfare retains the brass recording’s pitch at 0.8× tempo, removes its trailing silence, and layers three acoustic timpani accents into the phrase and final cadence. It uses 15 ms attack and 350 ms final fades, two-pass EBU R128 loudness normalization, and stereo 44.1 kHz / 256 kbps MP3 encoding. Decoded musical duration is 6.80 seconds (container duration 6.84 seconds); integrated loudness is −13.99 LUFS and true peak −2.83 dBTP. File size is approximately 215 KiB. The app plays at 90% of player gain and never changes system volume or bypasses silent mode. These are licensed instrumental recordings, with no generated beep fallback.
 
 `cash-ching.wav` remains the existing bundled payment effect.
+
+The additional five-second chime, bell, melody, coin and payment variants are original
+application assets synthesized specifically for Lady J from layered musical partials and
+decaying envelopes. They contain no third-party recordings and may be distributed with the app.

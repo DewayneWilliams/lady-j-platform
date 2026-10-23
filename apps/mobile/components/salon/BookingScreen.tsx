@@ -9,7 +9,6 @@ import { isSpecialVipRequest, vipRequiresApproval } from "@/lib/salon/vipAccess"
 import ServiceAgreement, { type GuestAgreementDraft } from "./ServiceAgreement";
 import ServiceCategories from "./ServiceCategories";
 import CompletionCelebration from "./owner/CompletionCelebration";
-import { useCelebrationSounds } from "@/lib/salon/useCelebrationSounds";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { View, Pressable, useWindowDimensions, ActivityIndicator } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -315,7 +314,6 @@ export default function BookingScreen() {
     c = useColors(),
     go = useNav(),
     { width } = useWindowDimensions();
-  const sounds = useCelebrationSounds();
   const { date: requestedDate, id: requestedServiceId } = useLocalSearchParams<{
     date?: string;
     id?: string;
@@ -384,14 +382,16 @@ export default function BookingScreen() {
     total = serviceSubtotal + vipPremium,
     deposit = Math.round(total * 50) / 100;
   const isVip = !!selectedSlot?.is_vip;
-  const requiresApproval = !!selectedSlot && isVip && vipRequiresApproval(selectedSlot.starts_at);
+  const customApproval = selected.some((service) => service.requires_owner_approval);
+  const requiresApproval =
+    customApproval || (!!selectedSlot && isVip && vipRequiresApproval(selectedSlot.starts_at));
   const selectedPaymentAmount = paymentSelection === "full" ? total : deposit;
   const noPaymentRequired = selected.length > 0 && pricing.ready && total === 0;
   const submitDisabled =
     !agreementId ||
     !policy ||
     !pricing.ready ||
-    (requiresApproval && vipReason.trim().length < 8) ||
+    (requiresApproval && !customApproval && vipReason.trim().length < 8) ||
     (requiresApproval && !s.session) ||
     (!requiresApproval &&
       !noPaymentRequired &&
@@ -493,7 +493,6 @@ export default function BookingScreen() {
   async function submit() {
     setError("");
     if (!policy || !time || !agreementId || !pricing.ready) return;
-    if (noPaymentRequired && !requiresApproval) sounds.prepare("service");
     setBusy(true);
     let receiptPath: string | null = null;
     try {
@@ -510,7 +509,19 @@ export default function BookingScreen() {
         );
       }
       let id: unknown;
-      if (s.session && requiresApproval) {
+      if (s.session && customApproval) {
+        id = check(
+          await db().rpc("lj_request_custom_service", {
+            p_services: selected.map((v) => v.id),
+            p_start: time,
+            p_policy: policy,
+            p_code: pricing.code,
+            p_agreement: agreementId,
+            p_request_key: bookingRequestKey.current,
+            p_payment_selection: paymentSelection,
+          }),
+        );
+      } else if (s.session && requiresApproval) {
         id = check(
           await db().rpc("lj_request_vip", {
             p_services: selected.map((v) => v.id),
@@ -559,7 +570,6 @@ export default function BookingScreen() {
       setDone(String(id));
       if (noPaymentRequired && !requiresApproval) {
         setCelebrationRevision(1);
-        sounds.play("service", String(id));
       }
       if (s.session) await s.refreshPrivate();
     } catch (e) {
@@ -638,7 +648,11 @@ export default function BookingScreen() {
             adjustsFontSizeToFit
             minimumFontScale={0.78}
           >
-            {pricing.busy ? "Updating…" : money(total)} · {formatDuration(duration)}
+            {pricing.busy
+              ? "Updating…"
+              : customApproval
+                ? `Custom price · ${formatDuration(duration)}+`
+                : `${money(total)} · ${formatDuration(duration)}`}
           </Txt>
         </View>
         {step < 3 && (
@@ -675,14 +689,18 @@ export default function BookingScreen() {
             />
             <Tag>
               {requiresApproval
-                ? "VIP request saved · Pending owner approval"
+                ? customApproval
+                  ? "Custom pricing request saved"
+                  : "VIP request saved · Pending owner approval"
                 : noPaymentRequired
                   ? "Appointment confirmed"
                   : "Request saved · Payment pending"}
             </Tag>
             <Txt serif size={34} style={{ textAlign: "center" }}>
               {requiresApproval
-                ? "Your VIP Access request is pending approval."
+                ? customApproval
+                  ? "Management is preparing your custom price."
+                  : "Your VIP Access request is pending approval."
                 : noPaymentRequired
                   ? "Congratulations! Your Transformation Has Been Booked!"
                   : "Your booking is pending verification."}
@@ -694,7 +712,9 @@ export default function BookingScreen() {
             </Txt>
             <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
               {requiresApproval
-                ? "No payment was collected. The salon must approve this VIP time before you complete payment."
+                ? customApproval
+                  ? "No payment was collected. Management will confirm the final duration and price before payment."
+                  : "No payment was collected. The salon must approve this VIP time before you complete payment."
                 : noPaymentRequired
                   ? "Your appointment is confirmed. No payment or deposit is required."
                   : "Your transfer proof was saved securely. The appointment remains pending until the owner verifies funds received; uploaded proof is not a verified payment."}
@@ -703,17 +723,6 @@ export default function BookingScreen() {
               <Action label="View my appointments" onPress={() => go("appointments")} />
             ) : (
               <Action label="Return home" onPress={() => go("home")} />
-            )}
-            {noPaymentRequired && !requiresApproval && (
-              <Action
-                label="Replay Celebration"
-                secondary
-                icon="Volume2"
-                onPress={() => {
-                  setCelebrationRevision(Date.now());
-                  sounds.play("service", `${done}:${Date.now()}`);
-                }}
-              />
             )}
             <LinkText onPress={() => go("home")}>Return home</LinkText>
           </Card>
@@ -1188,7 +1197,17 @@ export default function BookingScreen() {
               </View>
             ))}
           </Card>
-          {isVip && (
+          {customApproval && (
+            <Card style={{ padding: 18, gap: 8, borderColor: c.brandAccent }}>
+              <Txt size={18} bold style={{ textAlign: "center" }}>
+                Custom pricing review
+              </Txt>
+              <Txt size={13} color={c.mutedForeground} style={{ textAlign: "center" }}>
+                Management will confirm the final detangling duration and price before payment.
+              </Txt>
+            </Card>
+          )}
+          {isVip && !customApproval && (
             <Card
               style={{ padding: 18, gap: 8, borderColor: c.vipFill, backgroundColor: c.vipSurface }}
             >
@@ -1223,11 +1242,13 @@ export default function BookingScreen() {
             {requiresApproval ? (
               <View style={{ gap: 6 }}>
                 <Txt bold color={c.vipText}>
-                  Payment begins after owner approval.
+                  {customApproval
+                    ? "Payment begins after management confirms your custom price."
+                    : "Payment begins after owner approval."}
                 </Txt>
                 <Txt size={13} color={c.mutedForeground}>
-                  No payment is collected with this VIP request. You will be invited to complete
-                  your selected payment after approval.
+                  No payment is collected with this request. You will be invited to complete your
+                  selected payment after approval.
                 </Txt>
               </View>
             ) : noPaymentRequired ? (
@@ -1274,7 +1295,9 @@ export default function BookingScreen() {
               [
                 "Selected Method",
                 requiresApproval
-                  ? "After owner approval"
+                  ? customApproval
+                    ? "After custom price approval"
+                    : "After owner approval"
                   : noPaymentRequired
                     ? "No payment required"
                     : "Bank transfer",
@@ -1282,7 +1305,9 @@ export default function BookingScreen() {
               [
                 "Payment Status",
                 requiresApproval
-                  ? "Pending Owner Approval"
+                  ? customApproval
+                    ? "Pending Custom Price"
+                    : "Pending Owner Approval"
                   : noPaymentRequired
                     ? "No payment due"
                     : "Pending Verification",

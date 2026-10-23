@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Modal, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Appointment, Purchase, money } from "@/lib/salon/types";
-import { Field, ButtonLabel, ErrorBox, useColors } from "../ui";
+import { Field, ButtonLabel, ErrorBox, Txt, useColors } from "../ui";
 import { OwnerText, OwnerButton } from "./OwnerUI";
 
 export type DiscountTarget =
@@ -98,16 +98,16 @@ export default function OrderDiscountDialog({
           }}
         >
           <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }}>
-            <OwnerText size={27} bold>
+            <Txt size={32} bold numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
               {target.kind === "appointment"
                 ? "Custom Appointment Discount"
                 : "Apply Discount to Total"}
-            </OwnerText>
+            </Txt>
 
             <OwnerText>{items.map((v) => v.name).join(", ")}</OwnerText>
             <OwnerText>
               Choose your percentage for the combined service, product or workshop subtotal.
-              Delivery is excluded. Recorded receipts stay unchanged.
+              Recorded receipts stay unchanged.
             </OwnerText>
             <View
               testID="discount-presets"

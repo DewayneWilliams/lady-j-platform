@@ -26,6 +26,7 @@ export function activityColor(a: Appointment): ActivityColor | null {
   if (a.status === "cancelled") return null;
   if (a.kind === "block")
     return allBlockReasons.find((r) => r.value === a.block_reason)?.color || "blocked";
+  if (a.is_vip) return "vip";
   if (a.services?.some((service) => ["Consult", "Consults"].includes(service.name)))
     return "consultation";
   return a.status === "confirmed" || a.status === "completed" ? "confirmed" : null;

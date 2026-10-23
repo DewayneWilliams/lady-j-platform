@@ -11,8 +11,12 @@ export interface CelebrationPlayer {
 
 /** One audible celebration at a time, even when asynchronous seeks finish out of order. */
 export function createCelebrationAudio(
-  players: Record<CelebrationSound, CelebrationPlayer>,
+  players: Record<string, CelebrationPlayer>,
   web: boolean,
+  selections: Record<CelebrationSound, { id: string; volume: number }> = {
+    service: { id: "service", volume: 0.9 },
+    payment: { id: "payment", volume: 0.65 },
+  },
 ) {
   const played = new Set<string>();
   const primed = new Set<string>();
@@ -41,7 +45,8 @@ export function createCelebrationAudio(
       if (!value) stop();
     },
     prepare(sound: CelebrationSound) {
-      const player = players[sound];
+      const player = players[selections[sound].id];
+      if (!player) return;
       if (disposed || !active || !web || primed.has(player.id)) return;
       try {
         player.loop = false;
@@ -59,7 +64,10 @@ export function createCelebrationAudio(
       played.add(key);
       stop();
       const request = generation;
-      const player = players[sound];
+      const choice = selections[sound];
+      if (choice.id === "silent") return;
+      const player = players[choice.id];
+      if (!player) return;
       void (async () => {
         try {
           // Bundled sources preload on mount; allow a slow device to finish decoding.
@@ -72,10 +80,28 @@ export function createCelebrationAudio(
           await player.seekTo(0);
           if (disposed || request !== generation) return;
           player.loop = false;
-          player.volume = sound === "service" ? 0.9 : 0.65;
+          player.volume = choice.volume;
           player.play();
         } catch {
           // Device mute, unavailable outputs and interrupted playback never fail completion.
+        }
+      })();
+    },
+    preview(id: string, volume: number) {
+      if (disposed || !active || id === "silent") return;
+      const player = players[id];
+      if (!player) return;
+      stop();
+      const request = generation;
+      void (async () => {
+        try {
+          await player.seekTo(0);
+          if (disposed || request !== generation) return;
+          player.loop = false;
+          player.volume = Math.max(0, Math.min(1, volume));
+          player.play();
+        } catch {
+          // Preview failures never block settings changes.
         }
       })();
     },
