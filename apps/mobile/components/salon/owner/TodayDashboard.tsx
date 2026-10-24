@@ -61,11 +61,21 @@ export default function TodayDashboard({
       ListHeaderComponent={
         <View style={{ gap: 24 }}>
           {notice}
-          <View style={{ alignItems: "center", gap: width < 390 ? 4 : 7, width: "100%" }}>
+          <View style={{
+            alignItems: "center",
+            gap: width < 390 ? 4 : 7,
+            width: "100%",
+            flexDirection: "column"
+          }}>
             <Txt
               size={width < 390 ? 36 : 46}
               bold
-              style={{ width: "100%", textAlign: "center", letterSpacing: -1.2 }}
+              style={{
+                width: "100%",
+                textAlign: "center",
+                letterSpacing: -1.2,
+                fontSize: 48
+              }}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.78}

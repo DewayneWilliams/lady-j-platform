@@ -49,48 +49,6 @@ export default function ProductStore() {
       <View
         style={{
           flexDirection: "row",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        <View style={{ flex: 1, minWidth: 200 }}>
-          <Txt serif size={32}>
-            The Lady J beauty store
-          </Txt>
-          <Txt color={c.mutedForeground} style={{ marginTop: 8 }}>
-            Professional care for your everyday routine.
-          </Txt>
-        </View>
-        <Action label="Buy Products" icon="ShoppingBag" inverted onPress={() => go("bag")} />
-      </View>
-      <Card
-        style={{
-          backgroundColor: c.goldSurface,
-          borderColor: c.goldBorder,
-          padding: width > 800 ? 36 : 24,
-          gap: 14,
-          marginBottom: 28,
-        }}
-      >
-        <Tag gold>Sample data</Tag>
-        <Txt serif size={width > 800 ? 38 : 28}>
-          Your salon shelf, at home.
-        </Txt>
-        <Txt color={c.mutedForeground} style={{ maxWidth: 620 }}>
-          Shop by brand and find your daily essentials.
-        </Txt>
-        {!s.session && !s.testMode && (
-          <LinkText onPress={() => go("register", { next: "boutique" })}>
-            Create a free account to shop
-          </LinkText>
-        )}
-      </Card>
-      <View
-        style={{
-          flexDirection: "row",
           gap: 12,
           borderWidth: 1,
           borderColor: c.border,
@@ -121,6 +79,43 @@ export default function ProductStore() {
           }}
         />
       </View>
+      <Card
+        style={{
+          backgroundColor: c.goldSurface,
+          borderColor: c.goldBorder,
+          padding: width > 800 ? 36 : 24,
+          gap: 14,
+          marginBottom: 28,
+          paddingTop: 8,
+          height: 95,
+        }}
+      >
+        <Tag gold>Sample data</Tag>
+        <Txt serif size={width > 800 ? 38 : 28}>
+          Your salon shelf, at home.
+        </Txt>
+        <Txt color={c.mutedForeground} style={{ maxWidth: 620 }}>
+          Shop by brand and find your daily essentials.
+        </Txt>
+        {!s.session && !s.testMode && (
+          <LinkText onPress={() => go("register", { next: "boutique" })}>
+            Create a free account to shop
+          </LinkText>
+        )}
+      </Card>
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <View style={{ flex: 1, minWidth: 200 }}></View>
+        <Action label="Buy Products" icon="ShoppingBag" inverted onPress={() => go("bag")} />
+      </View>
       <View
         style={{
           flexDirection: "row",
@@ -131,7 +126,9 @@ export default function ProductStore() {
           marginBottom: 24,
         }}
       >
-        <Txt color={c.mutedForeground}>{filtered.length} products</Txt>
+        <Txt color={c.mutedForeground} className={"justify-center relative"}>
+          {filtered.length} products
+        </Txt>
         <Action
           label={`Filter${brand !== "All brands" || category !== "All products" ? " · Active" : ""}`}
           icon="SlidersHorizontal"

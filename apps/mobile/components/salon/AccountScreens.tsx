@@ -493,46 +493,46 @@ export function AccountScreen() {
   ] as const;
   return (
     <Shell footer={false} contentTopPadding={8}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 18,
+          paddingBottom: 24,
+        }}
+      >
+        <ProfilePhotoEditor
+          name={name}
+          mode="client"
+          clientPath={
+            s.profile?.profile_photo_path ||
+            (!s.session && s.testMode ? demoTestClientPhotoPath : null)
+          }
+          displayPath={s.profile?.display_profile_photo_path}
+          updatedAt={s.profile?.profile_photo_updated_at}
+          disabled={!s.session}
+          onChanged={s.refreshPrivate}
+        />
+        <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+          <Txt size={24} bold>
+            Welcome back, {firstName}!
+          </Txt>
+          <Txt color={c.mutedForeground}>Your personal beauty experience</Txt>
+          {!!visiblePronouns(s.profile?.pronouns) && (
+            <Txt size={13} color={c.mutedForeground}>
+              {visiblePronouns(s.profile?.pronouns)}
+            </Txt>
+          )}
+          {!s.session && s.testMode && (
+            <Txt size={12} color={c.mutedForeground}>
+              Development Test Mode · profile uploads require sign-in
+            </Txt>
+          )}
+        </View>
+      </View>
       <View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
         <LoyaltyHeader rewards={s.rewards} firstName={firstName} onChanged={s.refreshPrivate} />
         <GiftsReferrals />
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 18,
-            paddingBottom: 24,
-          }}
-        >
-          <ProfilePhotoEditor
-            name={name}
-            mode="client"
-            clientPath={
-              s.profile?.profile_photo_path ||
-              (!s.session && s.testMode ? demoTestClientPhotoPath : null)
-            }
-            displayPath={s.profile?.display_profile_photo_path}
-            updatedAt={s.profile?.profile_photo_updated_at}
-            disabled={!s.session}
-            onChanged={s.refreshPrivate}
-          />
-          <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-            <Txt size={24} bold>
-              Welcome back, {firstName}!
-            </Txt>
-            <Txt color={c.mutedForeground}>Your personal beauty experience</Txt>
-            {!!visiblePronouns(s.profile?.pronouns) && (
-              <Txt size={13} color={c.mutedForeground}>
-                {visiblePronouns(s.profile?.pronouns)}
-              </Txt>
-            )}
-            {!s.session && s.testMode && (
-              <Txt size={12} color={c.mutedForeground}>
-                Development Test Mode · profile uploads require sign-in
-              </Txt>
-            )}
-          </View>
-        </View>
         <LoyaltyActions
           rewards={s.rewards}
           appointments={s.appointments}

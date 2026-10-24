@@ -15,7 +15,7 @@ import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreferen
 import { check, db } from "@/lib/salon/client";
 import { dateLabel } from "@/lib/salon/types";
 import { royaltyLevel, royaltyLevels, RewardSummary } from "@/lib/salon/loyalty";
-import { Action, Card, ErrorBox, Txt, useColors } from "./ui";
+import { Action, ErrorBox, Txt, useColors } from "./ui";
 
 const levelAccents = ["#CE007F", "#D73E8D", "#A36A13", "#C28B18", "#7543B8", "#9D4B79", "#5A2A72"];
 
@@ -153,183 +153,12 @@ export default function LoyaltyHeader({
         </Txt>
       </View>
       <View
-        style={{
-          minHeight: 190,
-          overflow: "hidden",
-          borderRadius: 18,
-          padding: 22,
-          backgroundColor: c.headerGold,
-          borderWidth: 1,
-          borderColor: c.goldBorder,
-          shadowColor: "#24180F",
-          shadowOpacity: 0.14,
-          shadowRadius: 14,
-          shadowOffset: { width: 0, height: 7 },
-          elevation: 4,
-        }}
-      >
-        <View
-          style={{
-            width: 44,
-            height: 4,
-            borderRadius: 99,
-            backgroundColor: levelAccents[level.level - 1],
-            marginBottom: 18,
-          }}
-        />
-        <Txt size={13} bold color={c.headerInk} style={{ letterSpacing: 0.8 }}>
-          LADY J · ROYALTY MEMBER
-        </Txt>
-        <View style={{ flex: 1, flexDirection: "row", alignItems: "flex-end", gap: 16 }}>
-          <View style={{ flex: 1, gap: 5 }}>
-            <Txt size={27} bold color={c.headerInk}>
-              {firstName || rewards.first_name || "Royal Guest"}
-            </Txt>
-            <Txt size={18} bold color={levelAccents[level.level - 1]}>
-              {level.icon} {level.name}
-            </Txt>
-            <Txt size={13} color={c.headerInk}>
-              {royalty.annual_visits} annual visit
-              {royalty.annual_visits === 1 ? "" : "s"} · {royalty.lifetime_visits}{" "}
-              lifetime
-            </Txt>
-          </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <Icon name="Crown" size={34} color={levelAccents[level.level - 1]} />
-            <Txt size={11} bold color={c.headerInk}>
-              Anniversary
-            </Txt>
-            <Txt size={11} color={c.headerInk}>
-              {dateLabel(royalty.anniversary)}
-            </Txt>
-          </View>
-        </View>
-        {reduced === false && (
-          <Animated.View
-            pointerEvents="none"
-            style={{
-              position: "absolute",
-              top: -80,
-              bottom: -80,
-              width: 54,
-              backgroundColor: "rgba(255,255,255,0.36)",
-              transform: [
-                {
-                  translateX: shimmer.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-80, Math.min(width, 720) + 80],
-                  }),
-                },
-                { rotate: "16deg" },
-              ],
-            }}
-          />
-        )}
-      </View>
-      <Card style={{ gap: 12, borderRadius: 16 }}>
-        {next ? (
-          <>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Txt size={20} bold>
-                  {level.icon} {level.name}
-                </Txt>
-                <Txt size={14} color={c.mutedForeground}>
-                  {level.message}
-                </Txt>
-              </View>
-              <Txt size={15} bold color={c.brandAccent}>
-                {Math.round(progressFraction * 100)}%
-              </Txt>
-            </View>
-            <View
-              style={{ height: 10, borderRadius: 99, overflow: "hidden", backgroundColor: c.muted }}
-            >
-              <Animated.View
-                style={{
-                  height: "100%",
-                  borderRadius: 99,
-                  backgroundColor: c.headerGold,
-                  borderWidth: 1,
-                  borderColor: c.goldBorder,
-                  width: progress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
-                }}
-              />
-            </View>
-            <Txt size={14} bold>
-              {royalty.annual_visits} of {next.visits} visits ·{" "}
-              {Math.round(progressFraction * 100)}% complete
-            </Txt>
-            <Txt size={14} color={c.mutedForeground}>
-              Just {remaining} more visit{remaining === 1 ? "" : "s"} until {next.name}!
-            </Txt>
-          </>
-        ) : (
-          <View style={{ alignItems: "center", gap: 6 }}>
-            <Txt size={22} bold style={{ textAlign: "center" }}>
-              👑 Lady J Royal Circle
-            </Txt>
-            <Txt color={c.mutedForeground} style={{ textAlign: "center" }}>
-              Thank you for being at the heart of Lady J. Your continued trust is our highest
-              honour.
-            </Txt>
-          </View>
-        )}
-      </Card>
-      <Card style={{ gap: 10, borderRadius: 16 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Icon name="Wallet" size={23} color={c.brandAccent} />
-          <Txt size={20} bold>
-            Royalty Rewards Wallet
-          </Txt>
-        </View>
-        <Txt size={28} bold>
-          {Number(rewards.points).toLocaleString("en-TT")} Points
-        </Txt>
-        <Txt size={15} color={c.mutedForeground}>
-          = TT$
-          {Number(rewards.value_ttd).toLocaleString("en-TT", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{" "}
-          Available Value
-        </Txt>
-        <Txt size={13} color={c.mutedForeground}>
-          Earn 1 point per TT$1 eligible service spending · 100 points = TT$5. You choose when to
-          redeem.
-        </Txt>
-        {entitlements
-          .filter((item) => item.status === "available")
-          .map((item) => (
-            <View
-              key={item.id}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-                paddingTop: 7,
-                borderTopWidth: 1,
-                borderColor: c.border,
-              }}
-            >
-              <Icon name="Gift" size={17} color={c.tertiary} />
-              <Txt size={14} bold>
-                {item.kind === "welcome" ? "Welcome credit" : "Birthday credit"} · TT$
-                {Number(item.amount).toFixed(2)}
-              </Txt>
-            </View>
-          ))}
-      </Card>
-      <View
         onLayout={(event) => setJourneyWidth(event.nativeEvent.layout.width)}
-        style={{ gap: 10 }}
+        style={{
+          gap: 10,
+          width: "100%",
+          height: 236,
+        }}
       >
         <View
           style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
@@ -415,11 +244,16 @@ export default function LoyaltyHeader({
                   minHeight: 150,
                   padding: 18,
                   borderRadius: 16,
-                  justifyContent: "space-between",
+                  justifyContent: "space-evenly",
                   borderWidth: current ? 2 : 1,
                   borderColor: current || achieved ? c.goldBorder : c.border,
                   backgroundColor: current ? c.headerGold : achieved ? c.goldSurface : c.card,
                   opacity: item.level > royalty.level ? 0.68 : 1,
+                  paddingTop: 8,
+                  paddingBottom: 8,
+                  height: 108,
+                  marginHorizontal: 8,
+                  display: "flex",
                 }}
               >
                 <View
@@ -438,10 +272,10 @@ export default function LoyaltyHeader({
                     </Txt>
                   )}
                 </View>
+                <Txt size={18} bold color={current ? c.headerInk : c.foreground}>
+                  {item.name}
+                </Txt>
                 <View>
-                  <Txt size={18} bold color={current ? c.headerInk : c.foreground}>
-                    {item.name}
-                  </Txt>
                   <Txt size={13} color={current ? c.headerInk : c.mutedForeground}>
                     {item.visits === 0 ? "Your starting level" : `${item.visits} annual visits`}
                   </Txt>
@@ -449,6 +283,7 @@ export default function LoyaltyHeader({
               </View>
             );
           }}
+          className={"justify-around"}
         />
         <Txt size={14} bold style={{ textAlign: "center" }}>
           Explore Royalty Levels

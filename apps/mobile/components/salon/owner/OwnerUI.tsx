@@ -16,7 +16,12 @@ export function OwnerText({
 }) {
   const c = useColors();
   return (
-    <Txt size={size} bold={bold} color={muted ? c.mutedForeground : c.foreground}>
+    <Txt
+      size={size}
+      bold={bold}
+      color={muted ? c.mutedForeground : c.foreground}
+      className={"text-sm"}
+    >
       {children}
     </Txt>
   );

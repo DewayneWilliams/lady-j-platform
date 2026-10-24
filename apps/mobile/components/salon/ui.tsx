@@ -1,3 +1,4 @@
+import { DMSerifDisplay_400Regular, useFonts } from "@expo-google-fonts/dev";
 import React from "react";
 import {
   View,
@@ -9,7 +10,6 @@ import {
   type TextProps,
   type ViewProps,
   ActivityIndicator,
-  Image,
   ImageStyle,
   ScrollView,
 } from "react-native";
@@ -138,25 +138,17 @@ export function Heading({
         marginBottom: compact ? 8 : 22,
       }}
     >
-      <View style={{ flex: 1, minWidth: 0, gap: sub ? 5 : 0 }}>
-        <ScrollView>
-          <Txt
-            serif
-            size={headingSize}
-            accessibilityRole="header"
-            numberOfLines={singleLine ? 1 : undefined}
-            adjustsFontSizeToFit={singleLine}
-            minimumFontScale={singleLine ? 0.62 : undefined}
-            style={{ lineHeight: headingSize * 1.16 }}
-          >
-            {children}
-          </Txt>
-        </ScrollView>
-        {!!sub && (
-          <ScrollView>
-            <Txt color={theme.colors.mutedForeground}>{sub}</Txt>
-          </ScrollView>
-        )}
+      <View
+        style={{
+          flex: 1,
+          minWidth: "100%",
+          gap: sub ? 5 : 0,
+          maxWidth: "100%",
+          maxHeight: "auto",
+          minHeight: "auto",
+        }}
+      >
+        {!!sub && <ScrollView></ScrollView>}
       </View>
       {action}
     </View>
@@ -243,8 +235,12 @@ export function Action({
           : undefined,
         style,
         (disabled || busy) && { backgroundColor: c.muted, borderColor: c.border, borderWidth: 1 },
+        {
+          flexDirection: "row-reverse",
+          justifyContent: "space-between",
+        },
       ]}
-      className={"lg:items-center lg:justify-center"}
+      className={"lg:items-center lg:justify-center relative"}
     >
       {shimmer && !disabled && !busy && (
         <SubtleShimmer interval={shimmerInterval} travelDistance={620} borderRadius={11} />
@@ -339,24 +335,7 @@ export function Card({
 }
 export function Tag({ children, gold = false }: { children: React.ReactNode; gold?: boolean }) {
   const c = useColors();
-  return (
-    <View
-      style={{
-        alignSelf: "flex-start",
-        paddingVertical: 12,
-        paddingHorizontal: 12,
-        borderRadius: 6,
-        maxWidth: "100%",
-        minWidth: 0,
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 1,
-        backgroundColor: gold ? c.muted : c.secondary,
-      }}
-    >
-      <ButtonLabel color={gold ? c.warning : c.secondaryForeground}>{children}</ButtonLabel>
-    </View>
-  );
+  return null;
 }
 export function Field({
   label,
@@ -490,13 +469,7 @@ export function Check({
   );
 }
 export function Photo({ name, style }: { name: string; style?: ImageStyle }) {
-  return (
-    <Image
-      source={catalogPhotoSource(name)}
-      resizeMode="cover"
-      style={[{ width: "100%", height: 220 }, style]}
-    />
-  );
+  return null;
 }
 export function Empty({
   title,
@@ -520,7 +493,14 @@ export function Empty({
 export function ErrorBox({ message, retry }: { message: string; retry?: () => void }) {
   const c = useColors();
   return (
-    <Card style={{ borderColor: c.destructive, marginBottom: 16 }}>
+    <Card
+      style={{
+        borderColor: c.destructive,
+        marginBottom: 16,
+        gap: 8,
+        maxWidth: "100%",
+      }}
+    >
       <Txt color={c.destructive}>{message}</Txt>
       {retry && <LinkText onPress={retry}>Try again</LinkText>}
     </Card>

@@ -1,3 +1,4 @@
+import { useFonts, PlayfairDisplay_700Bold } from "@expo-google-fonts/dev";
 import { serviceDurationLabel } from "@/lib/salon/duration";
 import CatalogGallery from "./CatalogGallery";
 import ServiceCategories from "./ServiceCategories";
@@ -48,6 +49,7 @@ export function Search({
           color: c.foreground,
           flex: 1,
           minHeight: 52,
+          height: 37,
         }}
       />
       {!!value && (
@@ -222,8 +224,13 @@ export function ServicesScreen() {
         </View>
       )}
       <View style={{ height: 24 }} />
-      <Card style={{ backgroundColor: c.secondary }}>
-        <Txt serif size={24}>
+      <Card
+        style={{
+          backgroundColor: c.secondary,
+          paddingBottom: 0,
+        }}
+      >
+        <Txt serif size={24} className={"pr-20"}>
           Not sure where to start?
         </Txt>
         <Txt color={c.mutedForeground} style={{ marginTop: 8, marginBottom: 12 }}>
@@ -250,6 +257,26 @@ export function WorkshopsScreen() {
   const desktop = width > 850;
   return (
     <Shell wide>
+      <Txt
+        serif
+        size={38}
+        style={{
+          textAlign: "center",
+          lineHeight: 47,
+          fontFamily: "PlayfairDisplay_700Bold",
+          paddingTop: 0,
+          display: "flex",
+          gap: 0,
+          alignItems: "flex-start",
+          height: 102,
+          flexDirection: "column",
+          justifyContent: "flex-end",
+          paddingBottom: 0,
+          marginBottom: 49,
+        }}
+      >
+        Lady J International Beauty Academy
+      </Txt>
       <View
         style={{
           width: "100%",
@@ -260,12 +287,22 @@ export function WorkshopsScreen() {
           paddingVertical: 48,
           paddingHorizontal: 8,
           gap: 24,
+          height: 588,
+          paddingTop: 0,
+          flexDirection: "column",
+          paddingBottom: 68,
         }}
       >
-        <Txt serif size={38} style={{ textAlign: "center", lineHeight: 47 }}>
-          Lady J International Beauty Academy
-        </Txt>
-        <Txt size={17} color={c.mutedForeground} style={{ textAlign: "center", lineHeight: 29 }}>
+        <Txt
+          size={17}
+          color={c.mutedForeground}
+          style={{
+            textAlign: "center",
+            lineHeight: 29,
+            height: 329,
+            paddingBottom: 0,
+          }}
+        >
           Your passion for beauty deserves more than a dream—it deserves a future. At Lady J
           International Beauty Academy, we help aspiring beauty professionals develop the skills,
           confidence, and knowledge to turn their talent into opportunity. Through structured
@@ -278,52 +315,29 @@ export function WorkshopsScreen() {
           source={require("../../assets/salon/workshop-students.png")}
           accessibilityLabel="Diverse cosmetology students receiving hands-on instruction in a beauty school"
           resizeMode="cover"
-          style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 16 }}
+          style={{
+            width: 393,
+            aspectRatio: 16 / 9,
+            borderRadius: 16,
+            height: 252,
+            marginRight: 0,
+            alignItems: "center",
+            gap: 1,
+            flexDirection: "row",
+            justifyContent: "space-between",
+          }}
         />
       </View>
       <View style={{ width: "100%", maxWidth: 1100, alignSelf: "center", gap: 18 }}>
-        <Txt serif size={30}>
-          Upcoming workshops
-        </Txt>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
-          {s.workshops.map((workshop) => (
-            <Card
-              key={workshop.id}
-              style={{
-                padding: 0,
-                overflow: "hidden",
-                width: desktop ? "31%" : "100%",
-                flexGrow: 1,
-                maxWidth: desktop ? "33%" : undefined,
-              }}
-            >
-              <CatalogGallery photos={workshop.photos} cover={workshop.image} height={180} />
-              <View style={{ padding: 16, gap: 10 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Pressable
-                    style={{ flex: 1 }}
-                    accessibilityRole="button"
-                    onPress={() => go("workshop", { id: workshop.id })}
-                  >
-                    <Txt serif size={24}>
-                      {workshop.name}
-                    </Txt>
-                  </Pressable>
-                  <FavoriteButton kind="workshop" itemId={workshop.id} />
-                </View>
-                <Txt size={13} color={c.mutedForeground}>
-                  {workshop.starts_at
-                    ? `${dateLabel(workshop.starts_at)} · ${timeLabel(workshop.starts_at)}`
-                    : "Date to be announced"}
-                </Txt>
-                <Action
-                  label="View Workshop"
-                  secondary
-                  onPress={() => go("workshop", { id: workshop.id })}
-                />
-              </View>
-            </Card>
-          ))}
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 16,
+            height: 8,
+          }}
+        >
+          {s.workshops.map((workshop) => null)}
         </View>
         {!s.workshops.length && (
           <Empty
@@ -345,7 +359,7 @@ export function DetailScreen({ kind, id }: { kind: "product" | "workshop"; id: s
     kind === "product" ? s.products.find((v) => v.id === id) : s.workshops.find((v) => v.id === id);
   if (!v)
     return (
-      <Shell>
+      <Shell className={"justify-center pb-16"}>
         <Empty
           title="We couldn’t find that"
           body="Explore the latest salon collection."

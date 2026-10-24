@@ -214,6 +214,8 @@ export default function Shell({
             alignItems: "center",
             justifyContent: "center",
             gap: 12,
+            height: 29,
+            paddingBottom: 0,
           }}
         >
           <Txt size={12} bold color={c.warning}>
@@ -254,6 +256,8 @@ export default function Shell({
             flexBasis: 0,
             minHeight: 0,
             backgroundColor: c.background,
+            height: 695,
+            flexDirection: "column",
           }}
           contentContainerStyle={{ paddingBottom: navigationSpacing + 16 }}
           showsVerticalScrollIndicator={false}
@@ -265,6 +269,10 @@ export default function Shell({
                 maxWidth: wide ? 1280 : 1200,
                 paddingHorizontal: desktop ? 32 : 20,
                 paddingTop: contentTopPadding ?? (desktop ? 32 : 24),
+                height: "auto",
+                justifyContent: "flex-start",
+                flexDirection: "column",
+                maxHeight: "auto",
               },
             ]}
           >
@@ -293,6 +301,7 @@ export default function Shell({
                 paddingHorizontal: desktop ? 40 : 20,
                 paddingVertical: 26,
                 marginTop: 28,
+                paddingBottom: 0,
               }}
             >
               <View
@@ -301,6 +310,7 @@ export default function Shell({
                   {
                     alignItems: "center",
                     gap: 12,
+                    height: 120,
                   },
                 ]}
               >

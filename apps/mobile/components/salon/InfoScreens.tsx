@@ -63,7 +63,14 @@ export default function InfoScreen({ page }: { page: string }) {
           <Txt serif size={40} style={{ textAlign: "center" }}>
             Let’s connect
           </Txt>
-          <Txt color={c.mutedForeground} style={{ textAlign: "center", marginTop: 8 }}>
+          <Txt
+            color={c.mutedForeground}
+            style={{
+              textAlign: "center",
+              marginTop: 8,
+              fontSize: 14,
+            }}
+          >
             We’re here to help you plan your next moment of care.
           </Txt>
         </View>
@@ -82,10 +89,6 @@ export default function InfoScreen({ page }: { page: string }) {
               name="contactReception"
               style={{ width: "100%", height: width > 820 ? 430 : 270, borderRadius: 18 }}
             />
-            <Txt size={11} color={c.mutedForeground} style={{ textAlign: "center" }}>
-              Representative salon image · The person pictured is not identified as a Lady J
-              employee.
-            </Txt>
           </View>
           <View
             accessibilityLabel="Lady J contact information"

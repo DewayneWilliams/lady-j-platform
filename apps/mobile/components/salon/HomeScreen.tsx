@@ -67,8 +67,9 @@ export default function HomeScreen() {
           paddingVertical: 18,
           borderBottomWidth: 1,
           borderColor: c.border,
-          marginBottom: 36,
+          marginBottom: 0,
           gap: 10,
+          height: 54,
         }}
       >
         {[
@@ -126,42 +127,12 @@ export default function HomeScreen() {
             style={{
               lineHeight: 26,
               flexDirection: "row",
+              fontSize: 16,
             }}
           >
-            A polished finish is only part of the experience. It is the ease of being heard, the
-            confidence of a clear plan, and the quiet pleasure of leaving ready for your day!
-          </Txt>
-          <Txt color={c.mutedForeground} style={{ lineHeight: 26 }}>
-            Tell us what you love, what you would like to change, and what makes you comfortable. We
-            shape the visit around your goals, your routine, and the way you want to feel.
-          </Txt>
-        </View>
-        <View style={{ gap: 16, paddingVertical: 12, maxWidth: 760 }}>
-          <Heading>Care you will be glad you made time for.</Heading>
-          <Txt color={c.mutedForeground} style={{ lineHeight: 26 }}>
-            The appointments you keep for yourself become part of how you show up in life. Let this
-            be the beginning of feeling more at ease, more confident, and more like you, long after
-            you leave the chair.
-          </Txt>
-          <Action
-            label={"Request Your Free Consultation\n15 Minutes • Complimentary"}
-            shimmer
-            shimmerInterval={9000}
-            onPress={() => {
-              go(s.session ? "consultation" : "login", s.session ? {} : { next: "consultation" });
-            }}
-            style={{
-              alignSelf: "center",
-              width: "100%",
-              maxWidth: 520,
-              borderRadius: 16,
-              backgroundColor: "#2563EB",
-              borderColor: "#2563EB",
-              borderWidth: 1,
-            }}
-          />
-          <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
-            Tell Lady J your goals first. Your appointment is arranged personally after review.
+            {
+              "You work hard, give your best to others, and deserve to feel just as good as you make everyone else feel. But finding time for yourself—and someone you can truly trust with your care—isn't always easy. At LADY J SALON & DAY SPA, we take the time to listen, understand your needs, and provide personalized beauty, grooming, and wellness services designed around you. Whether you're preparing for a special occasion or simply making yourself a priority, we're here to make every visit comfortable, relaxing, and rewarding. Because you deserve more than great results. \n\nYou deserve to leave feeling confident, refreshed, and ready to take on the world!"
+            }
           </Txt>
         </View>
       </View>
