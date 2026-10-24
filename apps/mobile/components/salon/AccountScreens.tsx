@@ -2,7 +2,7 @@ import { MyWaitlist } from "./Waitlist";
 import { DateField } from "./DateFields";
 import React, { useState, useEffect } from "react";
 import { View, Pressable, Linking } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { db, check } from "@/lib/salon/client";
@@ -11,6 +11,7 @@ import {
   availableAuthProviders,
   socialSignIn,
   authDestination,
+  rememberAuthDestination,
   AuthProviders,
   SocialProvider,
   signOutCurrentDevice,
@@ -22,6 +23,7 @@ import { demoTestClientPhotoPath } from "@/lib/salon/demoProfilePhotos";
 import VipPaymentPanel from "./VipPaymentPanel";
 import LoyaltyHeader from "./LoyaltyHeader";
 import LoyaltyActions from "./LoyaltyActions";
+import GiftsReferrals from "./GiftsReferrals";
 import {
   Txt,
   Action,
@@ -35,6 +37,7 @@ import {
   LinkText,
   useColors,
   shared,
+  Photo,
 } from "./ui";
 
 const pronounOptions = [
@@ -144,6 +147,9 @@ export function AuthScreen({
     const destination = authDestination(next);
     go(destination.page, destination.params);
   };
+  useEffect(() => {
+    if (!owner && s.authReady && s.session) continueToAccount();
+  }, [owner, s.authReady, s.session]);
   async function submit() {
     setError("");
     setSuccess("");
@@ -229,6 +235,7 @@ export function AuthScreen({
     setError("");
     setSuccess("");
     try {
+      await rememberAuthDestination(next);
       await socialSignIn(provider, consent);
       continueToAccount();
     } catch (e) {
@@ -419,6 +426,14 @@ export function AccountScreen() {
   const s = useSalon(),
     go = useNav(),
     c = useColors();
+  const accountParams = useLocalSearchParams<{ ref?: string; gift?: string }>();
+  const accountNext =
+    "account" +
+    (accountParams.ref
+      ? `?ref=${encodeURIComponent(accountParams.ref)}`
+      : accountParams.gift
+        ? `?gift=${encodeURIComponent(accountParams.gift)}`
+        : "");
   if (!s.session && !s.testMode)
     return (
       <Shell footer={false}>
@@ -428,8 +443,8 @@ export function AccountScreen() {
             body="Sign in to privately manage your appointments, workshop purchases, orders and personal details."
             action={
               <View style={[shared.row, { flexWrap: "wrap", justifyContent: "center" }]}>
-                <Action label="Sign in" onPress={() => go("login")} />
-                <Action label="Create an account" secondary onPress={() => go("register")} />
+                <Action label="Sign in" onPress={() => go("login", { next: accountNext })} />
+                <Action label="Create an account" secondary onPress={() => go("register", { next: accountNext })} />
               </View>
             }
           />
@@ -441,10 +456,27 @@ export function AccountScreen() {
     s.session?.user.user_metadata?.full_name ||
     (s.testMode ? "Test Client" : "Client");
   const firstName = s.profile?.first_name || name.split(" ")[0] || "beautiful";
+  const birthdayEntitlement = s.rewards.entitlements.find(
+    (entry) => entry.kind === "birthday" && entry.status === "available",
+  );
+  const birthdayExpiration =
+    birthdayEntitlement && s.profile?.birthday
+      ? dateLabel(
+          new Date(
+            Date.UTC(
+              birthdayEntitlement.benefit_year || new Date().getUTCFullYear(),
+              Number(s.profile.birthday.slice(5, 7)) - 1,
+              Number(s.profile.birthday.slice(8, 10)) + 7,
+              12,
+            ),
+          ).toISOString(),
+        )
+      : "7 days after your birthday";
   const rows = [
     ["UserRound", "Profile", "Personal details and preferences", "profile"],
     ["CalendarDays", "Appointments", "Upcoming bookings and service history", "appointments"],
     ["Wallet", "Orders & Payments", "Purchases, deposits, credits and balances", "payments"],
+    ["Heart", "Favorites", "Saved services, products and workshops", "favorites"],
     [
       "GraduationCap",
       "Beauty Academy",
@@ -462,7 +494,8 @@ export function AccountScreen() {
   return (
     <Shell footer={false} contentTopPadding={8}>
       <View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
-        <LoyaltyHeader rewards={s.rewards} />
+        <LoyaltyHeader rewards={s.rewards} firstName={firstName} onChanged={s.refreshPrivate} />
+        <GiftsReferrals />
         <View
           style={{
             flexDirection: "row",
@@ -500,7 +533,36 @@ export function AccountScreen() {
             )}
           </View>
         </View>
-        <LoyaltyActions rewards={s.rewards} appointments={s.appointments} onChanged={s.refreshPrivate} />
+        <LoyaltyActions
+          rewards={s.rewards}
+          appointments={s.appointments}
+          onChanged={s.refreshPrivate}
+        />
+        {birthdayEntitlement && (
+          <Card
+            style={{
+              marginBottom: 22,
+              gap: 8,
+              backgroundColor: c.goldSurface,
+              borderColor: c.goldBorder,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Icon name="Gift" size={22} color={c.brandAccent} />
+              <Txt serif size={23}>
+                Your Birthday Surprise is ready
+              </Txt>
+            </View>
+            <Txt bold>
+              TT$
+              {birthdayEntitlement.amount || 50} birthday credit
+            </Txt>
+            <Txt size={13} color={c.mutedForeground}>
+              Available to eligible Royalty members through {birthdayExpiration}. Apply it to an
+              eligible appointment before payment; the salon will confirm your redemption.
+            </Txt>
+          </Card>
+        )}
         <View
           style={{
             borderTopWidth: 1,
@@ -550,11 +612,6 @@ export function AccountScreen() {
             </Pressable>
           ))}
         </View>
-        <Action
-          label="Book an Appointment"
-          onPress={() => go("booking")}
-          style={{ alignSelf: "center", marginTop: 24 }}
-        />
         <Pressable
           accessibilityRole="button"
           onPress={() => {
@@ -585,6 +642,87 @@ export function AccountScreen() {
             {s.testMode && !s.session ? "Exit Test Mode" : "Log Out"}
           </Txt>
         </Pressable>
+      </View>
+    </Shell>
+  );
+}
+
+export function FavoritesScreen() {
+  const s = useSalon();
+  const go = useNav();
+  const c = useColors();
+  const [tab, setTab] = useState<"service" | "product" | "workshop">("service");
+  const catalog = tab === "service" ? s.services : tab === "product" ? s.products : s.workshops;
+  const items = s.favorites
+    .filter((favorite) => favorite.kind === tab)
+    .flatMap((favorite) => {
+      const item = catalog.find((entry) => entry.id === favorite.item_id);
+      return item ? [{ favorite, item }] : [];
+    });
+  return (
+    <Shell>
+      <Heading sub="Everything you love, ready when you are.">Favorites</Heading>
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 22 }}>
+        {(
+          [
+            ["service", "Services"],
+            ["product", "Products"],
+            ["workshop", "Workshops"],
+          ] as const
+        ).map(([value, label]) => (
+          <View key={value} style={{ flex: 1 }}>
+            <Action
+              label={label}
+              secondary={tab !== value}
+              gold={tab === value}
+              onPress={() => setTab(value)}
+              style={{ minHeight: 48, paddingHorizontal: 6 }}
+            />
+          </View>
+        ))}
+      </View>
+      <View style={{ gap: 12 }}>
+        {items.map(({ favorite, item }) => (
+          <Card
+            key={favorite.id}
+            style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 14 }}
+          >
+            <Photo name={item.image} style={{ width: 72, height: 72, borderRadius: 14 }} />
+            <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
+              <Txt size={17} bold>
+                {item.name}
+              </Txt>
+              <Txt size={13} color={c.mutedForeground}>
+                {tab === "service"
+                  ? "Saved service"
+                  : tab === "product"
+                    ? "Saved product"
+                    : "Saved workshop"}
+              </Txt>
+              <LinkText onPress={() => go(tab === "service" ? "booking" : tab, { id: item.id })}>
+                {tab === "service"
+                  ? "Book Service"
+                  : tab === "product"
+                    ? "View Product"
+                    : "View Workshop"}
+              </LinkText>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${item.name} from favorites`}
+              onPress={() => void s.toggleFavorite(tab, item.id)}
+              style={{ padding: 10 }}
+            >
+              <Icon name="Heart" size={22} color={c.brandAccent} fill={c.brandAccent} />
+            </Pressable>
+          </Card>
+        ))}
+        {!items.length && (
+          <Empty
+            title={`No favorite ${tab === "service" ? "services" : tab === "product" ? "products" : "workshops"} yet`}
+            body="Tap the heart on anything you want to find again quickly."
+          />
+        )}
       </View>
     </Shell>
   );
@@ -944,6 +1082,9 @@ export function RecordsScreen({ page }: { page: string }) {
           {page === "appointments" &&
             (s.appointments.length ? (
               s.appointments.slice(currentPage * 20, currentPage * 20 + 20).map((a) => {
+                const isConsultation = a.services?.some((service) =>
+                  /^(free )?consult(ation|s)?$/i.test(service.name),
+                );
                 const payment = s.transactions.find(
                   (transaction) =>
                     transaction.appointment_id === a.id && !["voided"].includes(transaction.status),
@@ -955,15 +1096,24 @@ export function RecordsScreen({ page }: { page: string }) {
                     >
                       <View style={{ flex: 1 }}>
                         <Txt serif size={25}>
-                          {a.services?.map((v) => v.name).join(" + ") || "Salon appointment"}
+                          {isConsultation
+                            ? "Free Consultation"
+                            : a.services?.map((v) => v.name).join(" + ") || "Salon appointment"}
                         </Txt>
                         <Txt style={{ marginVertical: 10 }}>
                           {dateLabel(a.starts_at)} at {timeLabel(a.starts_at)}
                         </Txt>
-                        <Txt size={13}>
-                          Total {money(a.total)} · Deposit {money(a.deposit)} · Remaining
-                          {money(a.total - (a.deposit_paid ? a.deposit : 0))}
-                        </Txt>
+                        {isConsultation ? (
+                          <Txt size={13}>
+                            15 minutes · Complimentary · No payment required{"\n"}
+                            {s.settings?.address || "Lady J Salon & Day Spa"}
+                          </Txt>
+                        ) : (
+                          <Txt size={13}>
+                            Total {money(a.total)} · Deposit {money(a.deposit)} · Remaining
+                            {money(a.total - (a.deposit_paid ? a.deposit : 0))}
+                          </Txt>
+                        )}
                       </View>
                       <Tag>
                         {payment?.status === "pending"

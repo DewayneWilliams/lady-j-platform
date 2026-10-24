@@ -38,6 +38,20 @@ const subjects: Record<string, string> = {
   order_fulfilled: "Your order is complete",
   order_cancelled: "Your request has been cancelled",
   payment_receipt: "Your Lady J payment receipt",
+  birthday_7_day: "Your Special Birthday Surprise is almost here",
+  birthday_greeting: "Happy Birthday from Lady J",
+  vip_approved: "Your VIP Access request was approved",
+  vip_declined: "An update on your VIP Access request",
+  royalty_welcome: "Welcome to the Lady J Royalty Program",
+  royalty_level_up: "A new Royalty level is yours",
+  royalty_anniversary: "Your Lady J Royalty anniversary",
+  gift_purchase_confirmed: "Your Lady J gift card is active",
+  gift_expiration_30: "Your Lady J gift card has 30 days remaining",
+  gift_expiration_7: "Your Lady J gift card has 7 days remaining",
+  gift_delivered: "A thoughtful Lady J gift is waiting for you",
+  gift_redeemed: "Your Lady J gift-card balance was updated",
+  referral_pending: "Your Lady J referral is pending",
+  referral_successful: "Your TT$25 referral credit is ready",
 };
 const when = (value: string) =>
   new Date(value).toLocaleString("en-TT", {
@@ -173,11 +187,15 @@ Deno.serve(async (req: Request) => {
           const expected =
             job.event === "request_received" || job.event === "deposit_reminder"
               ? "pending"
-              : job.event === "appointment_cancelled"
-                ? "cancelled"
-                : job.event === "service_thanks"
-                  ? "completed"
-                  : "confirmed";
+              : job.event === "vip_approved"
+                ? "pending"
+                : job.event === "vip_declined"
+                  ? "cancelled"
+                  : job.event === "appointment_cancelled"
+                    ? "cancelled"
+                    : job.event === "service_thanks"
+                      ? "completed"
+                      : "confirmed";
           if (
             job.event !== "payment_receipt" &&
             (appointment.status !== expected ||
@@ -276,6 +294,28 @@ Deno.serve(async (req: Request) => {
             failed++;
             continue;
           }
+          let deliveryEmail = recipient.email;
+          let giftDelivery = "";
+          if (job.event === "gift_delivered") {
+            const giftId = String(job.payload?.gift_card_id || "");
+            const gift = await admin
+              .from("lj_gift_cards")
+              .select("recipient_email,recipient_name,sender_name,message,amount,secure_code,expires_at,payment_status,status")
+              .eq("id", giftId)
+              .single();
+            if (gift.error || !gift.data || !["verified", "complimentary"].includes(gift.data.payment_status)) {
+              await update({ status: "cancelled", lease_until: null, last_error: "The gift is no longer deliverable." });
+              cancelled++;
+              continue;
+            }
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(gift.data.recipient_email || "")) {
+              await update({ status: "failed", lease_until: null, last_error: "Recipient email is unavailable; use the manual WhatsApp share." });
+              failed++;
+              continue;
+            }
+            deliveryEmail = gift.data.recipient_email;
+            giftDelivery = `\nFor ${gift.data.recipient_name}. From ${gift.data.sender_name}.\nGift value: TT$${Number(gift.data.amount).toFixed(2)}.\nSecure code: ${gift.data.secure_code}.\nExpires: ${new Date(gift.data.expires_at).toLocaleDateString("en-TT", { timeZone: "America/Port_of_Spain", year: "numeric", month: "long", day: "numeric" })}.\n${gift.data.message ? `Message: ${gift.data.message}\n` : ""}`;
+          }
           const subject = subjects[job.event];
           if (!subject) {
             await update({
@@ -309,9 +349,59 @@ Deno.serve(async (req: Request) => {
                   : "Recorded by the salon") +
                 ".\n"
               : "";
+          let birthdayBenefit = "";
+          if (job.event === "birthday_greeting") {
+            const entitlement = await admin
+              .from("lj_reward_entitlements")
+              .select("amount")
+              .eq("customer_id", job.customer_id)
+              .eq("kind", "birthday")
+              .eq("status", "available")
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (!entitlement.error && entitlement.data)
+              birthdayBenefit = ` Your eligible TT$${Number(entitlement.data.amount).toFixed(2)} Birthday Surprise is ready in your account.`;
+          }
+          const birthday =
+            job.event === "birthday_7_day"
+              ? `\n${String(job.payload?.first_name || "Beautiful")}, your birthday is one week away. Your Special Birthday Surprise will appear in your Lady J account when eligible.\n`
+              : job.event === "birthday_greeting"
+                ? `\nHappy Birthday, ${String(job.payload?.first_name || "Beautiful")}! Wishing you a radiant day from Lady J.${birthdayBenefit}\n`
+                : "";
+          const vip =
+            job.event === "vip_approved"
+              ? "\nLady J approved your requested VIP time. Open your account to complete the existing payment or deposit flow; approval itself is not a booking confirmation.\n"
+              : job.event === "vip_declined"
+                ? "\nLady J could not approve this requested VIP time. No payment was collected. Please choose another available time in the app.\n"
+                : "";
+          const royalty =
+            job.event === "royalty_welcome"
+              ? "\nWelcome to 👑 Lady J Royalty Program. Every visit brings you closer to Royalty. Your membership and rewards wallet are ready in your account.\n"
+              : job.event === "royalty_level_up"
+                ? `\nCongratulations—you have reached ${String(job.payload?.level_name || "a new Royalty level")}. Your new digital membership card is waiting in your account.\n`
+                : job.event === "royalty_anniversary"
+                  ? "\nHappy Royalty anniversary. A new year of qualifying visits has begun, while your lifetime visits, achievements and rewards remain safely preserved.\n"
+                  : "";
+          const gifts =
+            job.event === "gift_purchase_confirmed"
+              ? "\nYour full payment was confirmed and your Lady J gift card is now active. Its exact six-month expiration date and secure sharing details are in your account.\n"
+              : job.event === "gift_expiration_30"
+                ? "\nA Lady J gift-card balance has 30 days remaining in its stated six-month validity period. The balance remains protected for owner review where expiration cannot legally be enforced.\n"
+                : job.event === "gift_expiration_7"
+                  ? "\nA Lady J gift-card balance has 7 days remaining in its stated six-month validity period. The balance remains protected for owner review where expiration cannot legally be enforced.\n"
+                  : job.event === "gift_delivered"
+                    ? "\nA thoughtful Lady J gift is waiting in your secure account. Sign in with the recipient email or mobile number to claim it.\n"
+                    : job.event === "gift_redeemed"
+                      ? "\nYour Lady J gift-card balance was updated after an appointment payment. View the secure card and transaction history in your account.\n"
+                      : job.event === "referral_pending"
+                        ? "\nYour referral is linked. Both TT$25 credits remain pending until the referred client's first fully paid eligible appointment of TT$350 or more.\n"
+                        : job.event === "referral_successful"
+                          ? "\nBeauty is better shared—your TT$25 referral credit is now available for a future appointment. It remains separate from Royalty Points and gift cards.\n"
+                          : "";
           payload = {
             from: from!,
-            to: [recipient.email],
+            to: [deliveryEmail],
             subject: subject + " · Lady J",
             text:
               subject +
@@ -321,6 +411,11 @@ Deno.serve(async (req: Request) => {
               thanks +
               cancellation +
               receipt +
+              birthday +
+              vip +
+              royalty +
+              gifts +
+              giftDelivery +
               "\nOpen your account: " +
               appUrl!.replace(/\/$/, "") +
               "/account\n" +
@@ -364,6 +459,13 @@ Deno.serve(async (req: Request) => {
             last_error: null,
           });
           sent++;
+          if (job.event === "gift_delivered" && job.payload?.gift_card_id) {
+            await admin
+              .from("lj_gift_cards")
+              .update({ status: "active", delivered_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+              .eq("id", String(job.payload.gift_card_id))
+              .in("status", ["scheduled", "active"]);
+          }
         }
         await new Promise((resolve) => setTimeout(resolve, 550));
       } catch {

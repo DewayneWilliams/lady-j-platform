@@ -1,12 +1,11 @@
 import SalonLocation from "./SalonLocation";
 import { formatDuration } from "@/lib/salon/duration";
 import React, { useEffect, useState } from "react";
-import { Linking, View, useWindowDimensions } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { money } from "@/lib/salon/types";
 import CatalogGallery from "./CatalogGallery";
-import { whatsappContactUrl } from "@/lib/salon/whatsapp";
 import Shell, { useNav } from "./Shell";
 import { Txt, Action, Heading, Photo, Card, useColors } from "./ui";
 export default function HomeScreen() {
@@ -15,10 +14,6 @@ export default function HomeScreen() {
     { width } = useWindowDimensions(),
     s = useSalon();
   const desktop = width >= 850;
-  const consultationUrl = whatsappContactUrl(
-    s.settings?.whatsapp_phone,
-    "Hello LADY J SALON & DAY SPA! I'd like to request a complimentary 15-minute consultation to discuss your services. Please let me know your available days and times. Thank you!",
-  );
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const next = Math.min(
@@ -126,9 +121,15 @@ export default function HomeScreen() {
       <View style={{ gap: 28, marginBottom: 24 }}>
         <View style={{ gap: 14, maxWidth: 760 }}>
           <Heading>A moment for you. A difference you carry.</Heading>
-          <Txt color={c.mutedForeground} style={{ lineHeight: 26 }}>
+          <Txt
+            color={c.mutedForeground}
+            style={{
+              lineHeight: 26,
+              flexDirection: "row",
+            }}
+          >
             A polished finish is only part of the experience. It is the ease of being heard, the
-            confidence of a clear plan, and the quiet pleasure of leaving ready for your day.
+            confidence of a clear plan, and the quiet pleasure of leaving ready for your day!
           </Txt>
           <Txt color={c.mutedForeground} style={{ lineHeight: 26 }}>
             Tell us what you love, what you would like to change, and what makes you comfortable. We
@@ -147,15 +148,7 @@ export default function HomeScreen() {
             shimmer
             shimmerInterval={9000}
             onPress={() => {
-              if (!consultationUrl) {
-                s.notify(
-                  "The salon’s WhatsApp number is awaiting setup. Please use Contact for now.",
-                );
-                return;
-              }
-              void Linking.openURL(consultationUrl).catch(() =>
-                s.notify("WhatsApp could not open. Please use the salon contact details."),
-              );
+              go(s.session ? "consultation" : "login", s.session ? {} : { next: "consultation" });
             }}
             style={{
               alignSelf: "center",
@@ -168,9 +161,7 @@ export default function HomeScreen() {
             }}
           />
           <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
-            {consultationUrl
-              ? "Choose a time with the owner through WhatsApp."
-              : "Consultation requests will open when the salon’s WhatsApp number is configured."}
+            Tell Lady J your goals first. Your appointment is arranged personally after review.
           </Txt>
         </View>
       </View>

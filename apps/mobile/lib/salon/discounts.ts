@@ -7,10 +7,16 @@ export type Discount = {
   name: string;
   code: string | null;
   percentage: number;
+  discount_type?: "percentage" | "fixed";
+  fixed_amount?: number | null;
   scope: "all" | "service" | "product" | "workshop";
   item_id: string | null;
   active: boolean;
   expires_at: string | null;
+  starts_at?: string | null;
+  timezone?: string;
+  redemption_count?: number;
+  total_discount?: number;
 };
 export type DiscountItem = { id: string; quantity: number };
 export type DiscountQuote = {

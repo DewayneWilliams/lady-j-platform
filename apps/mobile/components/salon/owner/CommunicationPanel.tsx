@@ -38,6 +38,13 @@ const eventLabels: Record<string, string> = {
   order_ready: "Order ready",
   order_fulfilled: "Order complete",
   order_cancelled: "Order cancellation",
+  gift_purchase_confirmed: "Gift purchase confirmation",
+  gift_expiration_30: "Gift expiration · 30 days",
+  gift_expiration_7: "Gift expiration · 7 days",
+  gift_delivered: "Gift delivery",
+  gift_redeemed: "Gift redemption",
+  referral_pending: "Referral pending",
+  referral_successful: "Referral successful",
 };
 export default function CommunicationPanel({ demo }: { demo: boolean }) {
   const [connection, setConnection] = useState<Connection | null>(null),

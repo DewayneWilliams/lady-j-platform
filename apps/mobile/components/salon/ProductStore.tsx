@@ -8,6 +8,7 @@ import { fonts } from "@/lib/salon/design";
 import Shell, { useNav } from "./Shell";
 import { Action, Card, Chip, Empty, LinkText, Tag, Txt, useColors } from "./ui";
 import CatalogGallery from "./CatalogGallery";
+import FavoriteButton from "./FavoriteButton";
 
 export default function ProductStore() {
   const s = useSalon();
@@ -165,29 +166,59 @@ export default function ProductStore() {
           </View>
           <View style={{ gap: 9 }}>
             <Txt bold>Brand</Txt>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <View style={{ gap: 7 }}>
               {[
                 "All brands",
                 ...new Set([
                   ...productBrands,
                   ...s.products.map((v) => v.brand || "").filter(Boolean),
                 ]),
-              ].map((value) => (
-                <Chip
-                  key={value}
-                  label={value}
-                  selected={brand === value}
-                  onPress={() => {
-                    setBrand(value);
-                    setPage(0);
-                  }}
-                />
-              ))}
+              ].map((value) => {
+                const count = s.products.filter(
+                  (product) =>
+                    (value === "All brands" || product.brand === value) &&
+                    (category === "All products" || product.category === category) &&
+                    `${product.name} ${product.brand || ""} ${product.description}`
+                      .toLowerCase()
+                      .includes(query.toLowerCase()),
+                ).length;
+                const selected = brand === value;
+                return (
+                  <Pressable
+                    key={value}
+                    onPress={() => {
+                      setBrand(value);
+                      setPage(0);
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    style={({ pressed }) => ({
+                      minHeight: 48,
+                      paddingHorizontal: 14,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: selected ? c.goldBorder : c.border,
+                      backgroundColor: selected ? c.goldSurface : c.background,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Txt bold={selected} style={{ flex: 1, textAlign: "left" }}>
+                      {value}
+                    </Txt>
+                    <Txt color={c.mutedForeground} style={{ textAlign: "right" }}>
+                      {count}
+                    </Txt>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
           <View style={{ gap: 9 }}>
             <Txt bold>Category</Txt>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <View style={{ gap: 7 }}>
               {[
                 "All products",
                 ...new Set([
@@ -197,17 +228,47 @@ export default function ProductStore() {
                   "Styling",
                   ...s.products.map((v) => v.category),
                 ]),
-              ].map((value) => (
-                <Chip
-                  key={value}
-                  label={value}
-                  selected={category === value}
-                  onPress={() => {
-                    setCategory(value);
-                    setPage(0);
-                  }}
-                />
-              ))}
+              ].map((value) => {
+                const count = s.products.filter(
+                  (product) =>
+                    (brand === "All brands" || product.brand === brand) &&
+                    (value === "All products" || product.category === value) &&
+                    `${product.name} ${product.brand || ""} ${product.description}`
+                      .toLowerCase()
+                      .includes(query.toLowerCase()),
+                ).length;
+                const selected = category === value;
+                return (
+                  <Pressable
+                    key={value}
+                    onPress={() => {
+                      setCategory(value);
+                      setPage(0);
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    style={({ pressed }) => ({
+                      minHeight: 48,
+                      paddingHorizontal: 14,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: selected ? c.goldBorder : c.border,
+                      backgroundColor: selected ? c.goldSurface : c.background,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Txt bold={selected} style={{ flex: 1, textAlign: "left" }}>
+                      {value}
+                    </Txt>
+                    <Txt color={c.mutedForeground} style={{ textAlign: "right" }}>
+                      {count}
+                    </Txt>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
           <View style={{ gap: 9 }}>
@@ -249,11 +310,18 @@ export default function ProductStore() {
               <Txt size={12} bold color={c.secondaryForeground}>
                 {v.brand || "Lady J collection"}
               </Txt>
-              <Pressable accessibilityRole="button" onPress={() => go("product", { id: v.id })}>
-                <Txt serif size={25}>
-                  {v.name}
-                </Txt>
-              </Pressable>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Pressable
+                  style={{ flex: 1 }}
+                  accessibilityRole="button"
+                  onPress={() => go("product", { id: v.id })}
+                >
+                  <Txt serif size={25}>
+                    {v.name}
+                  </Txt>
+                </Pressable>
+                <FavoriteButton kind="product" itemId={v.id} />
+              </View>
               <Txt size={13} color={c.mutedForeground}>
                 {v.is_demo &&
                 /demo|sample|illustrative|demonstration|fictional/i.test(v.description)

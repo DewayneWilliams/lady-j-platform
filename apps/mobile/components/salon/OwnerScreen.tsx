@@ -11,6 +11,8 @@ import StatusNotice from "./StatusNotice";
 import ContactRemovalConfirmation from "./owner/ContactRemovalConfirmation";
 import ClientPurchaseHistory from "./owner/ClientPurchaseHistory";
 import OwnerClientLoyalty from "./owner/OwnerClientLoyalty";
+import LoyaltySettings from "./owner/LoyaltySettings";
+import GiftsReferralsPanel from "./owner/GiftsReferralsPanel";
 import OwnerClientMediaPreview from "./owner/OwnerClientMediaPreview";
 import MoneyCelebration from "./owner/MoneyCelebration";
 import DownloadReports from "./owner/DownloadReports";
@@ -73,6 +75,7 @@ import OwnerWorkspace from "./owner/OwnerWorkspace";
 import { appointmentsForToday, salonDayKey } from "@/lib/salon/ownerToday";
 import TodayDashboard, { OwnerAction } from "./owner/TodayDashboard";
 import ClientsPanel from "./owner/ClientsPanel";
+import ConsultationRequestsPanel from "./owner/ConsultationRequestsPanel";
 import BusinessOverview from "./owner/BusinessOverview";
 import RevenuePanel from "./owner/RevenuePanel";
 import DiscountsPanel from "./owner/DiscountsPanel";
@@ -182,7 +185,7 @@ function OF({
 }
 export default function OwnerScreen() {
   const routeParams = useLocalSearchParams<{ tab?: string }>();
-  const routeTab = ["Today", "Calendar", "Clients", "Business", "Maria"].includes(
+  const routeTab = ["Today", "Calendar", "Consultations", "Clients", "Business", "Maria"].includes(
     String(routeParams.tab),
   )
     ? String(routeParams.tab)
@@ -1644,6 +1647,13 @@ export default function OwnerScreen() {
           onRefresh={refreshWorkspace}
           renderAppointment={renderAppointment}
         />
+      ) : tab === "Consultations" ? (
+        <ConsultationRequestsPanel
+          key={navigationRevision}
+          services={services}
+          appointments={appointments}
+          onChanged={() => load(true)}
+        />
       ) : tab === "Clients" ? (
         loading ? (
           <ActivityIndicator color={c.tertiary} />
@@ -2312,6 +2322,22 @@ export default function OwnerScreen() {
                         demo={demo}
                       />
                     )}
+                    {section === "Royalty" && (
+                      <LoyaltySettings
+                        demo={demo}
+                        redemptionPoints={Number(s.settings?.loyalty_redemption_points ?? 100)}
+                        redemptionValue={Number(s.settings?.loyalty_redemption_value ?? 5)}
+                        onMessageClient={(client) =>
+                          setContactActions({
+                            name: client.full_name,
+                            whatsapp: client.whatsapp_phone,
+                            phone: client.phone,
+                            message: `Hello ${client.full_name.split(" ")[0] || ""}, Lady J is thinking of you. `,
+                          })
+                        }
+                      />
+                    )}
+                    {section === "GiftsReferrals" && <GiftsReferralsPanel demo={demo} />}
                     {section === "Agreements" && <AgreementList demo={demo} />}
                     {section === "Discounts" && (
                       <DiscountsPanel
@@ -2343,8 +2369,8 @@ export default function OwnerScreen() {
                         ))}
                         <Card>
                           <OT>
-                            Loyalty redemptions and automated birthday offers are planned
-                            integrations. No offers are sent automatically.
+                            Royalty redemptions remain client-directed. Birthday privileges and
+                            Royalty service updates use the configured transactional email channel.
                           </OT>
                         </Card>
                       </View>
@@ -2909,12 +2935,29 @@ export default function OwnerScreen() {
                               );
                             }}
                           />
-                          <OT size={30} bold>{selectedClient.full_name}</OT>
-                          <OT muted>
-                            DOB {selectedClient.birthday ? dateLabel(selectedClient.birthday + "T12:00:00Z", { year: "numeric" }) : "Not provided"}
+                          <OT size={30} bold>
+                            {selectedClient.full_name}
                           </OT>
                           <OT muted>
-                            Client Since {selectedClient.created_at || profiles.find((p) => p.id === selectedClient.customer_id)?.created_at ? dateLabel(String(selectedClient.created_at || profiles.find((p) => p.id === selectedClient.customer_id)?.created_at)) : "Not recorded"}
+                            DOB{" "}
+                            {selectedClient.birthday
+                              ? dateLabel(selectedClient.birthday + "T12:00:00Z", {
+                                  year: "numeric",
+                                })
+                              : "Not provided"}
+                          </OT>
+                          <OT muted>
+                            Client Since{" "}
+                            {selectedClient.created_at ||
+                            profiles.find((p) => p.id === selectedClient.customer_id)?.created_at
+                              ? dateLabel(
+                                  String(
+                                    selectedClient.created_at ||
+                                      profiles.find((p) => p.id === selectedClient.customer_id)
+                                        ?.created_at,
+                                  ),
+                                )
+                              : "Not recorded"}
                           </OT>
                           {!!selectedClient.pronouns &&
                             selectedClient.pronouns !== "prefer_not" && (
@@ -2928,13 +2971,60 @@ export default function OwnerScreen() {
                             )}
                         </View>
                         <View style={{ flexDirection: "row", gap: 8 }}>
-                          <View style={{ flex: 1 }}><OA label="Message" compact secondary fill onPress={() => setContactActions({ name: selectedClient.full_name, whatsapp: selectedClient.whatsapp_phone, phone: selectedClient.phone })} /></View>
-                          <View style={{ flex: 1 }}><OA label="Call" compact secondary fill onPress={() => selectedClient.phone ? void Linking.openURL(`tel:${selectedClient.phone.replace(/[^\d+]/g, "")}`).catch(() => s.notify("Unable to start the call.")) : s.notify("No phone number is saved for this client.")} /></View>
-                          <View style={{ flex: 1 }}><OA label={editingContact ? "Cancel" : "Edit"} compact secondary fill disabled={busy} onPress={() => { if (editingContact) { const saved = clients.find((client) => client.id === selectedClient.id); if (saved) setSelectedClient(saved); } setEditingContact(!editingContact); }} /></View>
+                          <View style={{ flex: 1 }}>
+                            <OA
+                              label="Message"
+                              compact
+                              secondary
+                              fill
+                              onPress={() =>
+                                setContactActions({
+                                  name: selectedClient.full_name,
+                                  whatsapp: selectedClient.whatsapp_phone,
+                                  phone: selectedClient.phone,
+                                })
+                              }
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <OA
+                              label="Call"
+                              compact
+                              secondary
+                              fill
+                              onPress={() =>
+                                selectedClient.phone
+                                  ? void Linking.openURL(
+                                      `tel:${selectedClient.phone.replace(/[^\d+]/g, "")}`,
+                                    ).catch(() => s.notify("Unable to start the call."))
+                                  : s.notify("No phone number is saved for this client.")
+                              }
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <OA
+                              label={editingContact ? "Cancel" : "Edit"}
+                              compact
+                              secondary
+                              fill
+                              disabled={busy}
+                              onPress={() => {
+                                if (editingContact) {
+                                  const saved = clients.find(
+                                    (client) => client.id === selectedClient.id,
+                                  );
+                                  if (saved) setSelectedClient(saved);
+                                }
+                                setEditingContact(!editingContact);
+                              }}
+                            />
+                          </View>
                         </View>
                         {editingContact ? (
                           <>
-                            <OT size={24} bold>Basic Information</OT>
+                            <OT size={24} bold>
+                              Basic Information
+                            </OT>
                             <OF
                               label="First Name"
                               wrap
@@ -2983,34 +3073,202 @@ export default function OwnerScreen() {
                             />
                           </>
                         ) : (
-                            <View style={{ gap: 10, paddingVertical: 2 }}>
+                          <View style={{ gap: 10, paddingVertical: 2 }}>
                             <View style={{ gap: 4 }}>
-                                <OT bold>Phone</OT><OT>{selectedClient.phone || "Not provided"}</OT>
+                              <OT bold>Phone</OT>
+                              <OT>{selectedClient.phone || "Not provided"}</OT>
+                            </View>
+                            <View style={{ gap: 4 }}>
+                              <OT bold>Email</OT>
+                              <OT>{selectedClient.email || "Not provided"}</OT>
+                            </View>
+                            {contactIsMinor(selectedClient.birthday, selectedClient.is_minor) && (
+                              <View style={{ gap: 4 }}>
+                                <OT bold>Guardian</OT>
+                                <OT>{selectedClient.guardian_name || "Not recorded"}</OT>
                               </View>
-                              <View style={{ gap: 4 }}><OT bold>Email</OT><OT>{selectedClient.email || "Not provided"}</OT></View>
-                              {contactIsMinor(selectedClient.birthday, selectedClient.is_minor) && <View style={{ gap: 4 }}><OT bold>Guardian</OT><OT>{selectedClient.guardian_name || "Not recorded"}</OT></View>}
+                            )}
                           </View>
                         )}
-                        {editingContact && <View style={{ flexDirection: "row", gap: 8 }}><View style={{ flex: 1 }}><OA label="Cancel Edit" secondary compact fill disabled={busy} onPress={() => { const saved = clients.find((client) => client.id === selectedClient.id); if (saved) setSelectedClient(saved); setEditingContact(false); }} /></View><View style={{ flex: 1 }}><OA label={busy ? "Saving" : "Save Client"} accent compact fill disabled={busy} onPress={() => void saveSelectedContact()} /></View></View>}
+                        {editingContact && (
+                          <View style={{ flexDirection: "row", gap: 8 }}>
+                            <View style={{ flex: 1 }}>
+                              <OA
+                                label="Cancel Edit"
+                                secondary
+                                compact
+                                fill
+                                disabled={busy}
+                                onPress={() => {
+                                  const saved = clients.find(
+                                    (client) => client.id === selectedClient.id,
+                                  );
+                                  if (saved) setSelectedClient(saved);
+                                  setEditingContact(false);
+                                }}
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <OA
+                                label={busy ? "Saving" : "Save Client"}
+                                accent
+                                compact
+                                fill
+                                disabled={busy}
+                                onPress={() => void saveSelectedContact()}
+                              />
+                            </View>
+                          </View>
+                        )}
                         {(() => {
-                          const upcoming = appointments.filter((a) => (a.client_id === selectedClient.id || (!!selectedClient.customer_id && a.customer_id === selectedClient.customer_id)) && a.kind !== "block" && ["pending", "confirmed"].includes(a.status) && new Date(a.starts_at).getTime() >= Date.now()).sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0];
-                          if (!upcoming) return <View style={{ gap: 8 }}><OT size={24} bold>Upcoming Appointment</OT><OT muted>No upcoming appointment.</OT></View>;
+                          const upcoming = appointments
+                            .filter(
+                              (a) =>
+                                (a.client_id === selectedClient.id ||
+                                  (!!selectedClient.customer_id &&
+                                    a.customer_id === selectedClient.customer_id)) &&
+                                a.kind !== "block" &&
+                                ["pending", "confirmed"].includes(a.status) &&
+                                new Date(a.starts_at).getTime() >= Date.now(),
+                            )
+                            .sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0];
+                          if (!upcoming)
+                            return (
+                              <View style={{ gap: 8 }}>
+                                <OT size={24} bold>
+                                  Upcoming Appointment
+                                </OT>
+                                <OT muted>No upcoming appointment.</OT>
+                              </View>
+                            );
                           const payment = appointmentPayment(upcoming, transactions);
-                          return <View style={{ gap: 10 }}><OT size={24} bold>Upcoming Appointment</OT><Card style={{ gap: 8, padding: 14, borderColor: c.goldBorder }}><OT bold>{dateLabel(upcoming.starts_at)} · {timeLabel(upcoming.starts_at)}</OT><OT>{upcoming.services.map((item) => item.name).join(", ")}</OT><OT muted>{payment.remaining <= 0 ? "Paid in full" : payment.received > 0 ? `Deposit received · ${money(payment.remaining)} due` : `Deposit pending · ${money(payment.remaining)} due`}</OT><View style={{ flexDirection: "row", gap: 8 }}><View style={{ flex: 1 }}><OA label="View" secondary compact fill onPress={() => { setCalendarDate(upcoming.starts_at.slice(0, 10)); setCalendarSelected(true); setSelectedClient(null); setTab("Calendar"); }} /></View><View style={{ flex: 1 }}><OA label="Payment" payment compact fill disabled={payment.remaining <= 0} onPress={() => { setSelectedClient(null); setPaymentAppointment(upcoming); }} /></View></View></Card></View>;
+                          return (
+                            <View style={{ gap: 10 }}>
+                              <OT size={24} bold>
+                                Upcoming Appointment
+                              </OT>
+                              <Card style={{ gap: 8, padding: 14, borderColor: c.goldBorder }}>
+                                <OT bold>
+                                  {dateLabel(upcoming.starts_at)} · {timeLabel(upcoming.starts_at)}
+                                </OT>
+                                <OT>{upcoming.services.map((item) => item.name).join(", ")}</OT>
+                                <OT muted>
+                                  {payment.remaining <= 0
+                                    ? "Paid in full"
+                                    : payment.received > 0
+                                      ? `Deposit received · ${money(payment.remaining)} due`
+                                      : `Deposit pending · ${money(payment.remaining)} due`}
+                                </OT>
+                                <View style={{ flexDirection: "row", gap: 8 }}>
+                                  <View style={{ flex: 1 }}>
+                                    <OA
+                                      label="View"
+                                      secondary
+                                      compact
+                                      fill
+                                      onPress={() => {
+                                        setCalendarDate(upcoming.starts_at.slice(0, 10));
+                                        setCalendarSelected(true);
+                                        setSelectedClient(null);
+                                        setTab("Calendar");
+                                      }}
+                                    />
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <OA
+                                      label="Payment"
+                                      payment
+                                      compact
+                                      fill
+                                      disabled={payment.remaining <= 0}
+                                      onPress={() => {
+                                        setSelectedClient(null);
+                                        setPaymentAppointment(upcoming);
+                                      }}
+                                    />
+                                  </View>
+                                </View>
+                              </Card>
+                            </View>
+                          );
                         })()}
-                        <OT size={24} bold>Important Information</OT>
+                        <OT size={24} bold>
+                          Important Information
+                        </OT>
                         <View style={{ gap: 10 }}>
-                          <View style={{ gap: 4 }}><OT bold>Medical/Service Considerations</OT><OT muted>{String(profiles.find((p) => p.id === selectedClient.customer_id)?.medical_conditions || selectedClient.medical_conditions || selectedClient.sensitivities || "None recorded")}</OT></View>
-                          {editingContact ? <OF label="Client Notes" disabled={busy} value={selectedClient.private_notes || ""} multiline onChange={(private_notes) => setSelectedClient({ ...selectedClient, private_notes })} /> : <View style={{ gap: 4 }}><OT bold>Client Notes</OT><OT>{selectedClient.private_notes || "None recorded"}</OT></View>}
+                          <View style={{ gap: 4 }}>
+                            <OT bold>Medical/Service Considerations</OT>
+                            <OT muted>
+                              {String(
+                                profiles.find((p) => p.id === selectedClient.customer_id)
+                                  ?.medical_conditions ||
+                                  selectedClient.medical_conditions ||
+                                  selectedClient.sensitivities ||
+                                  "None recorded",
+                              )}
+                            </OT>
+                          </View>
+                          {editingContact ? (
+                            <OF
+                              label="Client Notes"
+                              disabled={busy}
+                              value={selectedClient.private_notes || ""}
+                              multiline
+                              onChange={(private_notes) =>
+                                setSelectedClient({ ...selectedClient, private_notes })
+                              }
+                            />
+                          ) : (
+                            <View style={{ gap: 4 }}>
+                              <OT bold>Client Notes</OT>
+                              <OT>{selectedClient.private_notes || "None recorded"}</OT>
+                            </View>
+                          )}
                         </View>
-                        <OwnerClientLoyalty clientId={selectedClient.id} demo={demo} visits={appointments.filter((a) => (a.client_id === selectedClient.id || (!!selectedClient.customer_id && a.customer_id === selectedClient.customer_id)) && a.status === "completed").length} />
+                        <OwnerClientLoyalty clientId={selectedClient.id} demo={demo} />
                         <OT size={24} bold>
                           Photos &amp; Videos
                         </OT>
                         <OwnerClientMediaPreview clientId={selectedClient.id} demo={demo} />
-                        <View style={{ flexDirection: "row", gap: 8 }}><View style={{ flex: 1 }}><OA label="View All" secondary compact fill onPress={() => setMediaContext({ mode: "gallery", clientId: selectedClient.id })} /></View><View style={{ flex: 1 }}><OA label="Add Media" accent compact fill onPress={() => setMediaContext({ mode: "upload", clientId: selectedClient.id })} /></View></View>
-                        <ClientPurchaseHistory clientId={selectedClient.id} customerId={selectedClient.customer_id || selectedClient.id} appointments={appointments} transactions={transactions} />
-                        <OT size={24} bold>Service Agreement</OT>
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          <View style={{ flex: 1 }}>
+                            <OA
+                              label="View All"
+                              secondary
+                              compact
+                              fill
+                              onPress={() =>
+                                setMediaContext({ mode: "gallery", clientId: selectedClient.id })
+                              }
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <OA
+                              label="Add Media"
+                              accent
+                              compact
+                              fill
+                              onPress={() =>
+                                setMediaContext({ mode: "upload", clientId: selectedClient.id })
+                              }
+                            />
+                          </View>
+                        </View>
+                        <ConsultationRequestsPanel
+                          services={services}
+                          appointments={appointments}
+                          clientId={selectedClient.id}
+                          onChanged={() => load(true)}
+                        />
+                        <ClientPurchaseHistory
+                          clientId={selectedClient.id}
+                          customerId={selectedClient.customer_id || selectedClient.id}
+                          appointments={appointments}
+                          transactions={transactions}
+                        />
+                        <OT size={24} bold>
+                          Service Agreement
+                        </OT>
                         <AgreementList
                           demo={demo}
                           customerId={selectedClient.customer_id || selectedClient.id}
@@ -3069,6 +3327,7 @@ export default function OwnerScreen() {
                         onConfirm={(method, reference, amount) =>
                           recordPayment(paymentAppointment, method, reference, amount)
                         }
+                        onGiftApplied={() => load()}
                       />
                     )}
                     {confirm && (

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Image,
   ImageStyle,
+  ScrollView,
 } from "react-native";
 import { useTheme } from "@/theming/ThemeProvider";
 import { Button } from "@/components/ui/button";
@@ -138,18 +139,24 @@ export function Heading({
       }}
     >
       <View style={{ flex: 1, minWidth: 0, gap: sub ? 5 : 0 }}>
-        <Txt
-          serif
-          size={headingSize}
-          accessibilityRole="header"
-          numberOfLines={singleLine ? 1 : undefined}
-          adjustsFontSizeToFit={singleLine}
-          minimumFontScale={singleLine ? 0.62 : undefined}
-          style={{ lineHeight: headingSize * 1.16 }}
-        >
-          {children}
-        </Txt>
-        {!!sub && <Txt color={theme.colors.mutedForeground}>{sub}</Txt>}
+        <ScrollView>
+          <Txt
+            serif
+            size={headingSize}
+            accessibilityRole="header"
+            numberOfLines={singleLine ? 1 : undefined}
+            adjustsFontSizeToFit={singleLine}
+            minimumFontScale={singleLine ? 0.62 : undefined}
+            style={{ lineHeight: headingSize * 1.16 }}
+          >
+            {children}
+          </Txt>
+        </ScrollView>
+        {!!sub && (
+          <ScrollView>
+            <Txt color={theme.colors.mutedForeground}>{sub}</Txt>
+          </ScrollView>
+        )}
       </View>
       {action}
     </View>

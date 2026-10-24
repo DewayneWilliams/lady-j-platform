@@ -225,6 +225,12 @@ export type Promotion = {
   active: boolean;
   photos?: string[];
 };
+export type Favorite = {
+  id: string;
+  kind: "service" | "product" | "workshop";
+  item_id: string;
+  created_at: string;
+};
 export const money = (value: number) =>
   `$${Number(value).toLocaleString("en-TT", { maximumFractionDigits: 2 })}`;
 export const servicePriceLabel = (service: Pick<Service, "price" | "price_label">) =>

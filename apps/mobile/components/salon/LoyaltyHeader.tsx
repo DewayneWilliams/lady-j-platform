@@ -1,89 +1,597 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, Platform, ScrollView, View } from "react-native";
+import {
+  Animated,
+  Easing,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreference";
-import { nextReward, rewardMilestones, RewardSummary } from "@/lib/salon/loyalty";
-import { Txt, useColors } from "./ui";
+import { check, db } from "@/lib/salon/client";
+import { dateLabel } from "@/lib/salon/types";
+import { royaltyLevel, royaltyLevels, RewardSummary } from "@/lib/salon/loyalty";
+import { Action, Card, ErrorBox, Txt, useColors } from "./ui";
 
-export default function LoyaltyHeader({ rewards }: { rewards: RewardSummary }) {
+const levelAccents = ["#CE007F", "#D73E8D", "#A36A13", "#C28B18", "#7543B8", "#9D4B79", "#5A2A72"];
+
+export default function LoyaltyHeader({
+  rewards,
+  firstName,
+  onChanged,
+}: {
+  rewards: RewardSummary;
+  firstName: string;
+  onChanged: () => Promise<void>;
+}) {
   const c = useColors();
-  const reduced = useReducedMotionPreference();
   const focused = useIsFocused();
-  const progress = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotionPreference();
+  const { width } = useWindowDimensions();
+  const journey = useRef<FlatList<(typeof royaltyLevels)[number]>>(null);
   const shimmer = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0.45)).current;
-  const [meterWidth, setMeterWidth] = useState(0);
-  const upcoming = rewardMilestones.find((milestone) => rewards.points < milestone.points);
-  const next = upcoming || nextReward(Number(rewards.points));
-  const previous = [...rewardMilestones].reverse().find((item) => rewards.points >= item.points);
-  const start = previous?.points || 0;
-  const fraction = upcoming ? Math.max(0, Math.min(1, (rewards.points - start) / Math.max(1, next.points - start))) : 1;
-  const message = useMemo(() => {
-    const remaining = Math.max(0, next.points - rewards.points);
-    if (remaining > 0) return `You're only ${Math.ceil(remaining).toLocaleString("en-TT")} points from your next milestone!`;
-    const messages = ["Your glow is growing!", "Every visit brings a little more magic."];
-    return messages[Math.floor(rewards.points) % messages.length];
-  }, [next.points, rewards.points]);
+  const progress = useRef(new Animated.Value(0)).current;
+  const royalty = rewards.royalty || {
+    level: 1,
+    annual_visits: 0,
+    lifetime_visits: 0,
+    anniversary: new Date().toISOString().slice(0, 10),
+  };
+  const levelHistory = rewards.level_history || [];
+  const visitHistory = rewards.visit_history || [];
+  const rewardHistory = rewards.history || [];
+  const entitlements = rewards.entitlements || [];
+  const [journeyWidth, setJourneyWidth] = useState(0);
+  const [journeyIndex, setJourneyIndex] = useState(Math.max(0, royalty.level - 1));
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+  const [celebrationError, setCelebrationError] = useState("");
+  const level = royaltyLevel(royalty.level);
+  const next = royaltyLevels[royalty.level] || null;
+  const progressFraction = next
+    ? Math.max(
+        0,
+        Math.min(1, (royalty.annual_visits - level.visits) / (next.visits - level.visits)),
+      )
+    : 1;
+  const remaining = next ? Math.max(0, next.visits - royalty.annual_visits) : 0;
+  const cardWidth = Math.max(166, (journeyWidth || Math.min(width, 720)) / 1.72);
 
   useEffect(() => {
-    if (reduced) {
-      progress.setValue(fraction);
-      return;
-    }
-    Animated.spring(progress, { toValue: fraction, damping: 18, stiffness: 120, mass: 0.8, useNativeDriver: Platform.OS !== "web" }).start();
-  }, [fraction, progress, reduced]);
-
+    if (focused) setCelebrating(!!rewards.pending_level);
+  }, [focused, rewards.pending_level]);
   useEffect(() => {
-    if (reduced !== false || !focused) {
-      shimmer.stopAnimation();
-      glow.stopAnimation();
+    if (!focused || reduced !== false) {
+      shimmer.setValue(1);
       return;
     }
     shimmer.setValue(0);
-    const shimmerLoop = Animated.loop(Animated.sequence([
-      Animated.timing(shimmer, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.cubic), useNativeDriver: Platform.OS !== "web" }),
-      Animated.delay(900),
-      Animated.timing(shimmer, { toValue: 0, duration: 1, useNativeDriver: Platform.OS !== "web" }),
-    ]));
-    const glowLoop = Animated.loop(Animated.sequence([
-      Animated.timing(glow, { toValue: 0.9, duration: 1500, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== "web" }),
-      Animated.timing(glow, { toValue: 0.45, duration: 1500, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== "web" }),
-    ]));
-    shimmerLoop.start();
-    glowLoop.start();
-    return () => { shimmerLoop.stop(); glowLoop.stop(); };
-  }, [focused, glow, reduced, shimmer]);
+    Animated.timing(shimmer, {
+      toValue: 1,
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  }, [focused, reduced, shimmer]);
+  useEffect(() => {
+    if (reduced) {
+      progress.setValue(progressFraction);
+      return;
+    }
+    Animated.timing(progress, {
+      toValue: progressFraction,
+      duration: 600,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [progress, progressFraction, reduced]);
+  useEffect(() => {
+    if (!journeyWidth) return;
+    const index = Math.max(0, royalty.level - 1);
+    setJourneyIndex(index);
+    const timer = setTimeout(
+      () =>
+        journey.current?.scrollToOffset({
+          offset: Math.max(0, index * (cardWidth + 12) - (journeyWidth - cardWidth) / 2),
+          animated: reduced === false,
+        }),
+      0,
+    );
+    return () => clearTimeout(timer);
+  }, [cardWidth, journeyWidth, reduced, royalty.level]);
 
+  const timeline = useMemo(
+    () =>
+      [
+        ...levelHistory.map((item) => ({
+          id: `level-${item.id}`,
+          title: `${royaltyLevel(item.level).icon} ${royaltyLevel(item.level).name} achieved`,
+          detail: `${item.annual_visits} annual visits`,
+          date: item.achieved_at,
+        })),
+        ...visitHistory
+          .filter((item) => item.status === "qualified")
+          .map((item) => ({
+            id: `visit-${item.id}`,
+            title: "Qualifying Royalty visit",
+            detail: "Completed and fully paid",
+            date: `${item.visit_date}T12:00:00Z`,
+          })),
+        ...rewardHistory.map((item) => ({
+          id: `reward-${item.id}`,
+          title: item.reason,
+          detail: `${item.points > 0 ? "+" : ""}${Number(item.points).toLocaleString("en-TT")} points`,
+          date: item.created_at,
+        })),
+      ]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 20),
+    [levelHistory, rewardHistory, visitHistory],
+  );
+
+  const scrollTo = (index: number) => {
+    const nextIndex = Math.max(0, Math.min(royaltyLevels.length - 1, index));
+    setJourneyIndex(nextIndex);
+    journey.current?.scrollToOffset({
+      offset: Math.max(0, nextIndex * (cardWidth + 12) - (journeyWidth - cardWidth) / 2),
+      animated: reduced === false,
+    });
+  };
   if (!rewards.enabled) return null;
   return (
-    <View style={{ gap: 12, paddingBottom: 22 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 8 }}>
-        <Icon name="Crown" size={24} color={c.tertiary} />
-        <Txt size={21} bold>Loyalty Program</Txt>
-        <Txt size={17} color={c.mutedForeground}>
-          {Number(rewards.points).toLocaleString("en-TT", { maximumFractionDigits: 2 })} points · TT${Number(rewards.value_ttd).toLocaleString("en-TT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+    <View style={{ gap: 18, paddingBottom: 24 }}>
+      <View style={{ alignItems: "center", gap: 4 }}>
+        <Txt size={25} bold style={{ textAlign: "center" }}>
+          👑 Lady J Royalty Program
+        </Txt>
+        <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
+          Every visit brings you closer to Royalty.
         </Txt>
       </View>
-      <Animated.View style={{ opacity: glow }}>
-        <View onLayout={(event) => setMeterWidth(event.nativeEvent.layout.width)} style={{ height: 12, borderRadius: 999, overflow: "hidden", backgroundColor: c.goldSurface, borderWidth: 1, borderColor: c.goldBorder }}>
-          <Animated.View style={{ position: "absolute", left: 0, top: 0, bottom: 0, right: 0, borderRadius: 999, backgroundColor: "#C99728", transform: [{ translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [-meterWidth / 2, 0] }) }, { scaleX: progress }] }}>
-            {!reduced && <Animated.View pointerEvents="none" style={{ position: "absolute", top: -8, bottom: -8, width: 42, backgroundColor: "rgba(255,255,255,0.55)", transform: [{ translateX: shimmer.interpolate({ inputRange: [0, 1], outputRange: [-50, 760] }) }, { rotate: "18deg" }] }} />}
-          </Animated.View>
+      <View
+        style={{
+          minHeight: 190,
+          overflow: "hidden",
+          borderRadius: 18,
+          padding: 22,
+          backgroundColor: c.headerGold,
+          borderWidth: 1,
+          borderColor: c.goldBorder,
+          shadowColor: "#24180F",
+          shadowOpacity: 0.14,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 7 },
+          elevation: 4,
+        }}
+      >
+        <View
+          style={{
+            width: 44,
+            height: 4,
+            borderRadius: 99,
+            backgroundColor: levelAccents[level.level - 1],
+            marginBottom: 18,
+          }}
+        />
+        <Txt size={13} bold color={c.headerInk} style={{ letterSpacing: 0.8 }}>
+          LADY J · ROYALTY MEMBER
+        </Txt>
+        <View style={{ flex: 1, flexDirection: "row", alignItems: "flex-end", gap: 16 }}>
+          <View style={{ flex: 1, gap: 5 }}>
+            <Txt size={27} bold color={c.headerInk}>
+              {firstName || rewards.first_name || "Royal Guest"}
+            </Txt>
+            <Txt size={18} bold color={levelAccents[level.level - 1]}>
+              {level.icon} {level.name}
+            </Txt>
+            <Txt size={13} color={c.headerInk}>
+              {royalty.annual_visits} annual visit
+              {royalty.annual_visits === 1 ? "" : "s"} · {royalty.lifetime_visits}{" "}
+              lifetime
+            </Txt>
+          </View>
+          <View style={{ alignItems: "flex-end" }}>
+            <Icon name="Crown" size={34} color={levelAccents[level.level - 1]} />
+            <Txt size={11} bold color={c.headerInk}>
+              Anniversary
+            </Txt>
+            <Txt size={11} color={c.headerInk}>
+              {dateLabel(royalty.anniversary)}
+            </Txt>
+          </View>
         </View>
-      </Animated.View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 2 }}>
-        {rewardMilestones.map((milestone) => {
-          const reached = rewards.points >= milestone.points;
-          return (
-            <View key={milestone.points} accessibilityLabel={`${milestone.name}, ${milestone.points} points, TT$${milestone.value}`} style={{ minWidth: 148, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, borderWidth: 1, borderColor: reached ? c.tertiary : c.goldBorder, backgroundColor: reached ? c.goldSurface : c.card }}>
-              <Txt size={15} bold>{milestone.name}</Txt>
-              <Txt size={13} color={c.mutedForeground}>{milestone.points.toLocaleString("en-TT")} points · TT${milestone.value}</Txt>
+        {reduced === false && (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: -80,
+              bottom: -80,
+              width: 54,
+              backgroundColor: "rgba(255,255,255,0.36)",
+              transform: [
+                {
+                  translateX: shimmer.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-80, Math.min(width, 720) + 80],
+                  }),
+                },
+                { rotate: "16deg" },
+              ],
+            }}
+          />
+        )}
+      </View>
+      <Card style={{ gap: 12, borderRadius: 16 }}>
+        {next ? (
+          <>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Txt size={20} bold>
+                  {level.icon} {level.name}
+                </Txt>
+                <Txt size={14} color={c.mutedForeground}>
+                  {level.message}
+                </Txt>
+              </View>
+              <Txt size={15} bold color={c.brandAccent}>
+                {Math.round(progressFraction * 100)}%
+              </Txt>
             </View>
-          );
-        })}
-      </ScrollView>
-      <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>{message}</Txt>
+            <View
+              style={{ height: 10, borderRadius: 99, overflow: "hidden", backgroundColor: c.muted }}
+            >
+              <Animated.View
+                style={{
+                  height: "100%",
+                  borderRadius: 99,
+                  backgroundColor: c.headerGold,
+                  borderWidth: 1,
+                  borderColor: c.goldBorder,
+                  width: progress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
+                }}
+              />
+            </View>
+            <Txt size={14} bold>
+              {royalty.annual_visits} of {next.visits} visits ·{" "}
+              {Math.round(progressFraction * 100)}% complete
+            </Txt>
+            <Txt size={14} color={c.mutedForeground}>
+              Just {remaining} more visit{remaining === 1 ? "" : "s"} until {next.name}!
+            </Txt>
+          </>
+        ) : (
+          <View style={{ alignItems: "center", gap: 6 }}>
+            <Txt size={22} bold style={{ textAlign: "center" }}>
+              👑 Lady J Royal Circle
+            </Txt>
+            <Txt color={c.mutedForeground} style={{ textAlign: "center" }}>
+              Thank you for being at the heart of Lady J. Your continued trust is our highest
+              honour.
+            </Txt>
+          </View>
+        )}
+      </Card>
+      <Card style={{ gap: 10, borderRadius: 16 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Icon name="Wallet" size={23} color={c.brandAccent} />
+          <Txt size={20} bold>
+            Royalty Rewards Wallet
+          </Txt>
+        </View>
+        <Txt size={28} bold>
+          {Number(rewards.points).toLocaleString("en-TT")} Points
+        </Txt>
+        <Txt size={15} color={c.mutedForeground}>
+          = TT$
+          {Number(rewards.value_ttd).toLocaleString("en-TT", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}{" "}
+          Available Value
+        </Txt>
+        <Txt size={13} color={c.mutedForeground}>
+          Earn 1 point per TT$1 eligible service spending · 100 points = TT$5. You choose when to
+          redeem.
+        </Txt>
+        {entitlements
+          .filter((item) => item.status === "available")
+          .map((item) => (
+            <View
+              key={item.id}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                paddingTop: 7,
+                borderTopWidth: 1,
+                borderColor: c.border,
+              }}
+            >
+              <Icon name="Gift" size={17} color={c.tertiary} />
+              <Txt size={14} bold>
+                {item.kind === "welcome" ? "Welcome credit" : "Birthday credit"} · TT$
+                {Number(item.amount).toFixed(2)}
+              </Txt>
+            </View>
+          ))}
+      </Card>
+      <View
+        onLayout={(event) => setJourneyWidth(event.nativeEvent.layout.width)}
+        style={{ gap: 10 }}
+      >
+        <View
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Previous Royalty level"
+            accessibilityState={{ disabled: journeyIndex === 0 }}
+            disabled={journeyIndex === 0}
+            onPress={() => scrollTo(journeyIndex - 1)}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: c.headerGold,
+              borderWidth: 1,
+              borderColor: c.goldBorder,
+              opacity: journeyIndex === 0 ? 0.35 : pressed ? 0.72 : 1,
+              transform: reduced === false && pressed ? [{ scale: 0.96 }] : undefined,
+            })}
+          >
+            <Icon name="ChevronLeft" size={22} color={c.headerInk} />
+          </Pressable>
+          <Txt size={18} bold>
+            Royalty Journey
+          </Txt>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Next Royalty level"
+            accessibilityState={{ disabled: journeyIndex === royaltyLevels.length - 1 }}
+            disabled={journeyIndex === royaltyLevels.length - 1}
+            onPress={() => scrollTo(journeyIndex + 1)}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: c.headerGold,
+              borderWidth: 1,
+              borderColor: c.goldBorder,
+              opacity: journeyIndex === royaltyLevels.length - 1 ? 0.35 : pressed ? 0.72 : 1,
+              transform: reduced === false && pressed ? [{ scale: 0.96 }] : undefined,
+            })}
+          >
+            <Icon name="ChevronRight" size={22} color={c.headerInk} />
+          </Pressable>
+        </View>
+        <FlatList
+          ref={journey}
+          horizontal
+          data={royaltyLevels}
+          keyExtractor={(item) => String(item.level)}
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={cardWidth + 12}
+          decelerationRate="fast"
+          contentContainerStyle={{
+            gap: 12,
+            paddingHorizontal: Math.max(0, (journeyWidth - cardWidth) / 2),
+          }}
+          onMomentumScrollEnd={(event) =>
+            setJourneyIndex(
+              Math.max(
+                0,
+                Math.min(
+                  royaltyLevels.length - 1,
+                  Math.round(event.nativeEvent.contentOffset.x / (cardWidth + 12)),
+                ),
+              ),
+            )
+          }
+          renderItem={({ item }) => {
+            const current = item.level === royalty.level;
+            const achieved = item.level < royalty.level;
+            return (
+              <View
+                accessible
+                accessibilityLabel={`${item.name}, ${item.visits} qualifying visits, ${current ? "current level" : achieved ? "achieved" : "upcoming"}`}
+                style={{
+                  width: cardWidth,
+                  minHeight: 150,
+                  padding: 18,
+                  borderRadius: 16,
+                  justifyContent: "space-between",
+                  borderWidth: current ? 2 : 1,
+                  borderColor: current || achieved ? c.goldBorder : c.border,
+                  backgroundColor: current ? c.headerGold : achieved ? c.goldSurface : c.card,
+                  opacity: item.level > royalty.level ? 0.68 : 1,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: 8,
+                  }}
+                >
+                  <Txt size={31}>{item.icon}</Txt>
+                  {achieved && <Icon name="CircleCheck" size={21} color={c.tertiary} />}
+                  {current && (
+                    <Txt size={11} bold color={c.headerInk}>
+                      CURRENT
+                    </Txt>
+                  )}
+                </View>
+                <View>
+                  <Txt size={18} bold color={current ? c.headerInk : c.foreground}>
+                    {item.name}
+                  </Txt>
+                  <Txt size={13} color={current ? c.headerInk : c.mutedForeground}>
+                    {item.visits === 0 ? "Your starting level" : `${item.visits} annual visits`}
+                  </Txt>
+                </View>
+              </View>
+            );
+          }}
+        />
+        <Txt size={14} bold style={{ textAlign: "center" }}>
+          Explore Royalty Levels
+        </Txt>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: historyOpen }}
+        onPress={() => setHistoryOpen((value) => !value)}
+        style={{
+          minHeight: 52,
+          paddingHorizontal: 14,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: c.border,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <Icon name="History" size={20} color={c.brandAccent} />
+        <Txt bold style={{ flex: 1 }}>
+          Royalty History
+        </Txt>
+        <Icon name={historyOpen ? "ChevronUp" : "ChevronDown"} size={20} color={c.foreground} />
+      </Pressable>
+      {historyOpen && (
+        <View style={{ gap: 10 }}>
+          <View
+            style={{
+              padding: 13,
+              borderRadius: 14,
+              backgroundColor: c.goldSurface,
+              borderWidth: 1,
+              borderColor: c.goldBorder,
+            }}
+          >
+            <Txt bold>Royalty year anniversary · {dateLabel(royalty.anniversary)}</Txt>
+            <Txt size={13} color={c.mutedForeground}>
+              Annual progress renews; lifetime visits, levels and reward balances remain.
+            </Txt>
+          </View>
+          {timeline.length ? (
+            timeline.map((item) => (
+              <View
+                key={item.id}
+                style={{ paddingLeft: 12, borderLeftWidth: 2, borderColor: c.goldBorder }}
+              >
+                <Txt size={14} bold>
+                  {item.title}
+                </Txt>
+                <Txt size={12} color={c.mutedForeground}>
+                  {item.detail} · {dateLabel(item.date)}
+                </Txt>
+              </View>
+            ))
+          ) : (
+            <Txt color={c.mutedForeground}>
+              Your Royalty history will appear after your first qualifying visit or reward.
+            </Txt>
+          )}
+        </View>
+      )}
+      <Modal
+        visible={celebrating && !!rewards.pending_level}
+        transparent
+        animationType={reduced ? "none" : "fade"}
+        onRequestClose={() => {}}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.64)",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 22,
+          }}
+        >
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 440,
+              borderRadius: 18,
+              padding: 22,
+              gap: 16,
+              backgroundColor: c.card,
+              borderWidth: 1,
+              borderColor: c.goldBorder,
+            }}
+          >
+            <View style={{ alignItems: "center", gap: 7 }}>
+              <Icon name="Crown" size={36} color={c.tertiary} />
+              <Txt size={25} bold style={{ textAlign: "center" }}>
+                Congratulations, {firstName || rewards.first_name || "Royal Guest"}!
+              </Txt>
+              <Txt color={c.mutedForeground} style={{ textAlign: "center" }}>
+                You have reached a new Lady J Royalty level.
+              </Txt>
+            </View>
+            <View
+              style={{
+                borderRadius: 18,
+                padding: 20,
+                backgroundColor: c.headerGold,
+                borderWidth: 1,
+                borderColor: c.goldBorder,
+              }}
+            >
+              <Txt size={30} style={{ textAlign: "center" }}>
+                {royaltyLevel(rewards.pending_level?.level || 1).icon}
+              </Txt>
+              <Txt size={21} bold color={c.headerInk} style={{ textAlign: "center" }}>
+                {royaltyLevel(rewards.pending_level?.level || 1).name}
+              </Txt>
+              <Txt size={13} color={c.headerInk} style={{ textAlign: "center" }}>
+                👑 Lady J Royalty Program
+              </Txt>
+            </View>
+            {!!celebrationError && <ErrorBox message={celebrationError} />}
+            <Action
+              label="Continue"
+              onPress={() => {
+                const achieved = rewards.pending_level?.level;
+                if (!achieved) return setCelebrating(false);
+                setCelebrationError("");
+                void Promise.resolve(
+                  db().rpc("lj_acknowledge_royalty_level", { p_level: achieved }),
+                )
+                  .then(check)
+                  .then(onChanged)
+                  .then(() => setCelebrating(false))
+                  .catch((reason: unknown) =>
+                    setCelebrationError(
+                      reason instanceof Error
+                        ? reason.message
+                        : "Unable to save this celebration. Try again.",
+                    ),
+                  );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

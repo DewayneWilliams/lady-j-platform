@@ -21,12 +21,21 @@ export default function ClientPurchaseHistory({
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const entries = appointments
-    .filter(
-      (v) =>
+    .filter((v) => {
+      const received = transactions
+        .filter(
+          (transaction) => transaction.appointment_id === v.id && transaction.status === "verified",
+        )
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+      return (
         (v.customer_id === customerId || (!!clientId && v.client_id === clientId)) &&
         v.kind !== "block" &&
-        (new Date(v.starts_at).getTime() < Date.now() || ["completed", "cancelled", "no_show"].includes(v.status)),
-    )
+        v.status === "completed" &&
+        new Date(v.starts_at).getTime() < Date.now() &&
+        Number(v.total) > 0 &&
+        received >= Number(v.total)
+      );
+    })
     .sort((a, b) => b.starts_at.localeCompare(a.starts_at) || a.id.localeCompare(b.id));
   const visibleEntries = showAll ? entries : entries.slice(0, 3);
 

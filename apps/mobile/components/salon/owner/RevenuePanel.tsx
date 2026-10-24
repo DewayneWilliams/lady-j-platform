@@ -56,6 +56,22 @@ export default function RevenuePanel({
       (category === "All" || v.category === category),
   );
   const summary = summarizeRevenue(rows);
+  const promotionalDiscounts =
+    appointments
+      .filter(
+        (appointment) =>
+          salonDate(appointment.starts_at) >= range.from &&
+          salonDate(appointment.starts_at) <= range.to &&
+          !["cancelled", "no_show"].includes(appointment.status),
+      )
+      .reduce((total, appointment) => total + Number(appointment.discount_total || 0), 0) +
+    purchases
+      .filter(
+        (purchase) =>
+          salonDate(purchase.created_at) >= range.from &&
+          salonDate(purchase.created_at) <= range.to,
+      )
+      .reduce((total, purchase) => total + Number(purchase.discount_total || 0), 0);
   const amount = (cents: number) => money(cents / 100);
   const formatDate = (v: string) =>
     dateLabel(v + "T12:00Z", { weekday: undefined, year: "numeric" });
@@ -161,6 +177,13 @@ export default function RevenuePanel({
             backgroundColor: c.goldSurface,
             borderColor: c.goldBorder,
           }}
+        />
+        <OwnerStat
+          label="Promotional discounts"
+          value={money(promotionalDiscounts)}
+          icon="BadgePercent"
+          note="Recorded separately from money received"
+          style={{ flex: 1, minWidth: 240 }}
         />
       </View>
       <Card style={{ gap: 18 }}>

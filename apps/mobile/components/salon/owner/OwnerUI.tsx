@@ -130,7 +130,9 @@ export function OwnerButton({
 }
 export function OwnerStatus({ status }: { status: string }) {
   const c = useColors();
-  const good = ["confirmed", "verified", "paid", "completed", "fulfilled"].includes(status),
+  const good = ["confirmed", "verified", "paid", "completed", "fulfilled", "converted"].includes(
+      status,
+    ),
     bad = ["cancelled", "no_show", "refunded"].includes(status);
   const label: Record<string, string> = {
     pending: "Payment Pending",
@@ -147,6 +149,10 @@ export function OwnerStatus({ status }: { status: string }) {
     refund_due: "Refund Due",
     refunded: "Refunded",
     retained: "Retained",
+    new: "New",
+    contacted: "Contacted",
+    scheduled: "Scheduled",
+    converted: "Converted to Booking",
   };
   return (
     <View

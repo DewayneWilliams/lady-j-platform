@@ -1,6 +1,6 @@
 import React from "react";
 import { Redirect, Stack, useLocalSearchParams } from "expo-router";
-const tabs = ["Today", "Calendar", "Clients", "Business", "Maria"];
+const tabs = ["Today", "Calendar", "Consultations", "Clients", "Business", "Maria"];
 /** Recover the registered owner tab after a browser reload of its navigator-generated link. */
 export default function OwnerTabRoute() {
   const { ownerPath } = useLocalSearchParams<{ ownerPath: string[] }>();

@@ -67,7 +67,13 @@ export default function AppointmentCard({
         testID={"appointment-" + a.id}
         style={{
           borderLeftWidth: 7,
-          borderColor: a.is_vip ? "#7543B8" : a.kind === "block" ? c.mutedForeground : paymentColor,
+          borderColor: a.is_vip
+            ? "#7543B8"
+            : a.kind === "block"
+              ? c.mutedForeground
+              : calendarColor === "consultation"
+                ? c.calendarConsultation
+                : paymentColor,
           padding: 16,
           gap: 14,
         }}

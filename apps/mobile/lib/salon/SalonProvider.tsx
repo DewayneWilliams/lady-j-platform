@@ -18,6 +18,7 @@ import {
   Credit,
   Profile,
   Promotion,
+  Favorite,
 } from "./types";
 import { emptyRewardSummary, RewardSummary } from "./loyalty";
 interface SalonState {
@@ -40,6 +41,8 @@ interface SalonState {
   transactions: Transaction[];
   credits: Credit[];
   rewards: RewardSummary;
+  favorites: Favorite[];
+  toggleFavorite: (kind: Favorite["kind"], itemId: string) => Promise<void>;
   cart: Record<string, number>;
   setCart: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   selected: string[];
@@ -74,6 +77,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
     [transactions, setTransactions] = useState<Transaction[]>([]),
     [credits, setCredits] = useState<Credit[]>([]),
     [rewards, setRewards] = useState<RewardSummary>(emptyRewardSummary);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({}),
     [selected, setSelected] = useState<string[]>([]),
     [workshopCart, setWorkshopCart] = useState<string[]>([]),
@@ -185,6 +189,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       setTransactions([]);
       setCredits([]);
       setRewards(emptyRewardSummary);
+      setFavorites([]);
       return;
     }
     try {
@@ -208,6 +213,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
           .order("created_at", { ascending: false }),
         c.from("lj_credits").select("*").eq("customer_id", customerId),
         c.rpc("lj_my_rewards"),
+        c.from("lj_favorites").select("*").order("created_at", { ascending: false }),
       ]);
       if (generation !== privateGeneration.current) return;
       setProfile(check(results[0]) as Profile | null);
@@ -216,6 +222,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       setTransactions(check(results[3]) as Transaction[]);
       setCredits(check(results[4]) as Credit[]);
       setRewards(check(results[5]) as RewardSummary);
+      setFavorites(check(results[6]) as Favorite[]);
     } catch (e) {
       if (generation === privateGeneration.current)
         notify(e instanceof Error ? e.message : "Unable to load your account.");
@@ -258,6 +265,43 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
     });
     return () => subscription.unsubscribe();
   }, []);
+  const toggleFavorite = useCallback(
+    async (kind: Favorite["kind"], itemId: string) => {
+      if (!customerId) {
+        if (testMode) {
+          setFavorites((current) =>
+            current.some((favorite) => favorite.kind === kind && favorite.item_id === itemId)
+              ? current.filter(
+                  (favorite) => !(favorite.kind === kind && favorite.item_id === itemId),
+                )
+              : [
+                  {
+                    id: `demo-${kind}-${itemId}`,
+                    kind,
+                    item_id: itemId,
+                    created_at: new Date().toISOString(),
+                  },
+                  ...current,
+                ],
+          );
+          return;
+        }
+        throw new Error("Sign in to save favorites.");
+      }
+      const existing = favorites.find(
+        (favorite) => favorite.kind === kind && favorite.item_id === itemId,
+      );
+      if (existing) check(await db().from("lj_favorites").delete().eq("id", existing.id));
+      else
+        check(
+          await db()
+            .from("lj_favorites")
+            .insert({ customer_id: customerId, kind, item_id: itemId }),
+        );
+      await refreshPrivate();
+    },
+    [customerId, favorites, refreshPrivate, testMode],
+  );
   useEffect(() => {
     let active = true;
     if (!customerId) return;
@@ -288,7 +332,22 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "lj_reward_balances", filter: `customer_id=eq.${customerId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "lj_reward_balances",
+          filter: `customer_id=eq.${customerId}`,
+        },
+        () => void refreshPrivate(),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "lj_favorites",
+          filter: `customer_id=eq.${customerId}`,
+        },
         () => void refreshPrivate(),
       )
       .subscribe();
@@ -333,7 +392,10 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         purchases,
         transactions,
         credits,
-        rewards: testMode && !session ? { ...emptyRewardSummary, points: 1240, value_ttd: 62 } : rewards,
+        rewards:
+          testMode && !session ? { ...emptyRewardSummary, points: 1240, value_ttd: 62 } : rewards,
+        favorites,
+        toggleFavorite,
         cart,
         setCart,
         selected,

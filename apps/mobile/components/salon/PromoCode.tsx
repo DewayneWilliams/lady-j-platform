@@ -9,14 +9,14 @@ export default function PromoCode({ pricing }: { pricing: ReturnType<typeof useD
   return (
     <View style={{ gap: 10, marginVertical: 18 }}>
       <Field
-        label="Promo code (optional)"
+        label="Have a Promo Code?"
         value={pricing.draftCode}
         onChangeText={(v) => pricing.setDraftCode(v.toUpperCase())}
         placeholder="Enter your code"
       />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
         <Action
-          label="Apply code"
+          label="Apply"
           secondary
           busy={pricing.busy}
           disabled={!pricing.draftCode.trim()}

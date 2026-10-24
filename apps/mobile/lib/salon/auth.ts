@@ -2,6 +2,7 @@ import { db, check } from "./client";
 import { openAuthSessionAsync } from "expo-web-browser";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import { sessionStorage } from "./sessionStorage";
 export type SocialProvider = "google" | "facebook" | "apple";
 export type AuthProviders = Record<SocialProvider, boolean>;
 export async function availableAuthProviders(): Promise<AuthProviders> {
@@ -35,16 +36,31 @@ export function authDestination(next?: string) {
     "payments",
     "product",
     "workshop",
+    "consultation",
   ];
   const [candidate, query = ""] = (next || "account").split("?");
   const page = allowed.includes(candidate) ? candidate : "account",
     search = new URLSearchParams(query),
     params: Record<string, string> = {};
   const id = search.get("id"),
-    kind = search.get("kind");
+    kind = search.get("kind"),
+    referral = search.get("ref"),
+    gift = search.get("gift");
   if (id && id.length < 100) params.id = id;
   if (kind === "product" || kind === "workshop") params.kind = kind;
+  if (page === "account" && referral && /^[A-Z0-9-]{4,40}$/i.test(referral)) params.ref = referral;
+  if (page === "account" && gift && /^LJ-[A-Z0-9-]{6,40}$/i.test(gift)) params.gift = gift;
   return { page, params };
+}
+
+const pendingDestinationKey = "lady-j-auth-destination-v1";
+export async function rememberAuthDestination(next?: string) {
+  await sessionStorage.setItem(pendingDestinationKey, next || "account");
+}
+export async function consumeAuthDestination() {
+  const value = await sessionStorage.getItem(pendingDestinationKey);
+  await sessionStorage.removeItem(pendingDestinationKey);
+  return authDestination(value || undefined);
 }
 
 function configuredScheme() {

@@ -10,6 +10,7 @@ import { salonIdentity } from "@/lib/salon/identity";
 import Shell, { useNav } from "./Shell";
 import { Txt, Action, Heading, Tag, LinkText, Card, Empty, useColors } from "./ui";
 import { fonts } from "@/lib/salon/design";
+import FavoriteButton from "./FavoriteButton";
 export function Search({
   value,
   onChange,
@@ -146,9 +147,12 @@ export function ServicesScreen() {
                 <Tag>{v.category}</Tag>
                 {v.is_add_on && <Tag>Add-on</Tag>}
               </View>
-              <Txt serif size={25}>
-                {v.name}
-              </Txt>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Txt serif size={25} style={{ flex: 1 }}>
+                  {v.name}
+                </Txt>
+                <FavoriteButton kind="service" itemId={v.id} />
+              </View>
               <Txt size={13} color={c.mutedForeground}>
                 {v.is_demo &&
                 /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
@@ -240,8 +244,12 @@ export function ServicesScreen() {
 }
 export function WorkshopsScreen() {
   const c = useColors();
+  const s = useSalon();
+  const go = useNav();
+  const { width } = useWindowDimensions();
+  const desktop = width > 850;
   return (
-    <Shell>
+    <Shell wide>
       <View
         style={{
           width: "100%",
@@ -272,6 +280,57 @@ export function WorkshopsScreen() {
           resizeMode="cover"
           style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 16 }}
         />
+      </View>
+      <View style={{ width: "100%", maxWidth: 1100, alignSelf: "center", gap: 18 }}>
+        <Txt serif size={30}>
+          Upcoming workshops
+        </Txt>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
+          {s.workshops.map((workshop) => (
+            <Card
+              key={workshop.id}
+              style={{
+                padding: 0,
+                overflow: "hidden",
+                width: desktop ? "31%" : "100%",
+                flexGrow: 1,
+                maxWidth: desktop ? "33%" : undefined,
+              }}
+            >
+              <CatalogGallery photos={workshop.photos} cover={workshop.image} height={180} />
+              <View style={{ padding: 16, gap: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Pressable
+                    style={{ flex: 1 }}
+                    accessibilityRole="button"
+                    onPress={() => go("workshop", { id: workshop.id })}
+                  >
+                    <Txt serif size={24}>
+                      {workshop.name}
+                    </Txt>
+                  </Pressable>
+                  <FavoriteButton kind="workshop" itemId={workshop.id} />
+                </View>
+                <Txt size={13} color={c.mutedForeground}>
+                  {workshop.starts_at
+                    ? `${dateLabel(workshop.starts_at)} · ${timeLabel(workshop.starts_at)}`
+                    : "Date to be announced"}
+                </Txt>
+                <Action
+                  label="View Workshop"
+                  secondary
+                  onPress={() => go("workshop", { id: workshop.id })}
+                />
+              </View>
+            </Card>
+          ))}
+        </View>
+        {!s.workshops.length && (
+          <Empty
+            title="New workshops are being prepared"
+            body="Check back for the next Lady J Academy experience."
+          />
+        )}
       </View>
     </Shell>
   );
@@ -313,6 +372,7 @@ export function DetailScreen({ kind, id }: { kind: "product" | "workshop"; id: s
           <Txt serif size={39} style={{ lineHeight: 47 }}>
             {v.name}
           </Txt>
+          <FavoriteButton kind={kind} itemId={v.id} />
           <Txt size={24}>{money(v.price)}</Txt>
           <Txt color={c.mutedForeground}>
             {v.is_demo && /demo|sample|illustrative|demonstration|fictional/i.test(v.description)

@@ -2,22 +2,29 @@ import React, { useEffect, useState } from "react";
 import { View, Pressable } from "react-native";
 import { Appointment, Transaction, money } from "@/lib/salon/types";
 import { appointmentPayment } from "@/lib/salon/appointmentPayment";
-import { Card, ErrorBox, Txt, ButtonLabel, useColors } from "../ui";
+import { check, db } from "@/lib/salon/client";
+import { Card, ErrorBox, Field, Txt, ButtonLabel, useColors } from "../ui";
 import { OwnerButton, OwnerText } from "./OwnerUI";
+import GiftQrScanner from "./GiftQrScanner";
 export default function PaymentCompletion({
   appointment,
   transactions,
   onConfirm,
+  onGiftApplied,
 }: {
   appointment: Appointment;
   transactions: Transaction[];
   demo: boolean;
   onConfirm: (method: "cash" | "bank", reference: string, amount: number) => Promise<void>;
+  onGiftApplied: () => Promise<void>;
 }) {
   const c = useColors(),
     payment = appointmentPayment(appointment, transactions);
   const [method, setMethod] = useState<"cash" | "bank">("cash"),
     [accepted, setAccepted] = useState(false),
+    [giftCode, setGiftCode] = useState(""),
+    [giftAmount, setGiftAmount] = useState(""),
+    [scannerOpen, setScannerOpen] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
@@ -36,6 +43,28 @@ export default function PaymentCompletion({
         </OwnerText>
         <OwnerText muted>Previously verified receipts are already deducted.</OwnerText>
       </Card>
+      <Card style={{ gap: 12, borderColor: c.goldBorder, backgroundColor: c.goldSurface }}>
+        <OwnerText size={22} bold>Apply Gift Card</OwnerText>
+        <OwnerText muted>Enter the secure code from the card or QR. Partial and full gift payments are supported and audited.</OwnerText>
+        <Field label="Gift Card Code" value={giftCode} onChangeText={(value) => setGiftCode(value.toUpperCase())} placeholder="LJ-XXXXXX-XXXXXX" />
+        <OwnerButton label="Scan QR Code" secondary onPress={() => setScannerOpen(true)} />
+        <Field label="Amount to Apply" value={giftAmount} onChangeText={setGiftAmount} keyboardType="decimal-pad" placeholder={String(payment.remaining)} />
+        <OwnerButton
+          label={busy ? "Applying…" : "Apply Gift Card"}
+          secondary
+          disabled={busy || !giftCode.trim() || !(Number(giftAmount) > 0)}
+          onPress={() => {
+            setBusy(true); setError("");
+            void Promise.resolve(db().rpc("lj_owner_apply_gift_card", { p_appointment: appointment.id, p_code: giftCode.trim(), p_amount: Number(giftAmount) }))
+              .then(check)
+              .then(onGiftApplied)
+              .then(() => { setGiftCode(""); setGiftAmount(""); })
+              .catch((e: unknown) => setError(e instanceof Error ? e.message : "Gift card could not be applied."))
+              .finally(() => setBusy(false));
+          }}
+        />
+      </Card>
+      <GiftQrScanner visible={scannerOpen} onClose={() => setScannerOpen(false)} onCode={(code) => { setGiftCode(code); if (!giftAmount) setGiftAmount(String(payment.remaining)); }} />
       <OwnerText bold>How was the balance received?</OwnerText>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         <OwnerButton

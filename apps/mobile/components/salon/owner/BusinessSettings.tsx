@@ -10,7 +10,6 @@ import {
 } from "@/lib/salon/useCelebrationSounds";
 import { ButtonLabel, ErrorBox, Field, useColors } from "../ui";
 import { OwnerButton, OwnerText } from "./OwnerUI";
-import LoyaltySettings from "./LoyaltySettings";
 
 type Delivery = { configured: boolean; enabled: boolean; missing?: string[] };
 async function emailSettings(action: "status" | "configure" | "pause"): Promise<Delivery> {
@@ -181,7 +180,8 @@ export default function BusinessSettings({
       loyalty_referrer_points: String(settings?.loyalty_referrer_points ?? 300),
       loyalty_friend_points: String(settings?.loyalty_friend_points ?? 150),
       loyalty_minimum_spend: String(settings?.loyalty_minimum_spend ?? 250),
-      loyalty_birthday_gift_note: settings?.loyalty_birthday_gift_note || "Complimentary surprise gift presented in person",
+      loyalty_birthday_gift_note:
+        settings?.loyalty_birthday_gift_note || "Complimentary surprise gift presented in person",
     }),
     [settings],
   );
@@ -475,28 +475,137 @@ export default function BusinessSettings({
           </>
         )}
       </Section>
-      <Section title="Loyalty & Rewards">
-        <ToggleRow label="Lady J Rewards" detail="Credit points after verified payments and keep reward history." value={settings?.loyalty_enabled !== false} disabled={busy || demo} onChange={(loyalty_enabled) => void persist({ loyalty_enabled }, loyalty_enabled ? "Loyalty Program enabled." : "Loyalty Program paused.").catch((e) => setError(e instanceof Error ? e.message : "Unable to update rewards."))} />
-        <ToggleRow label="Allow Discount Stacking" detail="Allow rewards to combine with promotional discounts." value={!!settings?.loyalty_allow_discount_stacking} disabled={busy || demo} onChange={(loyalty_allow_discount_stacking) => void persist({ loyalty_allow_discount_stacking }, "Reward stacking preference saved.").catch((e) => setError(e instanceof Error ? e.message : "Unable to update rewards."))} />
-        <ToggleRow label="Birthday Surprise Gifts" detail="Gift details stay hidden from clients until their visit." value={settings?.loyalty_birthday_gift_enabled !== false} disabled={busy || demo} onChange={(loyalty_birthday_gift_enabled) => void persist({ loyalty_birthday_gift_enabled }, "Birthday gift preference saved.").catch((e) => setError(e instanceof Error ? e.message : "Unable to update rewards."))} />
-        {editing ? <>
-          <Field label="Points Earned Per TT$1 Paid" value={form.loyalty_points_per_ttd} keyboardType="decimal-pad" onChangeText={(loyalty_points_per_ttd) => setForm({ ...form, loyalty_points_per_ttd })} />
-          <Field label="Points Per Redemption Unit" value={form.loyalty_redemption_points} keyboardType="decimal-pad" onChangeText={(loyalty_redemption_points) => setForm({ ...form, loyalty_redemption_points })} />
-          <Field label="TT$ Value Per Redemption Unit" value={form.loyalty_redemption_value} keyboardType="decimal-pad" onChangeText={(loyalty_redemption_value) => setForm({ ...form, loyalty_redemption_value })} />
-          <Field label="Welcome Credit (TT$)" value={form.loyalty_welcome_credit} keyboardType="decimal-pad" onChangeText={(loyalty_welcome_credit) => setForm({ ...form, loyalty_welcome_credit })} />
-          <Field label="Birthday Credit (TT$)" value={form.loyalty_birthday_credit} keyboardType="decimal-pad" onChangeText={(loyalty_birthday_credit) => setForm({ ...form, loyalty_birthday_credit })} />
-          <Field label="Referrer Points" value={form.loyalty_referrer_points} keyboardType="decimal-pad" onChangeText={(loyalty_referrer_points) => setForm({ ...form, loyalty_referrer_points })} />
-          <Field label="Referred Friend Points" value={form.loyalty_friend_points} keyboardType="decimal-pad" onChangeText={(loyalty_friend_points) => setForm({ ...form, loyalty_friend_points })} />
-          <Field label="Minimum Qualifying Spend (TT$)" value={form.loyalty_minimum_spend} keyboardType="decimal-pad" onChangeText={(loyalty_minimum_spend) => setForm({ ...form, loyalty_minimum_spend })} />
-          <Field label="Private Birthday Gift Note" value={form.loyalty_birthday_gift_note} onChangeText={(loyalty_birthday_gift_note) => setForm({ ...form, loyalty_birthday_gift_note })} />
-        </> : <>
-          <ReadValue label="Earning Rate" value={`${form.loyalty_points_per_ttd} point per TT$1 paid`} />
-          <ReadValue label="Redemption Rate" value={`${form.loyalty_redemption_points} points = TT$${form.loyalty_redemption_value}`} />
-          <ReadValue label="Welcome / Birthday" value={`TT$${form.loyalty_welcome_credit} / TT$${form.loyalty_birthday_credit}`} />
-          <ReadValue label="Referral Rewards" value={`${form.loyalty_referrer_points} / ${form.loyalty_friend_points} points`} />
-          <ReadValue label="Minimum Qualifying Spend" value={`TT$${form.loyalty_minimum_spend}`} />
-        </>}
-        <LoyaltySettings demo={demo} redemptionPoints={Number(form.loyalty_redemption_points)} redemptionValue={Number(form.loyalty_redemption_value)} />
+      <Section title="Royalty Program & Rewards">
+        <ToggleRow
+          label="Lady J Royalty Program"
+          detail="Automatically enroll clients, track qualifying visits and credit points after eligible service payments."
+          value={settings?.loyalty_enabled !== false}
+          disabled={busy || demo}
+          onChange={(loyalty_enabled) =>
+            void persist(
+              { loyalty_enabled },
+              loyalty_enabled ? "Royalty Program enabled." : "Royalty Program paused.",
+            ).catch((e) => setError(e instanceof Error ? e.message : "Unable to update rewards."))
+          }
+        />
+        <ToggleRow
+          label="Allow Discount Stacking"
+          detail="Allow rewards to combine with promotional discounts."
+          value={!!settings?.loyalty_allow_discount_stacking}
+          disabled={busy || demo}
+          onChange={(loyalty_allow_discount_stacking) =>
+            void persist(
+              { loyalty_allow_discount_stacking },
+              "Reward stacking preference saved.",
+            ).catch((e) => setError(e instanceof Error ? e.message : "Unable to update rewards."))
+          }
+        />
+        <ToggleRow
+          label="Birthday Surprise Gifts"
+          detail="Gift details stay hidden from clients until their visit."
+          value={settings?.loyalty_birthday_gift_enabled !== false}
+          disabled={busy || demo}
+          onChange={(loyalty_birthday_gift_enabled) =>
+            void persist(
+              { loyalty_birthday_gift_enabled },
+              "Birthday gift preference saved.",
+            ).catch((e) => setError(e instanceof Error ? e.message : "Unable to update rewards."))
+          }
+        />
+        {editing ? (
+          <>
+            <Field
+              label="Points Earned Per TT$1 Paid"
+              value={form.loyalty_points_per_ttd}
+              keyboardType="decimal-pad"
+              onChangeText={(loyalty_points_per_ttd) =>
+                setForm({ ...form, loyalty_points_per_ttd })
+              }
+            />
+            <Field
+              label="Points Per Redemption Unit"
+              value={form.loyalty_redemption_points}
+              keyboardType="decimal-pad"
+              onChangeText={(loyalty_redemption_points) =>
+                setForm({ ...form, loyalty_redemption_points })
+              }
+            />
+            <Field
+              label="TT$ Value Per Redemption Unit"
+              value={form.loyalty_redemption_value}
+              keyboardType="decimal-pad"
+              onChangeText={(loyalty_redemption_value) =>
+                setForm({ ...form, loyalty_redemption_value })
+              }
+            />
+            <Field
+              label="Welcome Credit (TT$)"
+              value={form.loyalty_welcome_credit}
+              keyboardType="decimal-pad"
+              onChangeText={(loyalty_welcome_credit) =>
+                setForm({ ...form, loyalty_welcome_credit })
+              }
+            />
+            <Field
+              label="Birthday Credit (TT$)"
+              value={form.loyalty_birthday_credit}
+              keyboardType="decimal-pad"
+              onChangeText={(loyalty_birthday_credit) =>
+                setForm({ ...form, loyalty_birthday_credit })
+              }
+            />
+            <Field
+              label="Referrer Points"
+              value={form.loyalty_referrer_points}
+              keyboardType="decimal-pad"
+              onChangeText={(loyalty_referrer_points) =>
+                setForm({ ...form, loyalty_referrer_points })
+              }
+            />
+            <Field
+              label="Referred Friend Points"
+              value={form.loyalty_friend_points}
+              keyboardType="decimal-pad"
+              onChangeText={(loyalty_friend_points) => setForm({ ...form, loyalty_friend_points })}
+            />
+            <Field
+              label="Minimum Qualifying Spend (TT$)"
+              value={form.loyalty_minimum_spend}
+              keyboardType="decimal-pad"
+              onChangeText={(loyalty_minimum_spend) => setForm({ ...form, loyalty_minimum_spend })}
+            />
+            <Field
+              label="Private Birthday Gift Note"
+              value={form.loyalty_birthday_gift_note}
+              onChangeText={(loyalty_birthday_gift_note) =>
+                setForm({ ...form, loyalty_birthday_gift_note })
+              }
+            />
+          </>
+        ) : (
+          <>
+            <ReadValue
+              label="Earning Rate"
+              value={`${form.loyalty_points_per_ttd} point per TT$1 paid`}
+            />
+            <ReadValue
+              label="Redemption Rate"
+              value={`${form.loyalty_redemption_points} points = TT$${form.loyalty_redemption_value}`}
+            />
+            <ReadValue
+              label="Welcome / Birthday"
+              value={`TT$${form.loyalty_welcome_credit} / TT$${form.loyalty_birthday_credit}`}
+            />
+            <ReadValue
+              label="Referral Rewards"
+              value={`${form.loyalty_referrer_points} / ${form.loyalty_friend_points} points`}
+            />
+            <ReadValue
+              label="Minimum Qualifying Spend"
+              value={`TT$${form.loyalty_minimum_spend}`}
+            />
+          </>
+        )}
       </Section>
       <Section title="Notifications">
         <OwnerText size={16} muted>

@@ -66,6 +66,13 @@ export function buildOwnerReport(
   const receipts = sum(lines.filter((l) => l.type === "Receipt").map((l) => l.cents));
   const refunds = Math.abs(sum(lines.filter((l) => l.type === "Refund").map((l) => l.cents)));
   const net = receipts - refunds;
+  const promotionalDiscounts =
+    sum(booked.map((appointment) => cents(Number(appointment.discount_total || 0)))) +
+    sum(
+      records.purchases
+        .filter((purchase) => within(salonDate(purchase.created_at)))
+        .map((purchase) => cents(Number(purchase.discount_total || 0))),
+    );
   const amounts = [
     { label: "Receipts", value: money(receipts / 100) },
     { label: "Refunds", value: money(refunds / 100) },
@@ -90,7 +97,11 @@ export function buildOwnerReport(
     const pending = records.transactions.filter(
       (t) => t.status === "pending" && within(salonDate(t.created_at)),
     );
-    doc.summary = [...amounts, { label: "Pending Requests", value: pending.length }];
+    doc.summary = [
+      ...amounts,
+      { label: "Promotional Discounts", value: money(promotionalDiscounts / 100) },
+      { label: "Pending Requests", value: pending.length },
+    ];
     doc.notes.push(
       "Only confirmed receipts count as cash received. Pending requests are shown separately and excluded from totals.",
     );
@@ -155,6 +166,7 @@ export function buildOwnerReport(
       "Service",
       "Status",
       "Total TTD",
+      "Discount TTD",
       "Received TTD",
       "Balance TTD",
     ];
@@ -165,6 +177,7 @@ export function buildOwnerReport(
       a.services.map((s) => s.name).join(" + "),
       a.status,
       Number(a.total),
+      Number(a.discount_total || 0),
       appointmentPayment(a, records.transactions).received,
       appointmentPayment(a, records.transactions).remaining,
     ]);
@@ -185,7 +198,9 @@ export function buildOwnerReport(
     doc.headers = ["Client", "Email", "Mobile Number", "Visits", "Completed", "Net Receipts TTD"];
     doc.rows = clients.map((client) => {
       const ids = [client.id, client.customer_id].filter((id): id is string => !!id);
-      const history = visits.filter((a) => !!(a.client_id || a.customer_id) && ids.includes((a.client_id || a.customer_id)!));
+      const history = visits.filter(
+        (a) => !!(a.client_id || a.customer_id) && ids.includes((a.client_id || a.customer_id)!),
+      );
       const received = sum(
         lines
           .filter((l) => ids.includes(transactionById.get(l.transactionId)?.customer_id || ""))

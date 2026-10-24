@@ -7,9 +7,11 @@ export default function CalendarPicker({
   value,
   onChange,
   unrestricted = false,
+  allowVipDays = false,
 }: {
   value: string;
   unrestricted?: boolean;
+  allowVipDays?: boolean;
   onChange: (d: string) => void;
 }) {
   const c = useColors();
@@ -72,7 +74,10 @@ export default function CalendarPicker({
           const n = i - offset + 1;
           const key = `${year}-${String(m + 1).padStart(2, "0")}-${String(n).padStart(2, "0")}`;
           const day = i % 7,
-            disabled = n < 1 || (!unrestricted && (key < today || key > lastKey || day === 0 || day === 1));
+            disabled =
+              n < 1 ||
+              (!unrestricted &&
+                (key < today || key > lastKey || (!allowVipDays && (day === 0 || day === 1))));
           return (
             <Pressable
               key={i}

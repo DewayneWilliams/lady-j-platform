@@ -1,5 +1,7 @@
 # About this app
 
+- The 👑 Lady J Royalty Program is one automatic visit-based account per client, with seven levels at 0/3/7/10/14/20/24 completed-and-fully-paid service days in America/Port_of_Spain. Same-day visits deduplicate; corrections, annual resets and first-time level celebrations preserve lifetime history. Existing points, welcome/birthday benefits and ledgers remain; Gifts & Referrals is separate. Client Account contains the membership card, progress, wallet, horizontal journey and history; owner profiles and Business → Royalty Insights show progression and point totals. Migrations 080–083 and `lj-send-reminders` require Supabase panel deployment for production.
+
 This file describes this app's stack, structure, and conventions. **Keep it updated and short**: when the app gains a backend, new conventions, or significant structure, edit this file (and the README) in place so future sessions inherit that knowledge. This file is loaded into every session, so it describes the current state only. Never add dated or per-task entries, change logs, or test results, even if earlier ones exist. Put notable decisions in `docs/HISTORY.md` as one line each, and keep this file under about 200 lines.
 
 ## Stack

@@ -10,6 +10,7 @@ import { OwnerButton } from "./OwnerUI";
 const tabs = [
   { name: "Today", icon: "Gem" as const },
   { name: "Calendar", icon: "CalendarRange" as const },
+  { name: "Consultations", icon: "ClipboardList" as const },
   { name: "Clients", icon: "UsersRound" as const },
   { name: "Business", icon: "BriefcaseBusiness" as const },
   { name: "Maria", icon: "AudioLines" as const },

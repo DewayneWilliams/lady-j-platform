@@ -22,6 +22,18 @@ export default function BusinessOverview({
   const c = useColors();
   const rows: { title: string; section: string; detail: string; icon: IconName }[] = [
     {
+      title: "Royalty Insights",
+      section: "Royalty",
+      detail: "Client levels, progress, points and return follow-ups",
+      icon: "Crown",
+    },
+    {
+      title: "Gifts & Referrals",
+      section: "GiftsReferrals",
+      detail: "Gift cards, stored balances and referral credits",
+      icon: "Gift",
+    },
+    {
       title: "Services & Pricing",
       section: "Services",
       detail: `${services} services`,
@@ -60,6 +72,31 @@ export default function BusinessOverview({
   ];
   return (
     <View style={{ gap: 28 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Promotions"
+        onPress={() => onOpen("Discounts")}
+      >
+        <Card
+          style={{
+            padding: 22,
+            gap: 12,
+            backgroundColor: c.goldSurface,
+            borderColor: c.goldBorder,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+            <Icon name="BadgePercent" size={24} color={c.brandAccent} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <OwnerText size={22} bold>
+                Promotions
+              </OwnerText>
+            </View>
+            <Icon name="ChevronRight" size={20} color={c.mutedForeground} />
+          </View>
+          <OwnerText muted>Promo codes, schedules and redemption performance</OwnerText>
+        </Card>
+      </Pressable>
       {rows.map((row) => (
         <View key={row.section} style={{ gap: 24 }}>
           <Pressable

@@ -4,7 +4,7 @@ import { Stack, useGlobalSearchParams, useRouter } from "expo-router";
 import { maybeCompleteAuthSession } from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Txt, Action, useColors } from "@/components/salon/ui";
-import { completeOAuthCallback, oauthRedirectUrl } from "@/lib/salon/auth";
+import { completeOAuthCallback, consumeAuthDestination, oauthRedirectUrl } from "@/lib/salon/auth";
 export default function AuthCallback() {
   const c = useColors(),
     router = useRouter(),
@@ -30,7 +30,13 @@ export default function AuthCallback() {
     if (attempted.current === callbackUrl) return;
     attempted.current = callbackUrl;
     void completeOAuthCallback(callbackUrl)
-      .then(() => router.replace("/account"))
+      .then(async () => {
+        const destination = await consumeAuthDestination();
+        router.replace({
+          pathname: "/[page]",
+          params: { page: destination.page, ...destination.params },
+        });
+      })
       .catch((reason: unknown) => {
         setError(reason instanceof Error ? reason.message : "Sign-in could not be completed.");
         setWaiting(false);

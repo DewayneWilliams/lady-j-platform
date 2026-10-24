@@ -15,11 +15,13 @@ import {
   AccountScreen,
   ProfileScreen,
   RecordsScreen,
+  FavoritesScreen,
 } from "@/components/salon/AccountScreens";
 import { BagScreen, CheckoutScreen } from "@/components/salon/CommerceScreens";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import AccountGate from "@/components/salon/AccountGate";
 import InfoScreen from "@/components/salon/InfoScreens";
+import ConsultationScreen from "@/components/salon/ConsultationScreen";
 import Shell, { useNav } from "@/components/salon/Shell";
 import { Empty, Action } from "@/components/salon/ui";
 const titles: Record<string, string> = {
@@ -27,6 +29,7 @@ const titles: Record<string, string> = {
   workshops: "Workshops",
   boutique: "Boutique",
   booking: "Book your moment",
+  consultation: "Free consultation",
   account: "My Account",
   login: "Sign in",
   register: "Create an account",
@@ -36,6 +39,7 @@ const titles: Record<string, string> = {
   "my-workshops": "My Workshops",
   orders: "My Orders",
   payments: "Payments & Credits",
+  favorites: "Favorites",
   agreements: "My service agreements",
   "my-media": "My media",
   bag: "Shopping Bag",
@@ -72,6 +76,9 @@ export default function Page() {
       break;
     case "booking":
       content = <BookingScreen />;
+      break;
+    case "consultation":
+      content = <ConsultationScreen />;
       break;
     case "product":
     case "workshop":
@@ -123,6 +130,9 @@ export default function Page() {
     case "orders":
     case "payments":
       content = <RecordsScreen page={page} />;
+      break;
+    case "favorites":
+      content = s.session || s.testMode ? <FavoritesScreen /> : <AccountGate next="favorites" />;
       break;
     case "bag":
       content = <BagScreen />;
