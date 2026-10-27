@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { Appointment, Transaction, dateLabel, money, timeLabel } from "@/lib/salon/types";
 import { formatDuration } from "@/lib/salon/duration";
-import { Card, useColors } from "../ui";
+import { Card, Txt, useColors } from "../ui";
 import { OwnerStatus, OwnerText } from "./OwnerUI";
 
 export default function ClientPurchaseHistory({
@@ -37,17 +37,40 @@ export default function ClientPurchaseHistory({
       );
     })
     .sort((a, b) => b.starts_at.localeCompare(a.starts_at) || a.id.localeCompare(b.id));
-  const visibleEntries = showAll ? entries : entries.slice(0, 3);
+  const visibleEntries = showAll ? entries : entries.slice(0, 2);
 
   return (
-    <View style={{ gap: 12, marginTop: 12, marginBottom: 12 }}>
-      <OwnerText size={24} bold>
-        Service History
-      </OwnerText>
+    <View style={{ gap: 7, marginTop: 4, marginBottom: 4 }}>
+      <View
+        style={{
+          minHeight: 44,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <OwnerText size={24} bold>
+          Service History
+        </OwnerText>
+        {entries.length > 2 && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setShowAll((value) => !value)}
+            style={{ minHeight: 44, paddingHorizontal: 4, justifyContent: "center" }}
+          >
+            <OwnerText size={16} bold>
+              {showAll ? "Show Recent" : "View All"}
+            </OwnerText>
+          </Pressable>
+        )}
+      </View>
       {entries.length === 0 && <OwnerText muted>No services recorded.</OwnerText>}
       {visibleEntries.map((entry) => {
         const open = expanded === entry.id;
-        const service = entry.services.map((item) => item.name).join(", ");
+        const service = (Array.isArray(entry.services) ? entry.services : [])
+          .map((item) => String(item?.name ?? "Service"))
+          .join(", ");
         const payments = transactions.filter(
           (transaction) => transaction.appointment_id === entry.id,
         );
@@ -65,20 +88,21 @@ export default function ClientPurchaseHistory({
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                gap: 12,
+                gap: 8,
                 paddingHorizontal: 12,
-                paddingVertical: 10,
-                minHeight: 58,
+                paddingVertical: 7,
+                minHeight: 46,
               }}
             >
-              <OwnerText size={16} muted>
-                {dateLabel(entry.starts_at)}
-              </OwnerText>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <OwnerText size={16} bold>
-                  {service}
-                </OwnerText>
-              </View>
+              <Txt
+                size={16}
+                color={c.foreground}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{ flex: 1 }}
+              >
+                {dateLabel(entry.starts_at)} · {service}
+              </Txt>
               <Icon name={open ? "ChevronUp" : "ChevronDown"} size={18} color={c.foreground} />
             </Pressable>
             {open && (
@@ -121,15 +145,6 @@ export default function ClientPurchaseHistory({
           </Card>
         );
       })}
-      {entries.length > 3 && !showAll && (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setShowAll(true)}
-          style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}
-        >
-          <OwnerText bold>Full Appointment History</OwnerText>
-        </Pressable>
-      )}
     </View>
   );
 }

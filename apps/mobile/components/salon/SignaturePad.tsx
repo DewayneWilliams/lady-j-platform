@@ -6,9 +6,11 @@ import { Txt, LinkText, useColors } from "./ui";
 export default function SignaturePad({
   onChange,
   disabled = false,
+  height = 100,
 }: {
   onChange: (strokes: SignatureStroke[]) => void;
   disabled?: boolean;
+  height?: number;
 }) {
   const c = useColors();
   const [strokes, setStrokes] = useState<SignatureStroke[]>([]);
@@ -26,7 +28,7 @@ export default function SignaturePad({
       onPanResponderGrant: (e) => {
         const p = {
           x: Math.max(0, Math.min(320, (e.nativeEvent.locationX * 320) / width.current)),
-          y: Math.max(0, Math.min(160, e.nativeEvent.locationY)),
+          y: Math.max(0, Math.min(160, (e.nativeEvent.locationY * 160) / height)),
         };
         lines.current = [...lines.current, [p]];
         setStrokes(lines.current);
@@ -36,7 +38,7 @@ export default function SignaturePad({
         if (!last || last.length >= 4096) return;
         const p = {
           x: Math.max(0, Math.min(320, (e.nativeEvent.locationX * 320) / width.current)),
-          y: Math.max(0, Math.min(160, e.nativeEvent.locationY)),
+          y: Math.max(0, Math.min(160, (e.nativeEvent.locationY * 160) / height)),
         };
         const previous = last[last.length - 1];
         if (Math.hypot(p.x - previous.x, p.y - previous.y) < 1) return;
@@ -51,9 +53,6 @@ export default function SignaturePad({
   ).current;
   return (
     <View style={{ gap: 8 }}>
-      <Txt bold size={18}>
-        Your signature
-      </Txt>
       <View
         accessibilityLabel="Draw your signature with your finger or mouse"
         onLayout={(e) => {
@@ -61,18 +60,18 @@ export default function SignaturePad({
         }}
         {...responder.panHandlers}
         style={{
-          height: 160,
+          height,
           borderRadius: 12,
           borderWidth: 1,
           borderColor: c.border,
-          backgroundColor: c.background,
+          backgroundColor: "#FFFFFF",
           overflow: "hidden",
         }}
       >
         <Svg
           pointerEvents="none"
           width="100%"
-          height={160}
+          height={height}
           viewBox="0 0 320 160"
           preserveAspectRatio="none"
         >
@@ -80,7 +79,7 @@ export default function SignaturePad({
             <Path
               key={i}
               d={line.map((p, n) => `${n ? "L" : "M"} ${p.x} ${p.y}`).join(" ")}
-              stroke={c.foreground}
+              stroke="#111111"
               strokeWidth={2.2}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -89,9 +88,6 @@ export default function SignaturePad({
           ))}
         </Svg>
       </View>
-      <Txt size={13} color={c.mutedForeground}>
-        Sign using your finger or mouse.
-      </Txt>
       <LinkText
         onPress={() => {
           if (disabled) return;

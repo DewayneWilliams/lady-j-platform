@@ -84,7 +84,11 @@ export default function MediaSelect({
               </View>
               <MediaField label="Search Choices" value={query} onChange={setQuery} />
               <FlatList
-                data={options.filter((v) => v.name.toLowerCase().includes(query.toLowerCase()))}
+                data={options.filter((v) =>
+                  String(v?.name ?? "")
+                    .toLowerCase()
+                    .includes(query.toLowerCase()),
+                )}
                 keyboardShouldPersistTaps="handled"
                 keyExtractor={(v) => v.id}
                 ListEmptyComponent={<Txt>No matching choices.</Txt>}

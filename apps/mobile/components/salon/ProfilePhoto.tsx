@@ -18,11 +18,13 @@ export function ProfileAvatar({
   path,
   version,
   size = 82,
+  transparent = false,
 }: {
   name: string;
   path?: string | null;
   version?: string | null;
   size?: number;
+  transparent?: boolean;
 }) {
   const c = useColors();
   const [url, setUrl] = useState<string | null>(null);
@@ -54,9 +56,9 @@ export function ProfileAvatar({
         overflow: "hidden",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: c.goldSurface,
-        borderWidth: 1,
-        borderColor: c.goldBorder,
+        backgroundColor: transparent ? "transparent" : c.goldSurface,
+        borderWidth: transparent ? 0 : 1,
+        borderColor: transparent ? "transparent" : c.goldBorder,
       }}
     >
       {demoPhoto?.atlasIndex != null ? (
@@ -97,6 +99,7 @@ export function ProfilePhotoEditor({
   updatedAt,
   disabled = false,
   size = 92,
+  transparent = false,
   onChanged,
 }: {
   name: string;
@@ -109,6 +112,7 @@ export function ProfilePhotoEditor({
   updatedAt?: string | null;
   disabled?: boolean;
   size?: number;
+  transparent?: boolean;
   onChanged: () => Promise<void> | void;
 }) {
   const c = useColors();
@@ -240,7 +244,13 @@ export function ProfilePhotoEditor({
         onPress={() => setOpen(true)}
         style={{ position: "relative" }}
       >
-        <ProfileAvatar name={name} path={shownPath} version={updatedAt} size={size} />
+        <ProfileAvatar
+          name={name}
+          path={shownPath}
+          version={updatedAt}
+          size={size}
+          transparent={transparent}
+        />
         {!disabled && (
           <View
             style={{

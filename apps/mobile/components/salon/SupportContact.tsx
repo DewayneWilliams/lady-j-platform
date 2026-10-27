@@ -4,12 +4,12 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Button } from "@/components/ui/button";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { whatsappSupportUrl } from "@/lib/salon/whatsapp";
-import { Txt, ButtonLabel, useColors } from "./ui";
+import { ButtonLabel, useColors } from "./ui";
 /** Support is available through Contact, separate from the five navigation tabs. */
 export default function SupportContact() {
   const c = useColors();
   const { settings, notify } = useSalon();
-  const url = whatsappSupportUrl(settings?.whatsapp_phone);
+  const url = whatsappSupportUrl(settings?.whatsapp_phone || "+1 868 374 5517");
   const openSupport = () => {
     if (!url) return;
     void Linking.openURL(url).catch(() =>
@@ -33,24 +33,15 @@ export default function SupportContact() {
           flexShrink: 1,
           flexDirection: "row",
           gap: 10,
-          alignSelf: "flex-start",
-          backgroundColor: url ? c.tertiary : c.muted,
+          alignSelf: "stretch",
+          backgroundColor: url ? "#147A3F" : c.muted,
         }}
       >
-        <FontAwesome
-          name="whatsapp"
-          size={23}
-          color={url ? c.tertiaryForeground : c.mutedForeground}
-        />
-        <ButtonLabel color={url ? c.tertiaryForeground : c.mutedForeground}>
-          WhatsApp support
+        <FontAwesome name="whatsapp" size={23} color={url ? "#FFFFFF" : c.mutedForeground} />
+        <ButtonLabel color={url ? "#FFFFFF" : c.mutedForeground}>
+          WhatsApp +1 868 374 5517
         </ButtonLabel>
       </Button>
-      {!url && (
-        <Txt size={13} color={c.mutedForeground}>
-          WhatsApp support number awaiting setup.
-        </Txt>
-      )}
     </View>
   );
 }

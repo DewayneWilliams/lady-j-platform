@@ -103,6 +103,7 @@ export default function Shell({
   bottomBar,
   headerAction,
   contentTopPadding,
+  className,
 }: {
   children?: React.ReactNode;
   wide?: boolean;
@@ -111,6 +112,7 @@ export default function Shell({
   bottomBar?: React.ReactNode;
   headerAction?: { label: string; onPress: () => void };
   contentTopPadding?: number;
+  className?: string;
 }) {
   const c = useColors(),
     { width } = useWindowDimensions(),
@@ -142,8 +144,8 @@ export default function Shell({
       <View
         style={{
           backgroundColor: c.headerGold,
-          paddingHorizontal: compact ? 12 : 40,
-          paddingVertical: compact ? 12 : 20,
+          paddingHorizontal: compact ? 12 : 28,
+          paddingVertical: compact ? 8 : 11,
           flexShrink: 0,
         }}
       >
@@ -180,10 +182,10 @@ export default function Shell({
               backgroundColor: headerAction ? "#000000" : c.primary,
               borderRadius: 14,
               overflow: "hidden",
-              minHeight: 48,
+              minHeight: 44,
               height: "auto",
               paddingHorizontal: compact ? 7 : 12,
-              paddingVertical: 12,
+              paddingVertical: 8,
               flexGrow: compact ? 1 : 0,
               flexShrink: compact ? 1 : 0,
               flexBasis: "auto",
@@ -213,13 +215,12 @@ export default function Shell({
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
-            gap: 12,
-            height: 29,
-            paddingBottom: 0,
+            gap: 8,
+            minHeight: 36,
           }}
         >
           <Txt size={12} bold color={c.warning}>
-            TEST MODE · CLIENT VIEW
+            DEMO · CLIENT MODE
           </Txt>
           <Pressable
             accessibilityRole="button"
@@ -231,7 +232,7 @@ export default function Shell({
             style={{ paddingHorizontal: 10, paddingVertical: 5 }}
           >
             <Txt size={12} bold color={c.brandAccent}>
-              Owner Dashboard
+              OWNER MODE
             </Txt>
           </Pressable>
         </View>
@@ -256,19 +257,21 @@ export default function Shell({
             flexBasis: 0,
             minHeight: 0,
             backgroundColor: c.background,
-            height: 695,
+            height: "auto",
             flexDirection: "column",
+            paddingTop: 10,
           }}
-          contentContainerStyle={{ paddingBottom: navigationSpacing + 16 }}
+          contentContainerStyle={{ paddingBottom: navigationSpacing + 12 }}
           showsVerticalScrollIndicator={false}
         >
           <View
+            className={className}
             style={[
               shared.responsive,
               {
                 maxWidth: wide ? 1280 : 1200,
-                paddingHorizontal: desktop ? 32 : 20,
-                paddingTop: contentTopPadding ?? (desktop ? 32 : 24),
+                paddingHorizontal: desktop ? 24 : 16,
+                paddingTop: contentTopPadding ?? (desktop ? 18 : 12),
                 height: "auto",
                 justifyContent: "flex-start",
                 flexDirection: "column",
@@ -298,10 +301,9 @@ export default function Shell({
               style={{
                 borderTopWidth: 1,
                 borderColor: c.border,
-                paddingHorizontal: desktop ? 40 : 20,
-                paddingVertical: 26,
-                marginTop: 28,
-                paddingBottom: 0,
+                paddingHorizontal: desktop ? 28 : 16,
+                paddingVertical: 9,
+                marginTop: 8,
               }}
             >
               <View
@@ -309,8 +311,8 @@ export default function Shell({
                   shared.responsive,
                   {
                     alignItems: "center",
-                    gap: 12,
-                    height: 120,
+                    gap: 9,
+                    minHeight: 72,
                   },
                 ]}
               >

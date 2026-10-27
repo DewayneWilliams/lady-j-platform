@@ -1,4 +1,3 @@
-import { DMSerifDisplay_400Regular, useFonts } from "@expo-google-fonts/dev";
 import React from "react";
 import {
   View,
@@ -9,18 +8,27 @@ import {
   TextStyle,
   type TextProps,
   type ViewProps,
-  ActivityIndicator,
+  Image,
   ImageStyle,
-  ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useTheme } from "@/theming/ThemeProvider";
-import { Button } from "@/components/ui/button";
 import Icon, { IconName } from "@/lib/icons/LucideIcon";
 import { fonts, fieldLabel } from "@/lib/salon/design";
 import { catalogPhotoSource } from "@/lib/salon/images";
 import SubtleShimmer from "./SubtleShimmer";
 export function useColors() {
   return useTheme().theme.colors;
+}
+export function safeControlLabel(value: unknown, fallback: string) {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+export function controlTestId(prefix: string, value: unknown, fallback: string) {
+  const label = safeControlLabel(value, fallback);
+  return `${prefix}-${label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}`;
 }
 function visibleText(value: React.ReactNode): React.ReactNode {
   if (typeof value === "string") return value.replace(/\s*·\s*Demo\b/gi, "");
@@ -104,9 +112,10 @@ export function ButtonLabel({
       style={{
         fontFamily: theme.typography.button?.fontFamily || fonts.action,
         lineHeight: size * 1.25,
-        textAlign: "center",
         includeFontPadding: true,
         ...style,
+        justifyContent: "space-around",
+        flexDirection: "column",
       }}
     >
       {children}
@@ -134,28 +143,35 @@ export function Heading({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        gap: 16,
-        marginBottom: compact ? 8 : 22,
+        gap: 12,
+        marginBottom: compact ? 6 : 16,
       }}
     >
       <View
         style={{
           flex: 1,
-          minWidth: "100%",
+          minWidth: 0,
           gap: sub ? 5 : 0,
-          maxWidth: "100%",
-          maxHeight: "auto",
-          minHeight: "auto",
         }}
       >
-        {!!sub && <ScrollView></ScrollView>}
+        <Txt
+          serif
+          size={compact ? Math.min(headingSize, 28) : headingSize}
+          numberOfLines={singleLine ? 1 : undefined}
+          adjustsFontSizeToFit={singleLine}
+          minimumFontScale={singleLine ? 0.72 : undefined}
+          className={"text-sm w-80 mr-24"}
+        >
+          {children}
+        </Txt>
+        {!!sub && <Txt color={theme.colors.mutedForeground}>{sub}</Txt>}
       </View>
       {action}
     </View>
   );
 }
 export function Action({
-  label,
+  label: labelProp,
   onPress,
   secondary = false,
   gold = false,
@@ -169,9 +185,10 @@ export function Action({
   shimmerInterval = 9000,
   style,
   id,
+  contentColor: contentColorOverride,
 }: {
-  label: string;
-  onPress: () => void;
+  label?: string;
+  onPress?: () => void;
   secondary?: boolean;
   gold?: boolean;
   inverted?: boolean;
@@ -184,99 +201,111 @@ export function Action({
   shimmerInterval?: number;
   style?: ViewStyle;
   id?: string;
+  contentColor?: string;
 }) {
   const c = useColors();
+  const label = safeControlLabel(labelProp, "Action");
+  const unavailable = disabled || busy || !onPress;
   const contentColor =
-    disabled || busy
+    contentColorOverride ||
+    (unavailable
       ? c.mutedForeground
       : secondary
         ? c.foreground
         : inverted
           ? c.background
           : gold
-            ? c.tertiaryForeground
-            : c.primaryForeground;
+            ? c.primaryForeground
+            : c.primaryForeground);
   return (
-    <Button
+    <Pressable
+      accessibilityRole="button"
       accessibilityLabel={label}
-      testID={
-        id ||
-        `action-${label
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")}`
-      }
-      variant={secondary ? "outline" : "default"}
-      disabled={disabled || busy}
+      accessibilityState={{ disabled: unavailable, busy }}
+      testID={id || controlTestId("action", label, "action")}
+      disabled={unavailable}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         {
-          minHeight: prominent ? 56 : 52,
-          borderRadius: 11,
+          minHeight: prominent ? 52 : 46,
+          borderRadius: 10,
           paddingHorizontal: 12,
-          paddingVertical: prominent ? 14 : 12,
-          height: "auto",
+          paddingVertical: prominent ? 11 : 8,
           maxWidth: "100%",
           minWidth: 0,
           flexShrink: 1,
           flexDirection: "row",
-          gap: 10,
+          gap: 8,
           alignItems: "center",
           justifyContent: "center",
           alignSelf: "flex-start",
           overflow: "hidden",
-          opacity: 1,
+          backgroundColor: secondary
+            ? c.card
+            : gold
+              ? c.brandAccentFill
+              : inverted
+                ? c.foreground
+                : c.primary,
+          borderColor: secondary
+            ? c.border
+            : gold
+              ? c.brandAccentFill
+              : inverted
+                ? c.foreground
+                : c.primary,
+          borderWidth: 1,
+          opacity: pressed ? 0.86 : 1,
         },
-        gold && !secondary
-          ? { backgroundColor: c.tertiary, borderColor: c.tertiary, borderWidth: 1 }
-          : undefined,
-        inverted && !secondary
-          ? { backgroundColor: c.foreground, borderColor: c.foreground, borderWidth: 1 }
-          : undefined,
         style,
-        (disabled || busy) && { backgroundColor: c.muted, borderColor: c.border, borderWidth: 1 },
-        {
-          flexDirection: "row-reverse",
-          justifyContent: "space-between",
-        },
+        unavailable && { backgroundColor: c.muted, borderColor: c.border, opacity: 1 },
       ]}
-      className={"lg:items-center lg:justify-center relative"}
     >
-      {shimmer && !disabled && !busy && (
+      {shimmer && !unavailable && (
         <SubtleShimmer interval={shimmerInterval} travelDistance={620} borderRadius={11} />
       )}
-      {busy && <ActivityIndicator color={contentColor} />}
-      <ButtonLabel size={prominent ? 22 : secondary ? 18 : 20} color={contentColor}>
+      {busy ? (
+        <ActivityIndicator color={contentColor} />
+      ) : icon ? (
+        <Icon name={icon} size={22} color={iconColor || contentColor} />
+      ) : null}
+      <ButtonLabel
+        size={prominent ? 22 : secondary ? 18 : 20}
+        color={contentColor}
+        style={{ textAlign: "center" }}
+      >
         {label}
       </ButtonLabel>
-      {!busy && icon && <Icon name={icon} size={22} color={iconColor || contentColor} />}
-    </Button>
+    </Pressable>
   );
 }
 export function IconButton({
   name,
   onPress,
-  label,
+  label: labelProp,
 }: {
-  name: IconName;
-  onPress: () => void;
-  label: string;
+  name?: IconName;
+  onPress?: () => void;
+  label?: string;
 }) {
   const c = useColors();
+  const label = safeControlLabel(labelProp, "Icon action");
   return (
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
+      accessibilityState={{ disabled: !onPress }}
+      disabled={!onPress}
       onPress={onPress}
       style={({ pressed }) => ({
-        width: 48,
-        height: 48,
+        width: 44,
+        height: 44,
         alignItems: "center",
         justifyContent: "center",
         opacity: pressed ? 0.85 : 1,
       })}
     >
-      <Icon name={name} color={c.foreground} size={21} />
+      <Icon name={name || "Circle"} color={c.foreground} size={21} />
     </Pressable>
   );
 }
@@ -293,12 +322,12 @@ export function LinkText({
       accessibilityRole="button"
       onPress={onPress}
       style={{
-        minHeight: 48,
+        minHeight: 44,
         maxWidth: "100%",
         minWidth: 0,
         flexShrink: 1,
         paddingHorizontal: 10,
-        paddingVertical: 12,
+        paddingVertical: 8,
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -321,8 +350,8 @@ export function Card({
           backgroundColor: c.card,
           borderWidth: 1,
           borderColor: c.border,
-          borderRadius: 16,
-          padding: 18,
+          borderRadius: 14,
+          padding: 11,
           height: "auto",
           minHeight: 0,
         },
@@ -338,8 +367,8 @@ export function Tag({ children, gold = false }: { children: React.ReactNode; gol
   return null;
 }
 export function Field({
-  label,
-  value,
+  label: labelProp,
+  value: valueProp,
   onChangeText,
   placeholder,
   secureTextEntry = false,
@@ -347,9 +376,9 @@ export function Field({
   keyboardType = "default",
   large = false,
 }: {
-  label: string;
-  value: string;
-  onChangeText: (v: string) => void;
+  label?: string;
+  value?: string;
+  onChangeText?: (v: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
   multiline?: boolean;
@@ -357,19 +386,19 @@ export function Field({
   large?: boolean;
 }) {
   const c = useColors();
+  const label = safeControlLabel(labelProp, "Field");
+  const value = typeof valueProp === "string" ? valueProp : "";
   return (
-    <View style={{ gap: 8, marginBottom: 17 }}>
+    <View style={{ gap: 4, marginBottom: 10 }}>
       <Txt size={large ? 20 : 14} bold>
         {fieldLabel(label)}
       </Txt>
       <TextInput
         accessibilityLabel={fieldLabel(label)}
-        testID={`field-${label
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")}`}
+        testID={controlTestId("field", label, "field")}
         value={value}
         onChangeText={onChangeText}
+        editable={Boolean(onChangeText)}
         placeholder={placeholder}
         placeholderTextColor={c.mutedForeground}
         secureTextEntry={secureTextEntry}
@@ -379,14 +408,15 @@ export function Field({
         style={{
           fontFamily: fonts.body,
           fontSize: large ? 20 : 16,
-          padding: 15,
+          paddingHorizontal: 13,
+          paddingVertical: 8,
           borderWidth: 1,
           borderColor: c.border,
           borderRadius: 10,
           color: c.foreground,
           backgroundColor: c.background,
-          minHeight: large ? 58 : 52,
-          ...(multiline ? { minHeight: 100, textAlignVertical: "top" } : {}),
+          minHeight: large ? 50 : 44,
+          ...(multiline ? { minHeight: 88, textAlignVertical: "top" } : {}),
         }}
       />
     </View>
@@ -409,13 +439,13 @@ export function Chip({
       onPress={onPress}
       style={{
         paddingHorizontal: 12,
-        minHeight: 48,
+        minHeight: 44,
         maxWidth: "100%",
         minWidth: 0,
         flexShrink: 1,
         alignItems: "center",
         justifyContent: "center",
-        paddingVertical: 12,
+        paddingVertical: 8,
         borderRadius: 24,
         backgroundColor: selected ? c.foreground : c.card,
         borderWidth: 1,
@@ -446,8 +476,8 @@ export function Check({
         flexDirection: "row",
         gap: 12,
         alignItems: "center",
-        minHeight: 48,
-        paddingVertical: 12,
+        minHeight: 44,
+        paddingVertical: 8,
       }}
     >
       <View
@@ -469,7 +499,13 @@ export function Check({
   );
 }
 export function Photo({ name, style }: { name: string; style?: ImageStyle }) {
-  return null;
+  return (
+    <Image
+      source={catalogPhotoSource(name)}
+      resizeMode="cover"
+      style={[{ width: "100%", height: 220 }, style]}
+    />
+  );
 }
 export function Empty({
   title,
@@ -481,7 +517,7 @@ export function Empty({
   action?: React.ReactNode;
 }) {
   return (
-    <Card style={{ paddingVertical: 40, alignItems: "center", gap: 12 }}>
+    <Card style={{ paddingVertical: 30, alignItems: "center", gap: 10 }}>
       <Txt serif size={26} style={{ textAlign: "center" }}>
         {title}
       </Txt>
@@ -492,24 +528,12 @@ export function Empty({
 }
 export function ErrorBox({ message, retry }: { message: string; retry?: () => void }) {
   const c = useColors();
-  return (
-    <Card
-      style={{
-        borderColor: c.destructive,
-        marginBottom: 16,
-        gap: 8,
-        maxWidth: "100%",
-      }}
-    >
-      <Txt color={c.destructive}>{message}</Txt>
-      {retry && <LinkText onPress={retry}>Try again</LinkText>}
-    </Card>
-  );
+  return null;
 }
 export const shared = {
-  row: { flexDirection: "row", alignItems: "center", gap: 12 },
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  section: { marginBottom: 42 },
+  row: { flexDirection: "row", alignItems: "center", gap: 10 },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  section: { marginBottom: 22 },
   center: { alignItems: "center", justifyContent: "center" },
   responsive: { width: "100%", maxWidth: 1200, alignSelf: "center" },
 } satisfies Record<string, ViewStyle>;

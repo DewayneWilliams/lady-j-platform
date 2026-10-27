@@ -5,7 +5,7 @@ import { formatDuration, serviceDurationLabel } from "@/lib/salon/duration";
 import { useLocalSearchParams } from "expo-router";
 import { validReportDate } from "@/lib/salon/revenueReport";
 import { useForegroundRefresh } from "@/lib/salon/useForegroundRefresh";
-import { vipRequiresApproval } from "@/lib/salon/vipAccess";
+import { shouldShowVipIcon, vipRequiresApproval } from "@/lib/salon/vipAccess";
 import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreference";
 import { useTheme } from "@/theming/ThemeProvider";
 import { emptyGiftsReferrals, myGiftsReferrals } from "@/lib/salon/gifts";
@@ -22,6 +22,7 @@ import {
   Animated,
   Easing,
   Platform,
+  ScrollView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
@@ -31,21 +32,19 @@ import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import PromoCode from "./PromoCode";
 import { useDiscountQuote } from "@/lib/salon/discounts";
-import { db, check } from "@/lib/salon/client";
-import { money, servicePriceLabel, dateLabel, timeLabel } from "@/lib/salon/types";
+import { db, check, asRows } from "@/lib/salon/client";
+import { money, dateLabel, timeLabel, servicePriceLabel } from "@/lib/salon/types";
 import Shell, { useNav } from "./Shell";
 import { Search } from "./CatalogScreens";
 import {
   Txt,
   ButtonLabel,
   Action,
-  Heading,
   Photo,
   Tag,
   LinkText,
   Card,
   Chip,
-  Check,
   Field,
   ErrorBox,
   useColors,
@@ -69,12 +68,13 @@ async function receiptBytes(asset: ImagePicker.ImagePickerAsset) {
   if (!asset.base64) throw new Error("Choose the receipt again before confirming.");
   return Uint8Array.from(atob(asset.base64), (char) => char.charCodeAt(0)).buffer;
 }
-type AvailableSlot = { starts_at: string; is_vip: boolean; vip_percentage: 25 | 35 | null };
+type AvailableSlot = { starts_at: string; is_vip: boolean; vip_percentage: 20 | 30 | null };
 
 function TimeSlotButton({
   label,
   vip,
-  outsideHours,
+  dayOfWeek,
+  time,
   percentage,
   selected,
   disabled,
@@ -83,15 +83,23 @@ function TimeSlotButton({
 }: {
   label: string;
   vip: boolean;
-  outsideHours: boolean;
-  percentage: 25 | 35 | null;
+  dayOfWeek: number;
+  time: string;
+  percentage: 20 | 30 | null;
   selected: boolean;
   disabled: boolean;
   reducedMotion: boolean | null;
   onPress: () => void;
 }) {
+  const showVipIcon = shouldShowVipIcon(dayOfWeek, time);
   const { theme } = useTheme();
   const c = theme.colors;
+  // Presentation is deliberately derived from the same start-time predicate as the
+  // crown. Pricing and availability must never change a card into a VIP card.
+  const vipCard = showVipIcon;
+  const regularBackground = theme.name === "light" ? "#FFFFFF" : "#151515";
+  const regularInk = theme.name === "light" ? "#000000" : "#FFFFFF";
+  const vipInk = "#24180F";
   const motion = useRef(new Animated.Value(0)).current;
   const hovered = useRef(false);
   const [hoverShadow, setHoverShadow] = useState(false);
@@ -108,7 +116,6 @@ function TimeSlotButton({
     [disabled, motion, reducedMotion],
   );
   const activeShadow = !disabled && hoverShadow;
-
   return (
     <Animated.View
       style={{
@@ -146,9 +153,10 @@ function TimeSlotButton({
     >
       <Pressable
         accessibilityRole="radio"
-        accessibilityLabel={`${label}${vip ? `, VIP plus ${percentage} percent` : ""}${disabled ? ", unavailable" : ""}`}
+        accessibilityLabel={`${label}${showVipIcon ? ", VIP time" : vip ? `, ${percentage} percent surcharge applies` : ""}${disabled ? ", unavailable" : ""}`}
         accessibilityState={{ checked: selected, disabled }}
         disabled={disabled}
+        hitSlop={6}
         onPress={onPress}
         onHoverIn={() => {
           hovered.current = true;
@@ -163,45 +171,30 @@ function TimeSlotButton({
         onPressIn={() => animateTo(-1, 100)}
         onPressOut={() => animateTo(hovered.current ? 1 : 0, 180)}
         style={{
-          height: 70,
+          height: 56,
           paddingHorizontal: 2,
-          paddingVertical: 7,
+          paddingVertical: 4,
           borderRadius: 14,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: disabled
-            ? c.muted
-            : outsideHours
-              ? c.headerGold
-              : "#FFFFFF",
+          backgroundColor: vipCard ? c.headerGold : regularBackground,
           borderWidth: selected ? 2 : 1,
-          borderColor: selected
-            ? c.goldBorder
-            : disabled
-              ? c.border
-              : outsideHours
-                ? c.goldBorder
-                : c.border,
-          opacity: disabled ? 0.48 : 1,
+          borderColor: selected ? c.goldBorder : vipCard ? c.goldBorder : c.border,
+          opacity: 1,
         }}
       >
         <Txt
           size={12}
           bold
-          color={outsideHours && !disabled ? c.vipFill : disabled ? c.mutedForeground : c.headerInk}
+          color={vipCard ? vipInk : regularInk}
           style={{ textAlign: "center", lineHeight: 16 }}
         >
           {label}
         </Txt>
-        {vip && (
+        {showVipIcon && (
           <View style={{ alignItems: "center", marginTop: 2 }}>
-            <Icon name="Crown" size={12} color={disabled ? c.mutedForeground : c.vipFill} />
-            <Txt
-              size={9}
-              bold
-              color={disabled ? c.mutedForeground : c.vipFill}
-              style={{ textAlign: "center", lineHeight: 11 }}
-            >
+            <Icon name="Crown" size={12} color={vipInk} />
+            <Txt size={9} bold color={vipInk} style={{ textAlign: "center", lineHeight: 11 }}>
               VIP
             </Txt>
           </View>
@@ -333,16 +326,16 @@ export function PaymentChoice({
                   {[
                     {
                       id: "full" as const,
-                      title: "Pay in Full — 100%",
-                      headline: "Complete Your Payment — Arrive Ready to Relax",
-                      body: "Take care of everything today and enjoy your salon visit with nothing left to pay.",
+                      title: "Bank Transfer — Pay in Full (100%)",
+                      headline: "Complete your payment today for a seamless, fully paid salon experience.",
+                      body: "No remaining balance at your appointment.",
                       amount: fullTotal,
                     },
                     {
                       id: "deposit" as const,
-                      title: "Secure With 50% Deposit",
-                      headline: "Reserve your appointment with just half today.",
-                      body: `Pay the remaining balance at your visit. Remaining Balance: ${money(fullTotal - deposit)}`,
+                      title: "Bank Transfer — Secure Your Appointment (50% Deposit)",
+                      headline: "Reserve your appointment with just 50% today.",
+                      body: `Pay the remaining balance when your service is complete. Remaining balance: ${money(fullTotal - deposit)}`,
                       amount: deposit,
                     },
                   ].map((option) => {
@@ -448,9 +441,16 @@ export function PaymentChoice({
                     />
                   </View>
                   {!!receipt && (
-                    <Txt size={13} color={c.success}>
-                      Selected: {receipt.fileName || "Payment receipt image"}
-                    </Txt>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <Image
+                        source={{ uri: receipt.uri }}
+                        accessibilityLabel="Selected payment proof preview"
+                        style={{ width: 44, height: 44, borderRadius: 8, backgroundColor: c.muted }}
+                      />
+                      <Txt size={13} color={c.success} style={{ flex: 1 }}>
+                        Selected: {receipt.fileName || "Payment receipt image"}
+                      </Txt>
+                    </View>
                   )}
                 </>
               )}
@@ -495,8 +495,6 @@ export default function BookingScreen() {
     [paymentDate, setPaymentDate] = useState(todayKey()),
     [receipt, setReceipt] = useState<ImagePicker.ImagePickerAsset | null>(null),
     [policy, setPolicy] = useState(false),
-    [policyOpen, setPolicyOpen] = useState(false),
-    [openDisclaimer, setOpenDisclaimer] = useState<"services" | "products" | null>(null),
     [agreementId, setAgreementId] = useState(""),
     [busy, setBusy] = useState(false),
     [done, setDone] = useState(""),
@@ -511,22 +509,10 @@ export default function BookingScreen() {
     [giftAmount, setGiftAmount] = useState("0"),
     [referralAmount, setReferralAmount] = useState("0");
   const bookingRequestKey = useRef(requestUuid());
-  const appliedServiceId = useRef("");
-  useEffect(() => {
-    if (
-      typeof requestedServiceId !== "string" ||
-      s.loading ||
-      appliedServiceId.current === requestedServiceId
-    )
-      return;
-    const requested = s.services.find(
-      (service) =>
-        service.id === requestedServiceId && service.active && service.bookable !== false,
-    );
-    appliedServiceId.current = requestedServiceId;
-    if (requested) s.setSelected([requested.id]);
-    else setError("This service is unavailable. Choose another service.");
-  }, [requestedServiceId, s.loading, s.services, s.setSelected]);
+  const handleAgreementReady = useCallback((id: string) => {
+    setAgreementId(id);
+    setPolicy(Boolean(id));
+  }, []);
   const selected = s.services.filter((v) => s.selected.includes(v.id));
   const pricing = useDiscountQuote(
     "service",
@@ -542,6 +528,8 @@ export default function BookingScreen() {
     total = serviceSubtotal + vipPremium,
     deposit = Math.round(total * 50) / 100;
   const isVip = !!selectedSlot?.is_vip;
+  const selectedWeekday = new Date(`${date}T12:00:00Z`).getUTCDay();
+  const selectedClosedDay = selectedWeekday === 0 || selectedWeekday === 1;
   const displayedSlots = useMemo(() => {
     const availableByMinute = new Map<number, AvailableSlot>();
     slots.forEach((slot) => {
@@ -557,19 +545,16 @@ export default function BookingScreen() {
       availableByMinute.set(minute, slot);
     });
     const day = new Date(`${date}T12:00:00Z`).getUTCDay();
+    // The published VIP window begins at 6 AM. Keep the grid at four equal cells per row.
     return Array.from({ length: 64 }, (_, index) => {
       const minute = 360 + index * 15;
       const weekend = day === 0 || day === 1;
       const available = availableByMinute.get(minute);
       const windowVip = weekend || minute < 600 || minute >= 1095;
       const vip = available?.is_vip ?? windowVip;
-      const windowPercentage: 25 | 35 | null = !windowVip
-        ? null
-        : !weekend && minute >= 480 && minute < 600
-          ? 25
-          : 35;
+      const windowPercentage: 20 | 30 | null = !windowVip ? null : weekend ? 30 : 20;
       const percentage = available?.vip_percentage ?? windowPercentage;
-      return { minute, vip, percentage, available, disabled: !available || minute > 1140 };
+      return { minute, vip, percentage, available, disabled: !available };
     });
   }, [date, slots]);
   const customApproval = selected.some((service) => service.requires_owner_approval);
@@ -589,14 +574,16 @@ export default function BookingScreen() {
   const paymentDue = Math.max(0, selectedPaymentAmount - creditCovered);
   const fullyCovered = selectedPaymentAmount > 0 && paymentDue === 0;
   const noPaymentRequired = selected.length > 0 && pricing.ready && total === 0;
+  const agreementReady = Boolean(agreementId);
   const submitDisabled =
-    !agreementId ||
+    !agreementReady ||
     !policy ||
     !pricing.ready ||
     (requiresApproval && !customApproval && vipReason.trim().length < 8) ||
-    (requiresApproval && !s.session) ||
+    (requiresApproval && !s.session && !s.testMode) ||
     (!requiresApproval &&
       !noPaymentRequired &&
+      !s.testMode &&
       ((paymentDue > 0 && method !== "bank") ||
         !s.session ||
         (paymentDue > 0 &&
@@ -606,6 +593,25 @@ export default function BookingScreen() {
             !receipt)))) ||
     (!s.session && !s.testMode && (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()));
   const slotGeneration = useRef(0);
+  const changeDate = useCallback(
+    (nextDate: string) => {
+      if (nextDate === date) return;
+
+      // Invalidate the previous date before the new slot components render.
+      slotGeneration.current += 1;
+      setTime("");
+      setSlots([]);
+      setSlotLoading(false);
+      setVipDraft(null);
+      setVipReason("");
+      setVipReasonChoice("");
+      setVipDetails("");
+      setAgreementId("");
+      setError("");
+      setDate(nextDate);
+    },
+    [date],
+  );
   useEffect(() => {
     if (step !== 3 || !s.session || noPaymentRequired) return;
     void myGiftsReferrals()
@@ -618,11 +624,12 @@ export default function BookingScreen() {
     setSlotLoading(true);
     setError("");
     try {
-      const data = check(
-        await db().rpc("lj_available_v2", { p_date: date, p_duration: duration }),
-      ) as AvailableSlot[] | null;
+      const data = asRows<AvailableSlot>(
+        check(await db().rpc("lj_available_v2", { p_date: date, p_duration: duration })),
+        "Available times",
+      );
       if (generation !== slotGeneration.current) return;
-      const next = data || [];
+      const next = data;
       setSlots(next);
       setTime((previous) => (next.some((slot) => slot.starts_at === previous) ? previous : ""));
     } catch (e) {
@@ -640,6 +647,10 @@ export default function BookingScreen() {
   useEffect(() => {
     setTime("");
     setSlots([]);
+    setVipDraft(null);
+    setVipReason("");
+    setVipReasonChoice("");
+    setVipDetails("");
     void refreshSlots();
     return () => {
       slotGeneration.current += 1;
@@ -701,7 +712,12 @@ export default function BookingScreen() {
   }
   async function submit() {
     setError("");
-    if (!policy || !time || !agreementId || !pricing.ready) return;
+    if (!policy || !time || !agreementReady || !pricing.ready) return;
+    if (s.testMode) {
+      setDone("demo");
+      setCelebrationRevision(1);
+      return;
+    }
     setBusy(true);
     let receiptPath: string | null = null;
     try {
@@ -828,7 +844,7 @@ export default function BookingScreen() {
         borderTopWidth: 1,
         borderColor: c.border,
         backgroundColor: c.background,
-        paddingHorizontal: width > 700 ? 24 : 10,
+        paddingHorizontal: width > 700 ? 24 : 8,
         paddingVertical: 8,
       }}
     >
@@ -837,57 +853,75 @@ export default function BookingScreen() {
           width: "100%",
           maxWidth: 760,
           alignSelf: "center",
-          minHeight: 54,
-          borderRadius: 15,
-          backgroundColor: c.primary,
-          paddingHorizontal: 10,
-          paddingVertical: 7,
+          minHeight: 58,
+          borderRadius: 14,
+          backgroundColor: c.brandAccentFill,
+          paddingHorizontal: width < 390 ? 8 : 10,
+          paddingVertical: 8,
           flexDirection: "row",
           alignItems: "center",
-          gap: 8,
+          gap: width < 390 ? 6 : 10,
         }}
       >
         {step > 1 && (
           <Action
             label="Back"
             secondary
+            contentColor="#FFFFFF"
             onPress={() => {
               setStep(step - 1);
               setError("");
             }}
-            style={{ minHeight: 42, paddingHorizontal: 9, paddingVertical: 7 }}
+            style={{
+              minHeight: 40,
+              paddingHorizontal: width < 390 ? 8 : 10,
+              paddingVertical: 7,
+              backgroundColor: "transparent",
+              borderColor: "rgba(255,255,255,0.58)",
+            }}
           />
         )}
-        <View style={{ flex: 1, minWidth: 72 }}>
-          <Txt size={11} color={c.primaryForeground} numberOfLines={1}>
-            {selected.length} service{selected.length === 1 ? "" : "s"}
-          </Txt>
-          <Txt
-            size={width < 390 ? 13 : 15}
-            bold
-            color={c.primaryForeground}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.78}
-          >
-            {pricing.busy
-              ? "Updating…"
-              : customApproval
-                ? `Custom price · ${formatDuration(duration)}+`
-                : `${money(total)} · ${formatDuration(duration)}`}
-          </Txt>
+        <View style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Txt size={11} color="#FFFFFF" numberOfLines={1}>
+              {selected.length} service{selected.length === 1 ? "" : "s"}
+            </Txt>
+          </View>
+          <View style={{ width: 1, height: 26, backgroundColor: "rgba(255,255,255,0.36)" }} />
+          <View style={{ alignItems: "flex-end", minWidth: 0 }}>
+            <Txt
+              size={width < 390 ? 12 : 14}
+              bold
+              color="#FFFFFF"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.76}
+            >
+              {pricing.busy ? "Updating…" : customApproval ? "Custom price" : money(total)}
+            </Txt>
+            <Txt size={10} color="#FFFFFF" numberOfLines={1}>
+              {formatDuration(duration)}{customApproval ? "+" : ""}
+            </Txt>
+          </View>
         </View>
         {step < 3 && (
           <Action
             label={barLabel}
-            gold
             icon="ArrowRight"
+            contentColor="#FFFFFF"
+            iconColor="#FFFFFF"
             disabled={barDisabled}
             onPress={() => {
               if (step === 1) setStep(2);
               else setStep(3);
             }}
-            style={{ minHeight: 42, paddingHorizontal: 10, paddingVertical: 7 }}
+            style={{
+              minHeight: 40,
+              paddingHorizontal: width < 390 ? 8 : 10,
+              paddingVertical: 7,
+              backgroundColor: "transparent",
+              borderColor: "rgba(255,255,255,0.76)",
+            }}
           />
         )}
       </View>
@@ -905,27 +939,31 @@ export default function BookingScreen() {
         <View style={{ maxWidth: 640, alignSelf: "center", width: "100%", paddingVertical: 35 }}>
           <Card style={{ alignItems: "center", padding: 35, gap: 18 }}>
             <Icon
-              name={noPaymentRequired ? "CalendarCheck" : "Clock3"}
+              name={done === "demo" || noPaymentRequired ? "CalendarCheck" : "Clock3"}
               size={42}
               color={c.brandAccent}
             />
             <Tag>
-              {requiresApproval
-                ? customApproval
-                  ? "Custom pricing request saved"
-                  : "VIP request saved · Pending owner approval"
-                : noPaymentRequired
-                  ? "Appointment confirmed"
-                  : "Request saved · Payment pending"}
+              {done === "demo"
+                ? "Demo complete · No appointment created"
+                : requiresApproval
+                  ? customApproval
+                    ? "Custom pricing request saved"
+                    : "VIP request saved · Pending owner approval"
+                  : noPaymentRequired
+                    ? "Appointment confirmed"
+                    : "Request saved · Payment pending"}
             </Tag>
             <Txt serif size={34} style={{ textAlign: "center" }}>
-              {requiresApproval
-                ? customApproval
-                  ? "Management is preparing your custom price."
-                  : "Your VIP Access request is pending approval."
-                : noPaymentRequired
-                  ? "Congratulations! Your Transformation Has Been Booked!"
-                  : "Your booking is pending verification."}
+              {done === "demo"
+                ? "Your booking preview is complete."
+                : requiresApproval
+                  ? customApproval
+                    ? "Management is preparing your custom price."
+                    : "Your VIP Access request is pending approval."
+                  : noPaymentRequired
+                    ? "Congratulations! Your Transformation Has Been Booked!"
+                    : "Your booking is pending verification."}
             </Txt>
             <Txt style={{ textAlign: "center" }}>
               {selected.map((v) => v.name).join(" + ")}
@@ -933,13 +971,15 @@ export default function BookingScreen() {
               {dateLabel(time)} at {timeLabel(time)}
             </Txt>
             <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
-              {requiresApproval
-                ? customApproval
-                  ? "No payment was collected. Management will confirm the final duration and price before payment."
-                  : "No payment was collected. The salon must approve this VIP time before you complete payment."
-                : noPaymentRequired
-                  ? "Your appointment is confirmed. No payment or deposit is required."
-                  : "Your transfer proof was saved securely. The appointment remains pending until the owner verifies funds received; uploaded proof is not a verified payment."}
+              {done === "demo"
+                ? "This was a local demonstration. No appointment, agreement, payment, or private customer record was created."
+                : requiresApproval
+                  ? customApproval
+                    ? "No payment was collected. Management will confirm the final duration and price before payment."
+                    : "No payment was collected. The salon must approve this VIP time before you complete payment."
+                  : noPaymentRequired
+                    ? "Your appointment is confirmed. No payment or deposit is required."
+                    : "Your transfer proof was saved securely. The appointment remains pending until the owner verifies funds received; uploaded proof is not a verified payment."}
             </Txt>
             {s.session ? (
               <Action label="View my appointments" onPress={() => go("appointments")} />
@@ -959,16 +999,30 @@ export default function BookingScreen() {
         accessibilityValue={{ min: 1, max: 3, now: step }}
         accessibilityLabel={`Step ${step} of 3 — ${["Choose Your Service", "Choose Your Date & Time", "Payment"][step - 1]}`}
       >
-        <Heading
-          sub={`Step ${step} of 3 — ${["Choose Your Service", "Choose Your Date & Time", "Payment"][step - 1]}`}
-        >
-          Book your moment
-        </Heading>
+        <View style={{ alignItems: "center", gap: 5, marginBottom: 6 }}>
+          <Txt
+            serif
+            size={width < 390 ? 24 : 28}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.72}
+            style={{ width: "100%", textAlign: "center" }}
+          >
+            Book Your Moment!
+          </Txt>
+          <Txt
+            size={14}
+            color={c.mutedForeground}
+            style={{ width: "100%", textAlign: "center" }}
+          >
+            {`Step ${step} of 3 — ${["Choose Your Service", "Choose Your Date & Time", "Payment"][step - 1]}`}
+          </Txt>
+        </View>
       </View>
       <View
         style={{
           flexDirection: "row",
-          gap: width > 600 ? 30 : 8,
+          gap: width > 600 ? 30 : 2,
           marginVertical: 10,
           marginBottom: 30,
         }}
@@ -987,7 +1041,7 @@ export default function BookingScreen() {
               minWidth: 0,
               alignItems: "center",
               justifyContent: "center",
-              paddingHorizontal: 10,
+              paddingHorizontal: width < 600 ? 0 : 8,
               paddingVertical: 12,
               gap: 9,
               borderBottomWidth: 2,
@@ -1008,7 +1062,13 @@ export default function BookingScreen() {
                 {i + 1}
               </ButtonLabel>
             </View>
-            <ButtonLabel>{v}</ButtonLabel>
+            <ButtonLabel
+              singleLine
+              size={width < 600 ? 10 : 16}
+              style={{ width: "100%", textAlign: "center" }}
+            >
+              {v}
+            </ButtonLabel>
           </Pressable>
         ))}
       </View>
@@ -1023,7 +1083,9 @@ export default function BookingScreen() {
                 (v) =>
                   v.bookable !== false &&
                   (category === "All" || v.category === category) &&
-                  v.name.toLowerCase().includes(query.toLowerCase()),
+                  String(v?.name ?? "")
+                    .toLowerCase()
+                    .includes(query.toLowerCase()),
               )
               .map((v) => (
                 <Pressable
@@ -1048,20 +1110,12 @@ export default function BookingScreen() {
                   }}
                 >
                   <Photo name={v.image} style={{ width: 72, height: 82, borderRadius: 10 }} />
-                  <View style={{ flex: 1, gap: 5 }}>
+                  <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
                     <ButtonLabel size={20}>{v.name}</ButtonLabel>
-                    <Txt size={12} color={c.mutedForeground}>
-                      {v.description}
-                    </Txt>
-                    <Txt size={13}>
-                      {serviceDurationLabel(v)} · {servicePriceLabel(v)}
-                    </Txt>
+                    <Txt size={12} color={c.mutedForeground}>{v.description}</Txt>
+                    <Txt size={13}>{serviceDurationLabel(v)} · {servicePriceLabel(v)}</Txt>
                   </View>
-                  <Icon
-                    name={s.selected.includes(v.id) ? "CircleCheck" : "CirclePlus"}
-                    size={24}
-                    color={s.selected.includes(v.id) ? c.brandAccent : c.mutedForeground}
-                  />
+                  <Icon name={s.selected.includes(v.id) ? "CircleCheck" : "CirclePlus"} size={24} color={s.selected.includes(v.id) ? c.brandAccent : c.mutedForeground} />
                 </Pressable>
               ))}
           </View>
@@ -1085,6 +1139,7 @@ export default function BookingScreen() {
                 iconColor={c.brandAccent}
                 secondary
                 onPress={() => void choosePhoto()}
+                style={{ alignSelf: "center" }}
               />
               {!!photo && (
                 <View style={{ gap: 10, marginTop: 15 }}>
@@ -1111,17 +1166,11 @@ export default function BookingScreen() {
       {step === 2 && (
         <View style={{ flexDirection: width > 800 ? "row" : "column", gap: width > 800 ? 20 : 10 }}>
           <Card style={{ flex: width > 800 ? 1 : undefined, paddingBottom: 8 }}>
-            {!!s.settings?.max_daily_bookings_per_client && (
-              <Txt color={c.mutedForeground} style={{ marginBottom: 16 }}>
-                Up to {s.settings.max_daily_bookings_per_client} appointment
-                {s.settings.max_daily_bookings_per_client === 1 ? "" : "s"} per client per day. You
-                can combine several services in one appointment.
-              </Txt>
-            )}
-            <CalendarPicker allowVipDays value={date} onChange={setDate} />
+            {!!s.settings?.max_daily_bookings_per_client && null}
+            <CalendarPicker allowVipDays roundedSelection value={date} onChange={changeDate} />
             <Txt size={12} color={c.mutedForeground} style={{ marginTop: 8, textAlign: "center" }}>
-              Tuesday–Saturday regular hours · Daily VIP access · 15-minute starts{`\n`}Up to 6
-              months ahead · Trinidad time (GMT−4)
+              {"Tuesday–Saturday, 10 AM–6 PM regular hours · Daily VIP access · "}
+              {`\n`}Up to 6 months ahead · Trinidad time (GMT−4)
             </Txt>
           </Card>
           <Card style={{ flex: width > 800 ? 1 : undefined }}>
@@ -1140,46 +1189,16 @@ export default function BookingScreen() {
             ) : (
               <View style={{ gap: 12 }}>
                 <View style={{ gap: 12 }}>
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: c.goldBorder,
-                      borderLeftWidth: 4,
-                      borderLeftColor: c.headerGold,
-                      borderRadius: 16,
-                      backgroundColor: c.goldSurface,
-                      paddingHorizontal: 16,
-                      paddingVertical: 15,
-                      gap: 8,
-                    }}
-                  >
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <Icon name="Crown" size={17} color={c.tertiary} />
-                      <Txt size={12} bold color={c.tertiary} style={{ letterSpacing: 1.1 }}>
-                        VIP ACCESS
-                      </Txt>
-                    </View>
-                    <Txt size={14} style={{ lineHeight: 21 }}>
-                      Enjoy the flexibility of exclusive appointment times beyond our regular
-                      business hours, thoughtfully arranged around your schedule.
-                    </Txt>
-                    <Txt size={13} color={c.mutedForeground} style={{ lineHeight: 20 }}>
-                      <Txt size={13} bold color={c.foreground}>
-                        VIP Privilege:{" "}
-                      </Txt>
-                      Appointments that begin or end outside regular business hours include a 30%
-                      premium for extended-hour service and are subject to approval.
-                    </Txt>
-                  </View>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -3 }}>
                     {displayedSlots.map(
                       ({ minute, vip, percentage, available, disabled }, index) => {
                         const hour = Math.floor(minute / 60);
                         const minutePart = minute % 60;
                         const label = `${hour % 12 || 12}:${String(minutePart).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
+                        const timeValue = `${String(hour).padStart(2, "0")}:${String(minutePart).padStart(2, "0")}`;
                         const selected = !!available && time === available.starts_at;
                         return (
-                          <React.Fragment key={minute}>
+                          <React.Fragment key={`${date}-${timeValue}`}>
                             {index === 16 && (
                               <View
                                 style={{
@@ -1218,7 +1237,8 @@ export default function BookingScreen() {
                               <TimeSlotButton
                                 label={label}
                                 vip={vip}
-                                outsideHours={minute < 600 || minute >= 1080}
+                                dayOfWeek={selectedWeekday}
+                                time={timeValue}
                                 percentage={percentage}
                                 selected={selected}
                                 disabled={disabled}
@@ -1245,6 +1265,31 @@ export default function BookingScreen() {
                       },
                     )}
                   </View>
+                  <Card
+                    style={{
+                      gap: 8,
+                      borderColor: c.vipFill,
+                      backgroundColor: c.vipSurface,
+                      paddingVertical: 16,
+                    }}
+                  >
+                    <Txt serif size={22} color={c.vipText} style={{ textAlign: "center" }}>
+                      Request VIP Access
+                    </Txt>
+                    <Txt color={c.vipText} style={{ textAlign: "center", lineHeight: 22 }}>
+                      Enjoy exclusive appointment times designed around your lifestyle.
+                    </Txt>
+                    <Txt size={13} color={c.mutedForeground} style={{ lineHeight: 20 }}>
+                      Regular Business Days (Tuesday–Saturday): Appointments starting before 10 AM
+                      or ending after 6 PM have a 20% VIP surcharge.
+                    </Txt>
+                    <Txt size={13} color={c.mutedForeground} style={{ lineHeight: 20 }}>
+                      Closed Days (Sunday & Monday): Approved appointments have a 30% VIP surcharge.
+                    </Txt>
+                    <Txt size={13} bold color={c.vipText}>
+                      All VIP appointments require approval.
+                    </Txt>
+                  </Card>
                 </View>
                 {isVip && (
                   <Card
@@ -1285,14 +1330,19 @@ export default function BookingScreen() {
                       justifyContent: "flex-end",
                     }}
                   >
-                    <Pressable
-                      onPress={() => undefined}
-                      style={{
+                    <ScrollView
+                      keyboardShouldPersistTaps="handled"
+                      contentContainerStyle={{
                         backgroundColor: c.background,
                         borderTopLeftRadius: 24,
                         borderTopRightRadius: 24,
                         padding: 22,
                         gap: 14,
+                      }}
+                      style={{
+                        backgroundColor: c.background,
+                        borderTopLeftRadius: 24,
+                        borderTopRightRadius: 24,
                         maxHeight: "90%",
                       }}
                     >
@@ -1381,7 +1431,7 @@ export default function BookingScreen() {
                         No payment or appointment confirmation happens until Lady J approves your
                         request.
                       </Txt>
-                    </Pressable>
+                    </ScrollView>
                   </Pressable>
                 </Modal>
               </View>
@@ -1412,7 +1462,7 @@ export default function BookingScreen() {
               You&apos;re one step closer to looking and feeling your best.
             </Txt>
           </View>
-          {!s.session && !noPaymentRequired && (
+          {!s.session && !noPaymentRequired && !s.testMode && (
             <Card style={{ gap: 12, borderColor: c.goldBorder, backgroundColor: c.goldSurface }}>
               <Txt bold>Sign in to complete secure payment</Txt>
               <Txt size={13} color={c.mutedForeground}>
@@ -1571,19 +1621,46 @@ export default function BookingScreen() {
               <Card style={{ padding: 18, gap: 12, borderColor: c.goldBorder }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <Icon name="Gift" size={22} color={c.tertiary} />
-                  <Txt size={20} bold>Have a Gift Card?</Txt>
+                  <Txt size={20} bold>
+                    Have a Gift Card?
+                  </Txt>
                 </View>
-                {!!gifts.received.filter((card) => card.status === "active" && card.balance > 0).length && (
+                {!!gifts.received.filter((card) => card.status === "active" && card.balance > 0)
+                  .length && (
                   <View style={{ gap: 8 }}>
-                    <Txt size={13} color={c.mutedForeground}>Select a linked card</Txt>
+                    <Txt size={13} color={c.mutedForeground}>
+                      Select a linked card
+                    </Txt>
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                      {gifts.received.filter((card) => card.status === "active" && card.balance > 0).map((card) => (
-                        <Chip key={card.id} label={`•••• ${card.code.slice(-4)} · ${money(card.balance)}`} selected={giftCode === card.code} onPress={() => { setGiftCode(card.code); setGiftAmount(String(Math.min(card.balance, selectedPaymentAmount))); }} />
-                      ))}
+                      {gifts.received
+                        .filter((card) => card.status === "active" && card.balance > 0)
+                        .map((card) => (
+                          <Chip
+                            key={card.id}
+                            label={`•••• ${card.code.slice(-4)} · ${money(card.balance)}`}
+                            selected={giftCode === card.code}
+                            onPress={() => {
+                              setGiftCode(card.code);
+                              setGiftAmount(String(Math.min(card.balance, selectedPaymentAmount)));
+                            }}
+                          />
+                        ))}
                     </View>
                   </View>
                 )}
-                <Field label="Gift Card Code" value={giftCode} onChangeText={(value) => { setGiftCode(value.toUpperCase()); const linked = gifts.received.find((card) => card.code.toUpperCase() === value.toUpperCase()); if (linked) setGiftAmount(String(Math.min(linked.balance, selectedPaymentAmount))); }} placeholder="LJ-XXXXXX-XXXXXX" />
+                <Field
+                  label="Gift Card Code"
+                  value={giftCode}
+                  onChangeText={(value) => {
+                    setGiftCode(value.toUpperCase());
+                    const linked = gifts.received.find(
+                      (card) => card.code.toUpperCase() === value.toUpperCase(),
+                    );
+                    if (linked)
+                      setGiftAmount(String(Math.min(linked.balance, selectedPaymentAmount)));
+                  }}
+                  placeholder="LJ-XXXXXX-XXXXXX"
+                />
                 {!!giftCode && giftAvailable === 0 && (
                   <Action
                     label="Validate & Link Gift Card"
@@ -1597,29 +1674,65 @@ export default function BookingScreen() {
                         .then((next) => {
                           setGifts(next);
                           const card = next.received.find((item) => item.code === giftCode);
-                          if (card) setGiftAmount(String(Math.min(card.balance, selectedPaymentAmount)));
+                          if (card)
+                            setGiftAmount(String(Math.min(card.balance, selectedPaymentAmount)));
                         })
-                        .catch((e: unknown) => setError(e instanceof Error ? e.message : "Unable to validate this gift card."))
+                        .catch((e: unknown) =>
+                          setError(
+                            e instanceof Error ? e.message : "Unable to validate this gift card.",
+                          ),
+                        )
                         .finally(() => setBusy(false));
                     }}
                   />
                 )}
-                <Field label="Amount to Apply" value={giftAmount} onChangeText={setGiftAmount} keyboardType="decimal-pad" placeholder="0.00" />
-                <Txt size={12} color={c.mutedForeground}>Available on selected card: {money(giftAvailable)} · Partial use is welcome.</Txt>
+                <Field
+                  label="Amount to Apply"
+                  value={giftAmount}
+                  onChangeText={setGiftAmount}
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                />
+                <Txt size={12} color={c.mutedForeground}>
+                  Available on selected card: {money(giftAvailable)} · Partial use is welcome.
+                </Txt>
               </Card>
               <Card style={{ padding: 18, gap: 12, borderColor: c.brandAccent }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <Icon name="UsersRound" size={22} color={c.brandAccent} />
-                  <Txt size={20} bold>Apply Referral Credit</Txt>
+                  <Txt size={20} bold>
+                    Apply Referral Credit
+                  </Txt>
                 </View>
                 <Txt>Available: {money(gifts.referral_available)}</Txt>
-                <Field label="Amount to Apply" value={referralAmount} onChangeText={setReferralAmount} keyboardType="decimal-pad" placeholder="0.00" />
-                <Txt size={12} color={c.mutedForeground}>Referral credits are separate from Royalty Points and Gift Cards.</Txt>
+                <Field
+                  label="Amount to Apply"
+                  value={referralAmount}
+                  onChangeText={setReferralAmount}
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                />
+                <Txt size={12} color={c.mutedForeground}>
+                  Referral credits are separate from Royalty visit benefits and Gift Cards.
+                </Txt>
               </Card>
               {(creditCovered > 0 || fullyCovered) && (
-                <Card style={{ padding: 16, gap: 5, backgroundColor: c.goldSurface, borderColor: c.goldBorder }}>
-                  <Txt bold>{fullyCovered ? "Fully Covered by Gift Card / Referral Credit" : `${money(creditCovered)} applied to today’s payment`}</Txt>
-                  <Txt size={13} color={c.mutedForeground}>Remaining payment due now: {money(paymentDue)}</Txt>
+                <Card
+                  style={{
+                    padding: 16,
+                    gap: 5,
+                    backgroundColor: c.goldSurface,
+                    borderColor: c.goldBorder,
+                  }}
+                >
+                  <Txt bold>
+                    {fullyCovered
+                      ? "Fully Covered by Gift Card / Referral Credit"
+                      : `${money(creditCovered)} applied to today’s payment`}
+                  </Txt>
+                  <Txt size={13} color={c.mutedForeground}>
+                    Remaining payment due now: {money(paymentDue)}
+                  </Txt>
                 </Card>
               )}
             </>
@@ -1636,7 +1749,15 @@ export default function BookingScreen() {
                 </Txt>
               </View>
             </View>
-            {requiresApproval ? (
+            {s.testMode ? (
+              <View style={{ gap: 6 }}>
+                <Txt bold>Demo booking — no payment details needed.</Txt>
+                <Txt size={13} color={c.mutedForeground}>
+                  This step previews the customer experience without collecting or saving payment
+                  information.
+                </Txt>
+              </View>
+            ) : requiresApproval ? (
               <View style={{ gap: 6 }}>
                 <Txt bold color={c.vipText}>
                   {customApproval
@@ -1683,7 +1804,9 @@ export default function BookingScreen() {
               ["Total Price", money(total)],
               [
                 "Selected Payment",
-                money(requiresApproval || noPaymentRequired ? 0 : paymentDue),
+                s.testMode
+                  ? money(0)
+                  : money(requiresApproval || noPaymentRequired ? 0 : paymentDue),
               ],
               ...(creditCovered > 0 ? [["Gift & Referral Value", `−${money(creditCovered)}`]] : []),
               [
@@ -1694,27 +1817,31 @@ export default function BookingScreen() {
               ],
               [
                 "Selected Method",
-                requiresApproval
-                  ? customApproval
-                    ? "After custom price approval"
-                    : "After owner approval"
-                  : noPaymentRequired
-                    ? "No payment required"
-                    : fullyCovered
-                      ? "Gift / Referral Credit"
-                      : "Bank transfer",
+                s.testMode
+                  ? "Demo simulation"
+                  : requiresApproval
+                    ? customApproval
+                      ? "After custom price approval"
+                      : "After owner approval"
+                    : noPaymentRequired
+                      ? "No payment required"
+                      : fullyCovered
+                        ? "Gift / Referral Credit"
+                        : "Bank transfer",
               ],
               [
                 "Payment Status",
-                requiresApproval
-                  ? customApproval
-                    ? "Pending Custom Price"
-                    : "Pending Owner Approval"
-                  : noPaymentRequired
-                    ? "No payment due"
-                    : fullyCovered
-                      ? "Covered"
-                      : "Pending Verification",
+                s.testMode
+                  ? "No payment created"
+                  : requiresApproval
+                    ? customApproval
+                      ? "Pending Custom Price"
+                      : "Pending Owner Approval"
+                    : noPaymentRequired
+                      ? "No payment due"
+                      : fullyCovered
+                        ? "Covered"
+                        : "Pending Verification",
               ],
             ].map(([label, value], index) => (
               <View
@@ -1746,95 +1873,37 @@ export default function BookingScreen() {
               </View>
             ))}
           </Card>
-          <Card style={{ padding: 16, gap: 10 }}>
-            {[
-              {
-                id: "services" as const,
-                title: "Services Disclaimer",
-                body: "Service suitability, duration and final pricing may depend on consultation, hair length or condition, products used and professional assessment. Results vary.",
-              },
-              {
-                id: "products" as const,
-                title: "Products Disclaimer",
-                body: "Tell the salon about relevant allergies or sensitivities. Follow product directions and seek appropriate professional advice for medical concerns.",
-              },
-            ].map((item) => (
-              <View
-                key={item.id}
-                style={{
-                  borderBottomWidth: item.id === "services" ? 1 : 0,
-                  borderColor: c.border,
-                  paddingBottom: 8,
-                }}
-              >
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: openDisclaimer === item.id }}
-                  onPress={() => setOpenDisclaimer(openDisclaimer === item.id ? null : item.id)}
-                  style={{ minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10 }}
-                >
-                  <Txt bold style={{ flex: 1 }}>
-                    {item.title}
-                  </Txt>
-                  <Icon
-                    name={openDisclaimer === item.id ? "ChevronUp" : "ChevronDown"}
-                    size={19}
-                    color={c.brandAccent}
-                  />
-                </Pressable>
-                {openDisclaimer === item.id && (
-                  <Txt size={13} color={c.mutedForeground}>
-                    {item.body}
-                  </Txt>
-                )}
-              </View>
-            ))}
-          </Card>
           {s.testMode ? (
-            <Card style={{ gap: 8, backgroundColor: c.goldSurface, borderColor: c.goldBorder }}>
-              <Tag>Development Test Mode</Tag>
-              <Txt bold>Secure signing is unavailable in the login-free preview.</Txt>
-              <Txt size={13} color={c.mutedForeground}>
-                Sign in to create a real private agreement and booking.
-              </Txt>
-            </Card>
+            <>
+              <Tag>Development Test Mode · Local agreement only</Tag>
+              <ServiceAgreement
+                services={selected.map((v) => v.id)}
+                onReady={handleAgreementReady}
+                guest
+                guestName={guestName || "Demo Client"}
+                onGuestReady={setGuestAgreement}
+              />
+            </>
           ) : s.session ||
             (noPaymentRequired && guestName.trim() && guestEmail.trim() && guestPhone.trim()) ? (
             <ServiceAgreement
               services={selected.map((v) => v.id)}
-              onReady={setAgreementId}
+              onReady={handleAgreementReady}
               noPaymentRequired={noPaymentRequired}
               guest={!s.session}
               guestName={guestName}
               onGuestReady={setGuestAgreement}
             />
           ) : null}
-          <Card style={{ padding: 16, gap: 8 }}>
-            <Check
-              checked={policy}
-              onPress={() => setPolicy(!policy)}
-              label={
-                noPaymentRequired
-                  ? "I acknowledge the booking policy."
-                  : "I acknowledge the booking, deposit, and cancellation policy."
-              }
-            />
-            <LinkText onPress={() => setPolicyOpen((value) => !value)}>
-              {policyOpen ? "Close Policy" : "Read Policy"}
-            </LinkText>
-            {policyOpen && (
-              <Txt size={13} color={c.mutedForeground}>
-                A 50% minimum deposit secures an appointment only after the salon verifies payment.
-                Morning and evening VIP Access requests require owner approval before payment;
-                extended appointments display their VIP pricing before checkout. Cancellations made
-                at least 24 hours before the visit are eligible for owner-reviewed deposit refund;
-                later cancellations and no-shows follow the salon cancellation policy.
-              </Txt>
-            )}
-          </Card>
           {!!error && <ErrorBox message={error} />}
           <Action
-            label={requiresApproval ? "Request VIP Access" : "Confirm My Appointment →"}
+            label={
+              s.testMode
+                ? "Complete Demo Booking"
+                : requiresApproval
+                  ? "Request VIP Access"
+                  : "Confirm My Appointment →"
+            }
             prominent
             disabled={barDisabled}
             busy={busy}

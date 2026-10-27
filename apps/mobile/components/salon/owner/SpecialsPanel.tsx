@@ -43,7 +43,11 @@ export default function SpecialsPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const choices = services.filter((v) => !v.is_special && v.active);
-  const filteredChoices = choices.filter((v) => v.name.toLowerCase().includes(query.toLowerCase()));
+  const filteredChoices = choices.filter((v) =>
+    String(v?.name ?? "")
+      .toLowerCase()
+      .includes(query.toLowerCase()),
+  );
   const choicePages = Math.max(1, Math.ceil(filteredChoices.length / 12));
   const currentChoicePage = Math.min(choicePage, choicePages - 1);
   function open(item?: Service) {

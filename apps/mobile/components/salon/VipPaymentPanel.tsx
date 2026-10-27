@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View } from "react-native";
+import { Image, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { useSalon } from "@/lib/salon/SalonProvider";
@@ -101,9 +101,20 @@ export default function VipPaymentPanel({ appointment }: { appointment: Appointm
         <Txt size={12} color={c.mutedForeground}>Upload your bank transfer proof here.</Txt>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           <Action label="Take Photo" secondary icon="Camera" onPress={() => void choose("camera")} />
-          <Action label={receipt ? "Change Photo" : "Photo Library"} secondary icon="Upload" onPress={() => void choose("library")} />
+          <Action label={receipt ? "Change Photo" : "Upload Photo"} secondary icon="Upload" onPress={() => void choose("library")} />
         </View>
-        {!!receipt && <Txt size={13} color={c.success}>Selected: {receipt.fileName || "Payment proof image"}</Txt>}
+        {!!receipt && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Image
+              source={{ uri: receipt.uri }}
+              accessibilityLabel="Selected payment proof preview"
+              style={{ width: 44, height: 44, borderRadius: 8, backgroundColor: c.muted }}
+            />
+            <Txt size={13} color={c.success} style={{ flex: 1 }}>
+              Selected: {receipt.fileName || "Payment proof image"}
+            </Txt>
+          </View>
+        )}
       </Card>
       <Action label="Submit Proof for Verification" busy={busy} onPress={() => void submit()} style={{ alignSelf: "stretch" }} />
     </View>

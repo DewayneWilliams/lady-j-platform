@@ -10,7 +10,15 @@ module.exports = {
   assetBundlePatterns: ["**/*"],
   experiments: { typedRoutes: true, tsconfigPaths: true },
   icon: "./assets/images/icon.png",
-  ios: { supportsTablet: true, bundleIdentifier: "com.draftbit.newapp", buildNumber: "1" },
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: "com.draftbit.newapp",
+    buildNumber: "1",
+    infoPlist: {
+      NSSpeechRecognitionUsageDescription: "Maria listens only after you tap her ring.",
+      NSMicrophoneUsageDescription: "Maria uses the microphone only during an active conversation."
+    }
+  },
   name: "Lady J",
   orientation: "portrait",
   plugins: [
@@ -32,13 +40,24 @@ module.exports = {
   {
     photosPermission: "Choose profile, salon gallery, and private payment proof photos.",
     cameraPermission: "Take profile, salon gallery, and private payment proof photos.",
-    microphonePermission: "Record audio with appointment videos."
+    microphonePermission:
+    "Lady J uses the microphone only for Maria conversations and videos you choose to record."
   }],
 
 
   "expo-web-browser",
   "expo-image",
   "expo-secure-store",
+  "expo-notifications",
+  [
+  "expo-speech-recognition",
+  {
+    microphonePermission: "Maria uses the microphone only during an active conversation.",
+    speechRecognitionPermission:
+    "Maria converts your speech to text during an active conversation.",
+    androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"]
+  }],
+
 
   [
   "expo-router",

@@ -78,6 +78,13 @@ export function buildOwnerReport(
     { label: "Refunds", value: money(refunds / 100) },
     { label: "Net Receipts", value: money(net / 100) },
   ];
+  // Payments are recorded as individual receipts. This retains each portion of a mixed payment
+  // instead of labelling the entire booking with one method or counting it twice.
+  const receiptMethods = new Map<string, number>();
+  lines.filter((line) => line.type === "Receipt").forEach((line) => {
+    const label = line.method === "bank" ? "Bank Transfer" : line.method === "cash" ? "Cash Received" : line.method;
+    receiptMethods.set(label, (receiptMethods.get(label) || 0) + line.cents);
+  });
   const doc: ReportDocument = {
     title: kind,
     businessName,
@@ -99,6 +106,7 @@ export function buildOwnerReport(
     );
     doc.summary = [
       ...amounts,
+      ...[...receiptMethods].map(([label, cents]) => ({ label, value: money(cents / 100) })),
       { label: "Promotional Discounts", value: money(promotionalDiscounts / 100) },
       { label: "Pending Requests", value: pending.length },
     ];
@@ -123,7 +131,7 @@ export function buildOwnerReport(
       name(transactionById.get(l.transactionId)?.customer_id || null),
       l.category,
       l.item,
-      l.method,
+      l.method === "bank" ? "Bank Transfer" : l.method === "cash" ? "Cash Received" : l.method,
       transactionById.get(l.transactionId)?.status || "",
       l.cents / 100,
       l.reference || "",
@@ -136,7 +144,7 @@ export function buildOwnerReport(
         name(t.customer_id),
         "",
         "Awaiting verification",
-        t.method,
+        t.method === "bank" ? "Bank Transfer" : t.method === "cash" ? "Cash Received" : t.method,
         t.status,
         Number(t.amount),
         t.reference || "",
@@ -174,7 +182,9 @@ export function buildOwnerReport(
       localCalendarTime(a.starts_at).replace("T", " "),
       localCalendarTime(a.ends_at).replace("T", " "),
       name(a.client_id || a.customer_id),
-      a.services.map((s) => s.name).join(" + "),
+      (Array.isArray(a.services) ? a.services : [])
+        .map((s) => String(s?.name ?? "Service"))
+        .join(" + ") || "Service",
       a.status,
       Number(a.total),
       Number(a.discount_total || 0),
@@ -184,7 +194,7 @@ export function buildOwnerReport(
   } else if (kind === "Clients") {
     const clients = records.clients
       .filter((c) => !c.deleted_at)
-      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+      .sort((a, b) => String(a?.full_name ?? "").localeCompare(String(b?.full_name ?? "")));
     doc.summary = [
       { label: "Directory Clients", value: clients.length },
       {
@@ -225,17 +235,18 @@ export function buildOwnerReport(
       return groups.get(name)!;
     };
     for (const a of visits) {
-      const totalWeight = sum(a.services.map((s) => Math.max(0, cents(s.price))));
+      const appointmentServices = Array.isArray(a.services) ? a.services : [];
+      const totalWeight = sum(appointmentServices.map((s) => Math.max(0, cents(s?.price ?? 0))));
       let remaining = cents(a.total);
-      a.services.forEach((service, index) => {
+      appointmentServices.forEach((service, index) => {
         const part =
-          index === a.services.length - 1
+          index === appointmentServices.length - 1
             ? remaining
             : Math.floor(
                 cents(a.total) *
                   (totalWeight
                     ? Math.max(0, cents(service.price)) / totalWeight
-                    : 1 / a.services.length),
+                    : 1 / Math.max(1, appointmentServices.length)),
               );
         remaining -= part;
         const entry = group(service.name);

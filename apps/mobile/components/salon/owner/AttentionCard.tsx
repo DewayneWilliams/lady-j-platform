@@ -60,13 +60,21 @@ export default function AttentionCard({
   };
   return (
     <View testID="owner-attention-card">
-      <Card style={{ gap: 6, borderWidth: 0, padding: 26 }}>{children}</Card>
-      <View pointerEvents="none" accessible={false} style={{ ...outline, borderWidth: 2 }} />
+      <Card style={{ borderWidth: 0, paddingHorizontal: 10, paddingVertical: 4 }}>{children}</Card>
+      <View pointerEvents="none" accessible={false} style={{ ...outline, borderWidth: 1 }} />
       <Animated.View
         testID="owner-attention-pulse"
         pointerEvents="none"
         accessible={false}
-        style={{ ...outline, borderWidth: 8, opacity: pulse }}
+        style={{
+          ...outline,
+          borderWidth: 5,
+          opacity: pulse,
+          shadowColor: c.attentionBorder,
+          shadowOpacity: 0.18,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 0 },
+        }}
       />
     </View>
   );

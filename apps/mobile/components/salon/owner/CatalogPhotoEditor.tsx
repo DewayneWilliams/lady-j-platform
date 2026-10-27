@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Pressable, ScrollView } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { db, check } from "@/lib/salon/client";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import Icon from "@/lib/icons/LucideIcon";
@@ -45,36 +46,22 @@ export default function CatalogPhotoEditor({
       setBusy(true);
       const added: string[] = [];
       for (const asset of result.assets) {
-        if (!asset.base64 && !asset.file)
+        const normalized = await manipulateAsync(asset.uri, [], {
+          compress: 0.84,
+          format: SaveFormat.JPEG,
+          base64: true,
+        });
+        if (!normalized.base64)
           throw new Error("This photo could not be read. Please choose it again.");
-        const bytes = asset.file
-          ? await asset.file.arrayBuffer()
-          : Uint8Array.from(atob(asset.base64!), (char) => char.charCodeAt(0)).buffer;
-        const header = new Uint8Array(bytes);
-        const mime =
-          header[0] === 255 && header[1] === 216
-            ? "image/jpeg"
-            : header[0] === 137 && header[1] === 80 && header[2] === 78 && header[3] === 71
-              ? "image/png"
-              : header[0] === 82 &&
-                  header[1] === 73 &&
-                  header[2] === 70 &&
-                  header[3] === 70 &&
-                  header[8] === 87 &&
-                  header[9] === 69 &&
-                  header[10] === 66 &&
-                  header[11] === 80
-                ? "image/webp"
-                : null;
-        if (!mime) throw new Error("Choose JPEG, PNG or WebP images.");
+        const bytes = Uint8Array.from(atob(normalized.base64), (char) => char.charCodeAt(0)).buffer;
+        const mime = "image/jpeg";
         if (bytes.byteLength > 5 * 1024 * 1024)
           throw new Error("Each photo must be smaller than 5 MB.");
         if (demo) {
-          if (asset.base64) added.push("data:" + mime + ";base64," + asset.base64);
-          else added.push(asset.uri);
+          added.push("data:" + mime + ";base64," + normalized.base64);
         } else {
           if (!s.session) throw new Error("Please sign in as the owner.");
-          const extension = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
+          const extension = "jpg";
           const path =
             s.session.user.id +
             "/" +

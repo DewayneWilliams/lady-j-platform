@@ -1,9 +1,9 @@
 import { Appointment } from "./types";
 export const blockReasons = [
+  { value: "personal", label: "Personal Reason", color: "blocked" },
   { value: "vacation", label: "Vacation", color: "blocked" },
   { value: "training", label: "Training", color: "blocked" },
   { value: "maintenance", label: "Salon Maintenance", color: "blocked" },
-  { value: "personal", label: "Personal Time", color: "blocked" },
 ] as const;
 const legacyBlockReasons = [
   { value: "day_off", label: "Day Off / Holiday", color: "blocked" },

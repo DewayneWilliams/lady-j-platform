@@ -5,7 +5,7 @@ import { headerDate } from "@/lib/salon/ownerToday";
 import { addCalendarDays } from "@/lib/salon/calendarActivity";
 import { useBottomNavigationSpacing } from "../BottomNavigation";
 import { Card, ErrorBox } from "../ui";
-import { OwnerText } from "./OwnerUI";
+import { OwnerButton, OwnerText } from "./OwnerUI";
 import CalendarTools from "./CalendarTools";
 import BlockActivityCard from "./BlockActivityCard";
 export default function CalendarDashboard({
@@ -24,6 +24,8 @@ export default function CalendarDashboard({
   error,
   onRefresh,
   renderAppointment,
+  demo = false,
+  onClearDemo,
 }: {
   date: string;
   selected: boolean;
@@ -40,6 +42,8 @@ export default function CalendarDashboard({
   error: string;
   onRefresh: () => Promise<void>;
   renderAppointment: (a: Appointment) => React.ReactNode;
+  demo?: boolean;
+  onClearDemo?: () => void;
 }) {
   const { width } = useWindowDimensions(),
     spacing = useBottomNavigationSpacing(true);
@@ -95,6 +99,11 @@ export default function CalendarDashboard({
             live={live}
             status={status}
           />
+          {demo && appointments.some((item) => item.id.startsWith("demo-")) && (
+            <View style={{ marginBottom: 14, alignItems: "flex-end" }}>
+              <OwnerButton label="Clear Demo Data" secondary destructive onPress={onClearDemo} />
+            </View>
+          )}
           {selected && (
             <View style={{ marginBottom: 20 }}>
               <OwnerText muted>

@@ -39,7 +39,7 @@ export default function ClientsPanel({
       ? clients.map((v) => ({
           id: v.id,
           name: v.full_name,
-          detail: v.phone || v.email,
+          detail: v.phone || v.whatsapp_phone || "Phone not supplied",
           notes: "",
           client: v,
           profile: undefined as Profile | undefined,
@@ -182,8 +182,9 @@ export default function ClientsPanel({
         <View>
           <Card
             style={{
-              marginBottom: 14,
-              padding: 18,
+              marginBottom: 8,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
               flexDirection: "row",
               gap: 12,
               alignItems: "center",
@@ -203,16 +204,13 @@ export default function ClientsPanel({
                 version={item.photoUpdatedAt}
                 size={52}
               />
-              <View style={{ flex: 1, gap: 5 }}>
-                <OwnerText size={24} bold>
+              <View style={{ flex: 1, minWidth: 0, gap: 1, justifyContent: "center" }}>
+                <Txt size={20} bold numberOfLines={1} ellipsizeMode="tail">
                   {item.name}
-                </OwnerText>
-                <OwnerText muted>{item.detail || "Client details not supplied"}</OwnerText>
-                {!!item.notes && (
-                  <Txt size={18} color={c.mutedForeground}>
-                    {item.notes}
-                  </Txt>
-                )}
+                </Txt>
+                <Txt size={15} color={c.mutedForeground} numberOfLines={1} ellipsizeMode="tail">
+                  {item.detail || "Phone not supplied"}
+                </Txt>
               </View>
             </Pressable>
             <Pressable

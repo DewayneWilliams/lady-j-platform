@@ -16,17 +16,197 @@ import { check, db } from "@/lib/salon/client";
 import { dateLabel } from "@/lib/salon/types";
 import { royaltyLevel, royaltyLevels, RewardSummary } from "@/lib/salon/loyalty";
 import { Action, ErrorBox, Txt, useColors } from "./ui";
+import SubtleShimmer from "./SubtleShimmer";
 
 const levelAccents = ["#CE007F", "#D73E8D", "#A36A13", "#C28B18", "#7543B8", "#9D4B79", "#5A2A72"];
+
+function JourneyChevron({
+  direction,
+  disabled,
+  onPress,
+  compact = false,
+}: {
+  direction: "left" | "right";
+  disabled: boolean;
+  onPress: () => void;
+  compact?: boolean;
+}) {
+  const c = useColors();
+  const reduced = useReducedMotionPreference();
+  const motion = useRef(new Animated.Value(0)).current;
+  const animate = (value: number) => {
+    if (reduced !== false) return motion.setValue(0);
+    Animated.spring(motion, {
+      toValue: value,
+      speed: 28,
+      bounciness: 4,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  };
+  return (
+    <Animated.View
+      pointerEvents={disabled ? "none" : "auto"}
+      style={{
+        opacity: disabled ? 0 : 1,
+        transform: [
+          {
+            scale: motion.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: [0.97, 1, 1.08],
+            }),
+          },
+        ],
+      }}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${direction === "left" ? "Previous" : "Next"} Royalty level`}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        onPressIn={() => animate(-1)}
+        onPressOut={() => animate(0)}
+        onHoverIn={() => animate(1)}
+        onHoverOut={() => animate(0)}
+        hitSlop={0}
+        style={{
+          width: compact ? 28 : 44,
+          height: compact ? 28 : 44,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Icon
+          name={direction === "left" ? "ChevronLeft" : "ChevronRight"}
+          size={14}
+          strokeWidth={1.5}
+          color={c.foreground}
+        />
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function RoyaltyJourneyCard({
+  item,
+  width,
+  current,
+  achieved,
+  onPress,
+}: {
+  item: (typeof royaltyLevels)[number];
+  width: number;
+  current: boolean;
+  achieved: boolean;
+  onPress: () => void;
+}) {
+  const c = useColors();
+  const reduced = useReducedMotionPreference();
+  const motion = useRef(new Animated.Value(0)).current;
+  const hovered = useRef(false);
+  const [lifted, setLifted] = useState(false);
+  const animate = (value: number) => {
+    if (reduced !== false) return motion.setValue(0);
+    Animated.spring(motion, {
+      toValue: value,
+      speed: 24,
+      bounciness: 5,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  };
+  return (
+    <Animated.View
+      style={{
+        transform: [
+          {
+            scale: motion.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: [0.97, 1, 1.03],
+            }),
+          },
+          {
+            translateY: motion.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: [0, 0, -2],
+            }),
+          },
+        ],
+      }}
+    >
+      <Pressable
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}, ${item.visits} qualifying visits, ${current ? "current level" : achieved ? "achieved" : "upcoming"}`}
+        onPress={onPress}
+        onPressIn={() => {
+          setLifted(true);
+          animate(-1);
+        }}
+        onPressOut={() => {
+          setLifted(hovered.current);
+          animate(hovered.current ? 1 : 0);
+        }}
+        onHoverIn={() => {
+          hovered.current = true;
+          setLifted(true);
+          animate(1);
+        }}
+        onHoverOut={() => {
+          hovered.current = false;
+          setLifted(false);
+          animate(0);
+        }}
+        style={{
+          width,
+          height: 62,
+          paddingHorizontal: 12,
+          paddingVertical: 7,
+          borderRadius: 14,
+          justifyContent: "center",
+          borderWidth: current ? 2 : 1,
+          borderColor: current || achieved ? c.goldBorder : c.border,
+          backgroundColor: current ? c.headerGold : achieved ? c.goldSurface : c.card,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 9,
+          overflow: "hidden",
+          shadowColor: c.foreground,
+          shadowOpacity: lifted ? 0.12 : 0,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+        }}
+      >
+        {current && <SubtleShimmer interval={14000} travelDistance={width + 60} />}
+        <Txt size={22}>{item.icon}</Txt>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Txt size={15} bold color={current ? c.headerInk : c.foreground}>
+            {item.name}
+          </Txt>
+          <Txt size={11} color={current ? c.headerInk : c.mutedForeground}>
+            {item.visits === 0 ? "Your starting level" : `${item.visits} visits`}
+          </Txt>
+        </View>
+        {achieved && <Icon name="CircleCheck" size={18} color={c.tertiary} />}
+        {current && (
+          <Txt size={10} bold color={c.headerInk}>
+            CURRENT
+          </Txt>
+        )}
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export default function LoyaltyHeader({
   rewards,
   firstName,
   onChanged,
+  compact = false,
 }: {
   rewards: RewardSummary;
   firstName: string;
   onChanged: () => Promise<void>;
+  compact?: boolean;
 }) {
   const c = useColors();
   const focused = useIsFocused();
@@ -41,13 +221,8 @@ export default function LoyaltyHeader({
     lifetime_visits: 0,
     anniversary: new Date().toISOString().slice(0, 10),
   };
-  const levelHistory = rewards.level_history || [];
-  const visitHistory = rewards.visit_history || [];
-  const rewardHistory = rewards.history || [];
-  const entitlements = rewards.entitlements || [];
   const [journeyWidth, setJourneyWidth] = useState(0);
   const [journeyIndex, setJourneyIndex] = useState(Math.max(0, royalty.level - 1));
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [celebrationError, setCelebrationError] = useState("");
   const level = royaltyLevel(royalty.level);
@@ -96,7 +271,7 @@ export default function LoyaltyHeader({
     const timer = setTimeout(
       () =>
         journey.current?.scrollToOffset({
-          offset: Math.max(0, index * (cardWidth + 12) - (journeyWidth - cardWidth) / 2),
+          offset: index * (cardWidth + 12),
           animated: reduced === false,
         }),
       0,
@@ -104,111 +279,28 @@ export default function LoyaltyHeader({
     return () => clearTimeout(timer);
   }, [cardWidth, journeyWidth, reduced, royalty.level]);
 
-  const timeline = useMemo(
-    () =>
-      [
-        ...levelHistory.map((item) => ({
-          id: `level-${item.id}`,
-          title: `${royaltyLevel(item.level).icon} ${royaltyLevel(item.level).name} achieved`,
-          detail: `${item.annual_visits} annual visits`,
-          date: item.achieved_at,
-        })),
-        ...visitHistory
-          .filter((item) => item.status === "qualified")
-          .map((item) => ({
-            id: `visit-${item.id}`,
-            title: "Qualifying Royalty visit",
-            detail: "Completed and fully paid",
-            date: `${item.visit_date}T12:00:00Z`,
-          })),
-        ...rewardHistory.map((item) => ({
-          id: `reward-${item.id}`,
-          title: item.reason,
-          detail: `${item.points > 0 ? "+" : ""}${Number(item.points).toLocaleString("en-TT")} points`,
-          date: item.created_at,
-        })),
-      ]
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, 20),
-    [levelHistory, rewardHistory, visitHistory],
-  );
-
   const scrollTo = (index: number) => {
     const nextIndex = Math.max(0, Math.min(royaltyLevels.length - 1, index));
     setJourneyIndex(nextIndex);
     journey.current?.scrollToOffset({
-      offset: Math.max(0, nextIndex * (cardWidth + 12) - (journeyWidth - cardWidth) / 2),
+      offset: nextIndex * (cardWidth + 12),
       animated: reduced === false,
     });
   };
   if (!rewards.enabled) return null;
   return (
-    <View style={{ gap: 18, paddingBottom: 24 }}>
-      <View style={{ alignItems: "center", gap: 4 }}>
-        <Txt size={25} bold style={{ textAlign: "center" }}>
-          👑 Lady J Royalty Program
-        </Txt>
-        <Txt size={14} color={c.mutedForeground} style={{ textAlign: "center" }}>
-          Every visit brings you closer to Royalty.
-        </Txt>
-      </View>
+    <View style={{ gap: compact ? 0 : 5, paddingBottom: compact ? 0 : 4 }}>
+      <Txt size={18} bold style={{ textAlign: "center" }}>
+        Royalty Program
+      </Txt>
       <View
         onLayout={(event) => setJourneyWidth(event.nativeEvent.layout.width)}
         style={{
-          gap: 10,
           width: "100%",
-          height: 236,
+          height: compact ? 62 : 70,
+          justifyContent: "center",
         }}
       >
-        <View
-          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Previous Royalty level"
-            accessibilityState={{ disabled: journeyIndex === 0 }}
-            disabled={journeyIndex === 0}
-            onPress={() => scrollTo(journeyIndex - 1)}
-            style={({ pressed }) => ({
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: c.headerGold,
-              borderWidth: 1,
-              borderColor: c.goldBorder,
-              opacity: journeyIndex === 0 ? 0.35 : pressed ? 0.72 : 1,
-              transform: reduced === false && pressed ? [{ scale: 0.96 }] : undefined,
-            })}
-          >
-            <Icon name="ChevronLeft" size={22} color={c.headerInk} />
-          </Pressable>
-          <Txt size={18} bold>
-            Royalty Journey
-          </Txt>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Next Royalty level"
-            accessibilityState={{ disabled: journeyIndex === royaltyLevels.length - 1 }}
-            disabled={journeyIndex === royaltyLevels.length - 1}
-            onPress={() => scrollTo(journeyIndex + 1)}
-            style={({ pressed }) => ({
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: c.headerGold,
-              borderWidth: 1,
-              borderColor: c.goldBorder,
-              opacity: journeyIndex === royaltyLevels.length - 1 ? 0.35 : pressed ? 0.72 : 1,
-              transform: reduced === false && pressed ? [{ scale: 0.96 }] : undefined,
-            })}
-          >
-            <Icon name="ChevronRight" size={22} color={c.headerInk} />
-          </Pressable>
-        </View>
         <FlatList
           ref={journey}
           horizontal
@@ -219,7 +311,7 @@ export default function LoyaltyHeader({
           decelerationRate="fast"
           contentContainerStyle={{
             gap: 12,
-            paddingHorizontal: Math.max(0, (journeyWidth - cardWidth) / 2),
+            paddingHorizontal: Math.max(44, (journeyWidth - cardWidth) / 2),
           }}
           onMomentumScrollEnd={(event) =>
             setJourneyIndex(
@@ -232,121 +324,38 @@ export default function LoyaltyHeader({
               ),
             )
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const current = item.level === royalty.level;
             const achieved = item.level < royalty.level;
             return (
-              <View
-                accessible
-                accessibilityLabel={`${item.name}, ${item.visits} qualifying visits, ${current ? "current level" : achieved ? "achieved" : "upcoming"}`}
-                style={{
-                  width: cardWidth,
-                  minHeight: 150,
-                  padding: 18,
-                  borderRadius: 16,
-                  justifyContent: "space-evenly",
-                  borderWidth: current ? 2 : 1,
-                  borderColor: current || achieved ? c.goldBorder : c.border,
-                  backgroundColor: current ? c.headerGold : achieved ? c.goldSurface : c.card,
-                  opacity: item.level > royalty.level ? 0.68 : 1,
-                  paddingTop: 8,
-                  paddingBottom: 8,
-                  height: 108,
-                  marginHorizontal: 8,
-                  display: "flex",
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: 8,
-                  }}
-                >
-                  <Txt size={31}>{item.icon}</Txt>
-                  {achieved && <Icon name="CircleCheck" size={21} color={c.tertiary} />}
-                  {current && (
-                    <Txt size={11} bold color={c.headerInk}>
-                      CURRENT
-                    </Txt>
-                  )}
-                </View>
-                <Txt size={18} bold color={current ? c.headerInk : c.foreground}>
-                  {item.name}
-                </Txt>
-                <View>
-                  <Txt size={13} color={current ? c.headerInk : c.mutedForeground}>
-                    {item.visits === 0 ? "Your starting level" : `${item.visits} annual visits`}
-                  </Txt>
-                </View>
-              </View>
+              <RoyaltyJourneyCard
+                item={item}
+                width={cardWidth}
+                current={current}
+                achieved={achieved}
+                onPress={() => scrollTo(index)}
+              />
             );
           }}
-          className={"justify-around"}
         />
-        <Txt size={14} bold style={{ textAlign: "center" }}>
+      </View>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 }}>
+        <JourneyChevron
+          direction="left"
+          disabled={journeyIndex === 0}
+          onPress={() => scrollTo(journeyIndex - 1)}
+          compact={compact}
+        />
+        <Txt size={12} bold style={{ textAlign: "center" }}>
           Explore Royalty Levels
         </Txt>
+        <JourneyChevron
+          direction="right"
+          disabled={journeyIndex === royaltyLevels.length - 1}
+          onPress={() => scrollTo(journeyIndex + 1)}
+          compact={compact}
+        />
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: historyOpen }}
-        onPress={() => setHistoryOpen((value) => !value)}
-        style={{
-          minHeight: 52,
-          paddingHorizontal: 14,
-          borderRadius: 14,
-          borderWidth: 1,
-          borderColor: c.border,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
-        <Icon name="History" size={20} color={c.brandAccent} />
-        <Txt bold style={{ flex: 1 }}>
-          Royalty History
-        </Txt>
-        <Icon name={historyOpen ? "ChevronUp" : "ChevronDown"} size={20} color={c.foreground} />
-      </Pressable>
-      {historyOpen && (
-        <View style={{ gap: 10 }}>
-          <View
-            style={{
-              padding: 13,
-              borderRadius: 14,
-              backgroundColor: c.goldSurface,
-              borderWidth: 1,
-              borderColor: c.goldBorder,
-            }}
-          >
-            <Txt bold>Royalty year anniversary · {dateLabel(royalty.anniversary)}</Txt>
-            <Txt size={13} color={c.mutedForeground}>
-              Annual progress renews; lifetime visits, levels and reward balances remain.
-            </Txt>
-          </View>
-          {timeline.length ? (
-            timeline.map((item) => (
-              <View
-                key={item.id}
-                style={{ paddingLeft: 12, borderLeftWidth: 2, borderColor: c.goldBorder }}
-              >
-                <Txt size={14} bold>
-                  {item.title}
-                </Txt>
-                <Txt size={12} color={c.mutedForeground}>
-                  {item.detail} · {dateLabel(item.date)}
-                </Txt>
-              </View>
-            ))
-          ) : (
-            <Txt color={c.mutedForeground}>
-              Your Royalty history will appear after your first qualifying visit or reward.
-            </Txt>
-          )}
-        </View>
-      )}
       <Modal
         visible={celebrating && !!rewards.pending_level}
         transparent
@@ -427,6 +436,72 @@ export default function LoyaltyHeader({
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+export function LoyaltyHistory({ rewards }: { rewards: RewardSummary }) {
+  const c = useColors();
+  const royalty = rewards.royalty || {
+    level: 1,
+    annual_visits: 0,
+    lifetime_visits: 0,
+    anniversary: new Date().toISOString().slice(0, 10),
+  };
+  const timeline = useMemo(
+    () =>
+      [
+        ...(rewards.level_history || []).map((item) => ({
+          id: `level-${item.id}`,
+          title: `${royaltyLevel(item.level).icon} ${royaltyLevel(item.level).name} achieved`,
+          detail: `${item.annual_visits} visits`,
+          date: item.achieved_at,
+        })),
+        ...(rewards.visit_history || [])
+          .filter((item) => item.status === "qualified")
+          .map((item) => ({
+            id: `visit-${item.id}`,
+            title: "Qualifying Royalty visit",
+            detail: "Completed and fully paid",
+            date: `${item.visit_date}T12:00:00Z`,
+          })),
+      ]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 20),
+    [rewards.level_history, rewards.visit_history],
+  );
+  if (!rewards.enabled) return null;
+  return (
+    <View style={{ gap: 10 }}>
+      <View
+        style={{
+          padding: 13,
+          borderRadius: 14,
+          backgroundColor: c.goldSurface,
+          borderWidth: 1,
+          borderColor: c.goldBorder,
+          gap: 3,
+        }}
+      >
+        <Txt bold>Royalty year anniversary · {dateLabel(royalty.anniversary)}</Txt>
+        <Txt size={13} color={c.mutedForeground}>
+          Annual progress resets; lifetime visits, levels, and benefits remain. Royalty history
+          appears after your first qualifying completed visit.
+        </Txt>
+      </View>
+      {timeline.map((item) => (
+        <View
+          key={item.id}
+          style={{ paddingLeft: 12, borderLeftWidth: 2, borderColor: c.goldBorder }}
+        >
+          <Txt size={14} bold>
+            {item.title}
+          </Txt>
+          <Txt size={12} color={c.mutedForeground}>
+            {item.detail} · {dateLabel(item.date)}
+          </Txt>
+        </View>
+      ))}
     </View>
   );
 }

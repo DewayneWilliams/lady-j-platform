@@ -1,7 +1,7 @@
 import SalonLocation from "./SalonLocation";
 import { formatDuration } from "@/lib/salon/duration";
 import React, { useEffect, useState } from "react";
-import { View, useWindowDimensions } from "react-native";
+import { Platform, Pressable, View, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { money } from "@/lib/salon/types";
@@ -14,6 +14,7 @@ export default function HomeScreen() {
     { width } = useWindowDimensions(),
     s = useSalon();
   const desktop = width >= 850;
+  const careHeadlineSize = Math.min(32, Math.max(16, (Math.min(width - 32, 760) || 288) / 18));
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const next = Math.min(
@@ -64,12 +65,12 @@ export default function HomeScreen() {
         style={{
           flexDirection: "row",
           justifyContent: "space-around",
-          paddingVertical: 18,
+          paddingVertical: 12,
           borderBottomWidth: 1,
           borderColor: c.border,
           marginBottom: 0,
-          gap: 10,
-          height: 54,
+          gap: 4,
+          minHeight: 72,
         }}
       >
         {[
@@ -81,13 +82,22 @@ export default function HomeScreen() {
             key={v.text}
             style={{
               flexDirection: desktop ? "row" : "column",
-              gap: 9,
+              gap: desktop ? 9 : 5,
               alignItems: "center",
               flex: 1,
+              minWidth: 0,
+              paddingHorizontal: 2,
             }}
           >
             <Icon name={v.icon} size={17} color={c.warning} />
-            <Txt size={desktop ? 12 : 10} color={c.mutedForeground} style={{ textAlign: "center" }}>
+            <Txt
+              size={desktop ? 12 : 10}
+              color={c.foreground}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.72}
+              style={{ textAlign: "center", width: "100%", lineHeight: desktop ? 18 : 15 }}
+            >
               {v.text}
             </Txt>
           </View>
@@ -111,7 +121,6 @@ export default function HomeScreen() {
               <Action
                 label="Book this special"
                 onPress={() => {
-                  s.setSelected([v.id]);
                   go("booking", { id: v.id });
                 }}
               />
@@ -120,8 +129,28 @@ export default function HomeScreen() {
         </View>
       )}
       <View style={{ gap: 28, marginBottom: 24 }}>
-        <View style={{ gap: 14, maxWidth: 760 }}>
-          <Heading>A moment for you. A difference you carry.</Heading>
+        <View
+          style={{
+            gap: 14,
+            maxWidth: 760,
+            width: "100%",
+            alignSelf: "center",
+            alignItems: "center",
+            paddingTop: 6,
+            justifyContent: "center",
+          }}
+        >
+          <Txt
+            bold
+            size={careHeadlineSize}
+            style={{
+              lineHeight: careHeadlineSize * 1.2,
+              textAlign: "center",
+              alignItems: "center",
+            }}
+          >
+            Look Your Best. Feel Your Best!
+          </Txt>
           <Txt
             color={c.mutedForeground}
             style={{
@@ -134,6 +163,69 @@ export default function HomeScreen() {
               "You work hard, give your best to others, and deserve to feel just as good as you make everyone else feel. But finding time for yourself—and someone you can truly trust with your care—isn't always easy. At LADY J SALON & DAY SPA, we take the time to listen, understand your needs, and provide personalized beauty, grooming, and wellness services designed around you. Whether you're preparing for a special occasion or simply making yourself a priority, we're here to make every visit comfortable, relaxing, and rewarding. Because you deserve more than great results. \n\nYou deserve to leave feeling confident, refreshed, and ready to take on the world!"
             }
           </Txt>
+          <Pressable
+            testID="home-consultation-cta"
+            collapsable={false}
+            renderToHardwareTextureAndroid
+            accessibilityRole="button"
+            accessibilityLabel="Request Your Free Consultation, 15 Minutes, Complimentary"
+            accessibilityHint="Opens the complete free consultation request"
+            onPress={() => go("consultation")}
+            style={({ pressed }) => ({
+              width: "100%",
+              maxWidth: 560,
+              minWidth: 0,
+              minHeight: 72,
+              alignSelf: "center",
+              borderRadius: 16,
+              backgroundColor: "#2563EB",
+              position: "relative",
+              zIndex: 2,
+              overflow: "visible",
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.9 : 1,
+              ...(Platform.OS === "web"
+                ? ({ boxShadow: "0 5px 10px rgba(29, 78, 216, 0.18)" } as object)
+                : {
+                    shadowColor: "#1D4ED8",
+                    shadowOpacity: 0.18,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 5 },
+                    elevation: 6,
+                  }),
+            })}
+          >
+            <Txt
+              bold
+              size={18}
+              color="#FFFFFF"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+              style={{ width: "100%", textAlign: "center", lineHeight: 24, opacity: 1 }}
+            >
+              Request Your Free Consultation
+            </Txt>
+            <Txt
+              size={14}
+              color="#FFFFFF"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.88}
+              style={{
+                width: "100%",
+                textAlign: "center",
+                marginTop: 3,
+                lineHeight: 20,
+                opacity: 1,
+              }}
+            >
+              15 Minutes • Complimentary
+            </Txt>
+          </Pressable>
         </View>
       </View>
       <SalonLocation />

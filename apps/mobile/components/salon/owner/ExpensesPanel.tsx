@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
-import { db, check } from "@/lib/salon/client";
+import { db, check, asRows } from "@/lib/salon/client";
 import { useForegroundRefresh } from "@/lib/salon/useForegroundRefresh";
 import { Expense } from "@/lib/salon/ownerAssistant";
 import { Appointment, Purchase, Transaction, money } from "@/lib/salon/types";
@@ -52,16 +52,19 @@ export default function ExpensesPanel({
     try {
       const rows: Expense[] = [];
       for (let offset = 0; ; offset += 1000) {
-        const part = check(
-          await db()
-            .from("lj_expenses")
-            .select("*")
-            .gte("spent_on", first)
-            .lt("spent_on", next)
-            .order("spent_on", { ascending: false })
-            .order("id")
-            .range(offset, offset + 999),
-        ) as Expense[];
+        const part = asRows<Expense>(
+          check(
+            await db()
+              .from("lj_expenses")
+              .select("*")
+              .gte("spent_on", first)
+              .lt("spent_on", next)
+              .order("spent_on", { ascending: false })
+              .order("id")
+              .range(offset, offset + 999),
+          ),
+          "Expenses",
+        );
         rows.push(...part);
         if (part.length < 1000) break;
       }

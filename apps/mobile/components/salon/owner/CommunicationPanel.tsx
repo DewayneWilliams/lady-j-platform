@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
-import { db, check } from "@/lib/salon/client";
+import { db, check, asRows } from "@/lib/salon/client";
 import { dateLabel } from "@/lib/salon/types";
 import { useForegroundRefresh } from "@/lib/salon/useForegroundRefresh";
 import { Card, ErrorBox } from "../ui";
@@ -83,7 +83,7 @@ export default function CommunicationPanel({ demo }: { demo: boolean }) {
           .range(page * 20, page * 20 + 19),
       ]);
       setConnection(status as Connection);
-      setMessages(check(jobs) as Message[]);
+      setMessages(asRows<Message>(check(jobs), "Messages"));
       setTotal(jobs.count || 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load communication.");

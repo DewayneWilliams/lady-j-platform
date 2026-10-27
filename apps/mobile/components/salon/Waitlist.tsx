@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
-import { db, check } from "@/lib/salon/client";
+import { db, check, asRows } from "@/lib/salon/client";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { WaitlistEntry } from "@/lib/salon/ownerAssistant";
 import { dateLabel } from "@/lib/salon/types";
@@ -66,16 +66,19 @@ export function MyWaitlist() {
     if (!customer) return;
     try {
       setEntries(
-        check(
-          await db()
-            .from("lj_waitlist")
-            .select("*")
-            .eq("customer_id", customer)
-            .eq("status", "waiting")
-            .gte("requested_date", salonDayKey())
-            .order("requested_date")
-            .limit(10),
-        ) as WaitlistEntry[],
+        asRows<WaitlistEntry>(
+          check(
+            await db()
+              .from("lj_waitlist")
+              .select("*")
+              .eq("customer_id", customer)
+              .eq("status", "waiting")
+              .gte("requested_date", salonDayKey())
+              .order("requested_date")
+              .limit(10),
+          ),
+          "Waitlist",
+        ),
       );
       setError("");
     } catch (e) {

@@ -124,7 +124,6 @@ export default function InfoScreen({ page }: { page: string }) {
               )}
             </View>
             <SupportContact />
-            <Action gold label="Book your appointment" onPress={() => go("booking")} />
           </View>
         </View>
         <View

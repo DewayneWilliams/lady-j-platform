@@ -1,12 +1,12 @@
 import { MyWaitlist } from "./Waitlist";
 import { DateField } from "./DateFields";
-import React, { useState, useEffect } from "react";
-import { View, Pressable, Linking } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { Animated, Platform, View, Pressable, Linking } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { db, check } from "@/lib/salon/client";
-import { money, dateLabel, timeLabel } from "@/lib/salon/types";
+import { money, dateLabel, timeLabel, type Product, type Service } from "@/lib/salon/types";
 import {
   availableAuthProviders,
   socialSignIn,
@@ -19,9 +19,12 @@ import {
 import { AccountTrust } from "./AccountGate";
 import Shell, { useNav } from "./Shell";
 import { ProfilePhotoEditor } from "./ProfilePhoto";
+import ServiceCard from "./ServiceCard";
+import ProductCard from "./ProductCard";
 import { demoTestClientPhotoPath } from "@/lib/salon/demoProfilePhotos";
+import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreference";
 import VipPaymentPanel from "./VipPaymentPanel";
-import LoyaltyHeader from "./LoyaltyHeader";
+import LoyaltyHeader, { LoyaltyHistory } from "./LoyaltyHeader";
 import LoyaltyActions from "./LoyaltyActions";
 import GiftsReferrals from "./GiftsReferrals";
 import {
@@ -53,6 +56,137 @@ function visiblePronouns(value?: string | null) {
 }
 
 let accountForwardTarget: string | null = null;
+
+function AccountMenuRow({
+  icon,
+  title,
+  description,
+  onPress,
+  topBorder = false,
+}: {
+  icon: React.ComponentProps<typeof Icon>["name"];
+  title: string;
+  description?: string;
+  onPress: () => void;
+  topBorder?: boolean;
+}) {
+  const c = useColors();
+  const reducedMotion = useReducedMotionPreference();
+  const motion = useRef(new Animated.Value(0)).current;
+  const hovered = useRef(false);
+  const [highlighted, setHighlighted] = useState(false);
+  const animate = (value: number) => {
+    if (reducedMotion !== false) {
+      motion.setValue(0);
+      return;
+    }
+    Animated.spring(motion, {
+      toValue: value,
+      speed: 24,
+      bounciness: 5,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  };
+  return (
+    <Animated.View
+      style={{
+        transform: [
+          {
+            scale: motion.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: [0.97, 1, 1.03],
+            }),
+          },
+          {
+            translateX: motion.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: [0, 0, 3],
+            }),
+          },
+          {
+            translateY: motion.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: [0, 0, -2],
+            }),
+          },
+        ],
+      }}
+    >
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => {
+          setHighlighted(true);
+          animate(-1);
+        }}
+        onPressOut={() => {
+          setHighlighted(hovered.current);
+          animate(hovered.current ? 1 : 0);
+        }}
+        onHoverIn={() => {
+          hovered.current = true;
+          setHighlighted(true);
+          animate(1);
+        }}
+        onHoverOut={() => {
+          hovered.current = false;
+          setHighlighted(false);
+          animate(0);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={description ? `${title}. ${description}` : title}
+        style={{
+          minHeight: 52,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          paddingVertical: 6,
+          paddingHorizontal: 7,
+          borderTopWidth: topBorder ? 1 : 0,
+          borderColor: c.border,
+          borderRadius: 12,
+          backgroundColor: highlighted ? c.goldSurface : "transparent",
+          shadowColor: c.foreground,
+          shadowOpacity: highlighted ? 0.1 : 0,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+        }}
+      >
+        <Animated.View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: c.goldSurface,
+            transform: [
+              {
+                rotate: motion.interpolate({
+                  inputRange: [-1, 0, 1],
+                  outputRange: ["-3deg", "0deg", "3deg"],
+                }),
+              },
+            ],
+          }}
+        >
+          <Icon name={icon} size={18} color={c.brandAccent} />
+        </Animated.View>
+        <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+          <Txt size={16} bold>
+            {title}
+          </Txt>
+          {!!description && (
+            <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
+              {description}
+            </Txt>
+          )}
+        </View>
+        <Icon name="ChevronRight" size={17} strokeWidth={1.5} color={c.foreground} />
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 function AccountHistoryControls({ currentPage }: { currentPage: string }) {
   const router = useRouter();
   const go = useNav();
@@ -299,7 +433,15 @@ export function AuthScreen({
         style={{ maxWidth: 500, width: "100%", alignSelf: "center", paddingVertical: 24, gap: 20 }}
       >
         <Tag>{owner ? "Private owner access" : "Free account · Private by design"}</Tag>
-        <Txt serif size={38} style={{ lineHeight: 44 }}>
+        <Txt
+          serif
+          size={38}
+          style={{
+            lineHeight: 44,
+            fontSize: 24,
+            textAlign: "center",
+          }}
+        >
           {owner
             ? "Welcome back, Lady J."
             : register
@@ -426,6 +568,20 @@ export function AccountScreen() {
   const s = useSalon(),
     go = useNav(),
     c = useColors();
+  const reducedMotion = useReducedMotionPreference();
+  const avatarEntrance = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (reducedMotion !== false) {
+      avatarEntrance.setValue(1);
+      return;
+    }
+    Animated.spring(avatarEntrance, {
+      toValue: 1,
+      speed: 16,
+      bounciness: 6,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  }, [avatarEntrance, reducedMotion]);
   const accountParams = useLocalSearchParams<{ ref?: string; gift?: string }>();
   const accountNext =
     "account" +
@@ -444,7 +600,11 @@ export function AccountScreen() {
             action={
               <View style={[shared.row, { flexWrap: "wrap", justifyContent: "center" }]}>
                 <Action label="Sign in" onPress={() => go("login", { next: accountNext })} />
-                <Action label="Create an account" secondary onPress={() => go("register", { next: accountNext })} />
+                <Action
+                  label="Create an account"
+                  secondary
+                  onPress={() => go("register", { next: accountNext })}
+                />
               </View>
             }
           />
@@ -456,6 +616,9 @@ export function AccountScreen() {
     s.session?.user.user_metadata?.full_name ||
     (s.testMode ? "Test Client" : "Client");
   const firstName = s.profile?.first_name || name.split(" ")[0] || "beautiful";
+  const nextAppointment = s.appointments
+    .filter((appointment) => appointment.status === "confirmed" && Date.parse(appointment.starts_at) > Date.now())
+    .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))[0];
   const birthdayEntitlement = s.rewards.entitlements.find(
     (entry) => entry.kind === "birthday" && entry.status === "available",
   );
@@ -474,16 +637,17 @@ export function AccountScreen() {
       : "7 days after your birthday";
   const rows = [
     ["UserRound", "Profile", "Personal details and preferences", "profile"],
-    ["CalendarDays", "Appointments", "Upcoming bookings and service history", "appointments"],
+    ["CalendarDays", "Appointment History", "Upcoming bookings and service history", "appointments"],
     ["Wallet", "Orders & Payments", "Purchases, deposits, credits and balances", "payments"],
     ["Heart", "Favorites", "Saved services, products and workshops", "favorites"],
+    ["Images", "Photos & Videos", "Privately share your beauty inspiration", "my-media"],
+    ["Crown", "Royalty Rewards", "History, benefits and reward redemption", "royalty-rewards"],
     [
       "GraduationCap",
       "Beauty Academy",
       "Courses, workshops and learning materials",
       "my-workshops",
     ],
-    ["Images", "Photos & Videos", "Privately share your beauty inspiration", "my-media"],
     [
       "FileText",
       "Policies & Agreements",
@@ -492,56 +656,93 @@ export function AccountScreen() {
     ],
   ] as const;
   return (
-    <Shell footer={false} contentTopPadding={8}>
+    <Shell footer={false} contentTopPadding={0}>
       <View
         style={{
+          width: "100%",
+          maxWidth: 720,
+          alignSelf: "center",
           flexDirection: "row",
           alignItems: "center",
-          gap: 18,
-          paddingBottom: 24,
+          gap: 14,
+          marginBottom: 4,
         }}
       >
-        <ProfilePhotoEditor
-          name={name}
-          mode="client"
-          clientPath={
-            s.profile?.profile_photo_path ||
-            (!s.session && s.testMode ? demoTestClientPhotoPath : null)
-          }
-          displayPath={s.profile?.display_profile_photo_path}
-          updatedAt={s.profile?.profile_photo_updated_at}
-          disabled={!s.session}
-          onChanged={s.refreshPrivate}
-        />
-        <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-          <Txt size={24} bold>
-            Welcome back, {firstName}!
+        <Animated.View
+          style={{
+            transform: [
+              {
+                translateY: avatarEntrance.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [4, 0],
+                }),
+              },
+              {
+                scale: avatarEntrance.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.98, 1],
+                }),
+              },
+            ],
+          }}
+        >
+          <ProfilePhotoEditor
+            name={name}
+            mode="client"
+            clientPath={
+              s.profile?.profile_photo_path ||
+              (!s.session && s.testMode ? demoTestClientPhotoPath : null)
+            }
+            displayPath={s.profile?.display_profile_photo_path}
+            updatedAt={s.profile?.profile_photo_updated_at}
+            disabled={!s.session}
+            transparent
+            onChanged={s.refreshPrivate}
+          />
+        </Animated.View>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <Txt size={21} bold numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            Welcome Back, {firstName}
           </Txt>
-          <Txt color={c.mutedForeground}>Your personal beauty experience</Txt>
-          {!!visiblePronouns(s.profile?.pronouns) && (
-            <Txt size={13} color={c.mutedForeground}>
-              {visiblePronouns(s.profile?.pronouns)}
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={nextAppointment ? "View next appointment" : "Book an appointment"}
+            onPress={() => go(nextAppointment ? "appointments" : "booking")}
+            style={{ alignSelf: "flex-start", minWidth: 0, maxWidth: "100%" }}
+          >
+            <Txt size={14} color={c.brandAccent} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              {nextAppointment
+                ? `Next Appointment · ${dateLabel(nextAppointment.starts_at)} at ${timeLabel(nextAppointment.starts_at)}`
+                : "No Upcoming Appointments · Book Now ›"}
             </Txt>
-          )}
-          {!s.session && s.testMode && (
-            <Txt size={12} color={c.mutedForeground}>
-              Development Test Mode · profile uploads require sign-in
-            </Txt>
-          )}
+          </Pressable>
+          {!s.session && s.testMode && null}
         </View>
       </View>
-      <View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
-        <LoyaltyHeader rewards={s.rewards} firstName={firstName} onChanged={s.refreshPrivate} />
+      <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", gap: 6 }}>
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
+            borderColor: c.goldBorder,
+            paddingVertical: 2,
+          }}
+        >
+          {rows.map(([icon, title, desc, page], index) => (
+            <AccountMenuRow
+              key={page}
+              icon={icon}
+              title={title}
+              description={desc}
+              topBorder={index > 0}
+              onPress={() => go(page)}
+            />
+          ))}
+        </View>
         <GiftsReferrals />
-        <LoyaltyActions
-          rewards={s.rewards}
-          appointments={s.appointments}
-          onChanged={s.refreshPrivate}
-        />
         {birthdayEntitlement && (
           <Card
             style={{
-              marginBottom: 22,
               gap: 8,
               backgroundColor: c.goldSurface,
               borderColor: c.goldBorder,
@@ -563,57 +764,15 @@ export function AccountScreen() {
             </Txt>
           </Card>
         )}
-        <View
-          style={{
-            borderTopWidth: 1,
-            borderBottomWidth: 1,
-            borderColor: c.goldBorder,
-          }}
-        >
-          {rows.map(([icon, title, desc, page], index) => (
-            <Pressable
-              key={page}
-              onPress={() => go(page)}
-              accessibilityRole="button"
-              accessibilityLabel={`${title}. ${desc}`}
-              style={({ pressed }) => ({
-                minHeight: 76,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 14,
-                paddingVertical: 12,
-                paddingHorizontal: 4,
-                borderTopWidth: index ? 1 : 0,
-                borderColor: c.border,
-                opacity: pressed ? 0.62 : 1,
-              })}
-            >
-              <View
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 11,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: c.goldSurface,
-                }}
-              >
-                <Icon name={icon} size={21} color={c.brandAccent} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                <Txt size={17} bold>
-                  {title}
-                </Txt>
-                <Txt size={13} color={c.mutedForeground}>
-                  {desc}
-                </Txt>
-              </View>
-              <Icon name="ChevronRight" size={20} color={c.mutedForeground} />
-            </Pressable>
-          ))}
-        </View>
-        <Pressable
-          accessibilityRole="button"
+        <LoyaltyHeader
+          rewards={s.rewards}
+          firstName={firstName}
+          onChanged={s.refreshPrivate}
+          compact
+        />
+        <AccountMenuRow
+          icon="LogOut"
+          title={s.testMode && !s.session ? "Exit Test Mode" : "Log Out"}
           onPress={() => {
             if (s.testMode && !s.session) {
               s.exitTestMode();
@@ -626,22 +785,50 @@ export function AccountScreen() {
                 s.notify(reason instanceof Error ? reason.message : "Unable to log out."),
               );
           }}
-          style={{
-            marginTop: 30,
-            paddingTop: 20,
-            borderTopWidth: 1,
-            borderColor: c.border,
-            minHeight: 54,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <Icon name="LogOut" size={18} color={c.mutedForeground} />
-          <Txt color={c.mutedForeground}>
-            {s.testMode && !s.session ? "Exit Test Mode" : "Log Out"}
-          </Txt>
-        </Pressable>
+          topBorder
+        />
+      </View>
+    </Shell>
+  );
+}
+
+export function RoyaltyRewardsScreen() {
+  const s = useSalon();
+  const c = useColors();
+  return (
+    <Shell footer={false} contentTopPadding={12}>
+      <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", gap: 14 }}>
+        <AccountHistoryControls currentPage="royalty-rewards" />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 13,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: c.goldSurface,
+              borderWidth: 1,
+              borderColor: c.goldBorder,
+            }}
+          >
+            <Icon name="Crown" size={23} color={c.brandAccent} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Txt size={26} bold>
+              Royalty Rewards
+            </Txt>
+            <Txt size={13} color={c.mutedForeground}>
+              Your Royalty history, benefits and available rewards.
+            </Txt>
+          </View>
+        </View>
+        <LoyaltyHistory rewards={s.rewards} />
+        <LoyaltyActions
+          rewards={s.rewards}
+          appointments={s.appointments}
+          onChanged={s.refreshPrivate}
+        />
       </View>
     </Shell>
   );
@@ -683,39 +870,22 @@ export function FavoritesScreen() {
       </View>
       <View style={{ gap: 12 }}>
         {items.map(({ favorite, item }) => (
-          <Card
-            key={favorite.id}
-            style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 14 }}
-          >
-            <Photo name={item.image} style={{ width: 72, height: 72, borderRadius: 14 }} />
-            <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
-              <Txt size={17} bold>
-                {item.name}
-              </Txt>
-              <Txt size={13} color={c.mutedForeground}>
-                {tab === "service"
-                  ? "Saved service"
-                  : tab === "product"
-                    ? "Saved product"
-                    : "Saved workshop"}
-              </Txt>
-              <LinkText onPress={() => go(tab === "service" ? "booking" : tab, { id: item.id })}>
-                {tab === "service"
-                  ? "Book Service"
-                  : tab === "product"
-                    ? "View Product"
-                    : "View Workshop"}
-              </LinkText>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Remove ${item.name} from favorites`}
-              onPress={() => void s.toggleFavorite(tab, item.id)}
-              style={{ padding: 10 }}
-            >
-              <Icon name="Heart" size={22} color={c.brandAccent} fill={c.brandAccent} />
-            </Pressable>
-          </Card>
+          tab === "service" ? (
+            <ServiceCard key={favorite.id} service={item as Service} showFavorite onPress={() => go("booking", { id: item.id })} />
+          ) : tab === "product" ? (
+            <ProductCard key={favorite.id} product={item as Product} onPress={() => go("product", { id: item.id })} />
+          ) : (
+            <Card key={favorite.id} style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 14 }}>
+              <Photo name={item.image} style={{ width: 72, height: 72, borderRadius: 14 }} />
+              <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
+                <Txt size={17} bold>{item.name}</Txt>
+                <LinkText onPress={() => go("workshop", { id: item.id })}>View Workshop</LinkText>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${item.name} from favorites`} onPress={() => void s.toggleFavorite(tab, item.id)} style={{ padding: 10 }}>
+                <Icon name="Heart" size={22} color={c.brandAccent} fill={c.brandAccent} />
+              </Pressable>
+            </Card>
+          )
         ))}
         {!items.length && (
           <Empty
@@ -744,7 +914,12 @@ export function ProfileScreen() {
     [phone, setPhone] = useState(s.profile?.phone || ""),
     [birthday, setBirthday] = useState(s.profile?.birthday || ""),
     [preferences, setPreferences] = useState(s.profile?.preferences || ""),
-    [medicalConditions, setMedicalConditions] = useState(s.profile?.medical_conditions || ""),
+    [healthSafetyNotes, setHealthSafetyNotes] = useState(
+      s.profile?.health_safety_notes || s.profile?.medical_conditions || "",
+    ),
+    [clientAccommodations, setClientAccommodations] = useState(
+      s.profile?.client_accommodations || "",
+    ),
     [pronouns, setPronouns] = useState(s.profile?.pronouns || null),
     [consent, setConsent] = useState(s.profile?.marketing_consent || false),
     [editing, setEditing] = useState(false),
@@ -781,7 +956,8 @@ export function ProfileScreen() {
             phone,
             birthday: birthday || null,
             preferences,
-            medical_conditions: medicalConditions.trim(),
+            health_safety_notes: healthSafetyNotes.trim(),
+            client_accommodations: clientAccommodations.trim(),
             pronouns,
             marketing_consent: consent,
           }),
@@ -809,7 +985,8 @@ export function ProfileScreen() {
     setPhone(s.profile?.phone || "");
     setBirthday(s.profile?.birthday || "");
     setPreferences(s.profile?.preferences || "");
-    setMedicalConditions(s.profile?.medical_conditions || "");
+    setHealthSafetyNotes(s.profile?.health_safety_notes || s.profile?.medical_conditions || "");
+    setClientAccommodations(s.profile?.client_accommodations || "");
     setPronouns(s.profile?.pronouns || null);
     setConsent(s.profile?.marketing_consent || false);
     setError("");
@@ -901,18 +1078,29 @@ export function ProfileScreen() {
                 birthday
                 optional
               />
-              <Field
-                label="Preferences or relevant sensitivities (optional)"
-                value={preferences}
-                onChangeText={setPreferences}
-                multiline
-              />
-              <Field
-                label="Medical Conditions"
-                value={medicalConditions}
-                onChangeText={setMedicalConditions}
-                multiline
-              />
+              <View style={{ gap: 4 }}>
+                <Field
+                  label="Health & Safety Notes (optional)"
+                  value={healthSafetyNotes}
+                  onChangeText={setHealthSafetyNotes}
+                  multiline
+                />
+                <Txt size={13} color={c.mutedForeground}>
+                  Allergies, sensitivities, medical considerations, and treatment precautions.
+                </Txt>
+              </View>
+              <View style={{ gap: 4 }}>
+                <Field
+                  label="Client Accommodations (optional)"
+                  value={clientAccommodations}
+                  onChangeText={setClientAccommodations}
+                  multiline
+                />
+                <Txt size={13} color={c.mutedForeground}>
+                  Accessibility needs, mobility assistance, comfort preferences, and special service
+                  adjustments.
+                </Txt>
+              </View>
               <Check
                 label="I consent to receive optional offers and birthday messages."
                 checked={consent}
@@ -949,8 +1137,8 @@ export function ProfileScreen() {
                 ["Email", email || "Not provided"],
                 ["Phone / WhatsApp", phone || "Not provided"],
                 ["Date of Birth", birthday || "Not provided"],
-                ["Preferences or Sensitivities", preferences || "Not provided"],
-                ["Medical Conditions", medicalConditions || "Not provided"],
+                ["Health & Safety Notes", healthSafetyNotes || "Not provided"],
+                ["Client Accommodations", clientAccommodations || "Not provided"],
                 ["Optional Offers", consent ? "Allowed" : "Not allowed"],
               ].map(([label, value], index) => (
                 <View
@@ -1001,7 +1189,7 @@ export function RecordsScreen({ page }: { page: string }) {
     [busy, setBusy] = useState(false);
   const title =
     page === "appointments"
-      ? "My appointments"
+      ? "Appointment History"
       : page === "orders"
         ? "My orders"
         : page === "my-workshops"
@@ -1278,7 +1466,7 @@ export function RecordsScreen({ page }: { page: string }) {
                           </LinkText>
                         ))}
                       {p.kind === "workshop" &&
-                        p.items.map((v) => (
+                        (Array.isArray(p.items) ? p.items : []).map((v) => (
                           <WorkshopAccess
                             key={v.id}
                             id={v.id}

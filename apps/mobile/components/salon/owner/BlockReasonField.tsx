@@ -19,7 +19,7 @@ export default function BlockReasonField({
   const selected = allBlockReasons.find((reason) => reason.value === value) || blockReasons[0];
   return (
     <View style={{ gap: 8, marginBottom: 8 }}>
-      <OwnerText bold>Reason</OwnerText>
+      <OwnerText bold>Reason (Optional)</OwnerText>
       <Select
         disabled={disabled}
         value={{ value: selected.value, label: selected.label }}

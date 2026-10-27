@@ -19,12 +19,12 @@ import DownloadReports from "./owner/DownloadReports";
 import BusinessSettings from "./owner/BusinessSettings";
 import CompletionCelebration from "./owner/CompletionCelebration";
 import { createOwnerCalendarDemo } from "@/lib/salon/ownerCalendarDemo";
-import { activitiesOnDate } from "@/lib/salon/calendarActivity";
+import { activitiesOnDate, localCalendarTime } from "@/lib/salon/calendarActivity";
 import BlockActivityCard from "./owner/BlockActivityCard";
 import { useCalendarRealtime } from "@/lib/salon/useCalendarRealtime";
 import CalendarDashboard from "./owner/CalendarDashboard";
 import BlockTimeEditor from "./owner/BlockTimeEditor";
-import { formatDuration, serviceDurationLabel } from "@/lib/salon/duration";
+import { serviceDurationLabel } from "@/lib/salon/duration";
 import ServiceCategoryField from "./owner/ServiceCategoryField";
 import ServiceCategories from "./ServiceCategories";
 import OwnerEditorPortal from "./owner/OwnerEditorPortal";
@@ -47,7 +47,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
-import { db, check } from "@/lib/salon/client";
+import { db, check, asRows } from "@/lib/salon/client";
 import { signOutCurrentDevice } from "@/lib/salon/auth";
 import {
   Appointment,
@@ -94,8 +94,11 @@ import WaitlistPanel from "./owner/WaitlistPanel";
 import ExpensesPanel from "./owner/ExpensesPanel";
 import CommunicationPanel from "./owner/CommunicationPanel";
 import MariaPanel from "./owner/MariaPanel";
+import BackbarPanel from "./owner/BackbarPanel";
+import VendorSpendingPanel from "./owner/VendorSpendingPanel";
 import { OwnerText as OT, OwnerButton as OA } from "./owner/OwnerUI";
 import { ProfilePhotoEditor } from "./ProfilePhoto";
+import ServiceCard from "./ServiceCard";
 
 type Row = Record<string, unknown>;
 type Editor = {
@@ -184,8 +187,8 @@ function OF({
   );
 }
 export default function OwnerScreen() {
-  const routeParams = useLocalSearchParams<{ tab?: string }>();
-  const routeTab = ["Today", "Calendar", "Consultations", "Clients", "Business", "Maria"].includes(
+  const routeParams = useLocalSearchParams<{ tab?: string; consultation?: string }>();
+  const routeTab = ["Today", "Calendar", "Clients", "Business", "Maria"].includes(
     String(routeParams.tab),
   )
     ? String(routeParams.tab)
@@ -233,7 +236,7 @@ export default function OwnerScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
   const [tab, setTab] = useState(routeTab || "Today"),
-    [section, setSection] = useState("Overview"),
+    [section, setSection] = useState(routeParams.consultation ? "Consultations" : "Overview"),
     [appointments, setAppointments] = useState<Appointment[]>([]),
     [clients, setClients] = useState<Client[]>([]),
     [transactions, setTransactions] = useState<Transaction[]>([]),
@@ -282,6 +285,12 @@ export default function OwnerScreen() {
   useEffect(() => {
     if (routeTab) setTab(routeTab);
   }, [routeTab]);
+  useEffect(() => {
+    if (routeParams.consultation) {
+      setTab("Business");
+      setSection("Consultations");
+    }
+  }, [routeParams.consultation]);
   const demo = s.demoOwner && !s.owner,
     allowed = s.owner || demo;
   useEffect(() => {
@@ -395,7 +404,7 @@ export default function OwnerScreen() {
             if (table === "lj_client_records") query = query.is("deleted_at", null);
             if (table === "lj_waitlist")
               query = query.eq("status", "waiting").gte("requested_date", salonDayKey());
-            const page = check(await query) as Row[];
+            const page = asRows<Row>(check(await query), table);
             rows.push(...page);
             if (page.length < 1000) break;
           }
@@ -490,7 +499,6 @@ export default function OwnerScreen() {
   const nameFor = (id: string | null, clientId?: string | null) =>
     clients.find((v) => v.id === clientId || v.id === id || v.customer_id === id)?.full_name ||
     String(profiles.find((v) => v.id === id)?.full_name || "Client");
-  const pending = transactions.filter((v) => v.status === "pending");
   const today = appointmentsForToday(appointments, todayDate);
   function openEditor(table: string, row?: Row) {
     const config: Record<string, { title: string; fields: Editor["fields"]; defaults: Row }> = {
@@ -1200,6 +1208,46 @@ export default function OwnerScreen() {
       setBusy(false);
     }
   };
+  const reviewVipRequest = async (appointment: Appointment, approve: boolean) => {
+    setBusy(true);
+    setError("");
+    try {
+      if (demo) {
+        setAppointments((current) =>
+          current.map((item) =>
+            item.id === appointment.id
+              ? {
+                  ...item,
+                  approval_status: approve ? "approved" : "declined",
+                  status: approve ? item.status : "cancelled",
+                }
+              : item,
+          ),
+        );
+      } else {
+        check(
+          await db().rpc("lj_review_vip_request", {
+            p_id: appointment.id,
+            p_approve: approve,
+          }),
+        );
+        await load();
+      }
+      s.notify(
+        approve
+          ? "VIP request approved. Payment remains outstanding."
+          : "VIP request declined.",
+      );
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : `Unable to ${approve ? "approve" : "decline"} VIP request.`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
   const renderAppointment = (a: Appointment) => (
     <AppointmentCard
       key={a.id}
@@ -1258,46 +1306,26 @@ export default function OwnerScreen() {
             <View style={{ flex: 1 }}>
               <OA
                 fill
-                label="Decline"
-                secondary
-                disabled={busy || demo}
-                onPress={() => {
-                  setBusy(true);
-                  void (async () =>
-                    check(
-                      await db().rpc("lj_review_vip_request", { p_id: a.id, p_approve: false }),
-                    ))()
-                    .then(() => load())
-                    .then(() => s.notify("VIP request declined."))
-                    .catch((reason: unknown) =>
-                      setError(
-                        reason instanceof Error ? reason.message : "Unable to decline VIP request.",
-                      ),
-                    )
-                    .finally(() => setBusy(false));
-                }}
+                label="Approve"
+                accent
+                disabled={busy}
+                onPress={() => void reviewVipRequest(a, true)}
               />
             </View>
             <View style={{ flex: 1 }}>
               <OA
                 fill
-                label="Approve"
-                accent
-                disabled={busy || demo}
+                label="Decline"
+                secondary
+                disabled={busy}
                 onPress={() => {
-                  setBusy(true);
-                  void (async () =>
-                    check(
-                      await db().rpc("lj_review_vip_request", { p_id: a.id, p_approve: true }),
-                    ))()
-                    .then(() => load())
-                    .then(() => s.notify("VIP request approved. Payment remains outstanding."))
-                    .catch((reason: unknown) =>
-                      setError(
-                        reason instanceof Error ? reason.message : "Unable to approve VIP request.",
-                      ),
-                    )
-                    .finally(() => setBusy(false));
+                  setConfirm({
+                    text: "Decline this VIP request?",
+                    detail: "The requested appointment will not be approved or charged.",
+                    actionLabel: "Decline VIP Request",
+                    cancelLabel: "Keep request",
+                    run: () => reviewVipRequest(a, false),
+                  });
                 }}
               />
             </View>
@@ -1464,12 +1492,11 @@ export default function OwnerScreen() {
   async function saveSelectedContact() {
     if (!selectedClient || !editingContact || busy) return;
     setError("");
-    const first_name = (selectedClient.first_name ?? selectedClient.full_name.split(" ")[0]).trim();
-    const last_name = (
-      selectedClient.last_name ?? selectedClient.full_name.split(" ").slice(1).join(" ")
-    ).trim();
-    const email = selectedClient.email.trim();
-    const phone = selectedClient.phone.trim();
+    const fullName = String(selectedClient?.full_name ?? "").trim();
+    const first_name = String(selectedClient?.first_name ?? fullName.split(" ")[0] ?? "").trim();
+    const last_name = (selectedClient?.last_name ?? fullName.split(" ").slice(1).join(" ")).trim();
+    const email = String(selectedClient?.email ?? "").trim();
+    const phone = String(selectedClient?.phone ?? "").trim();
     if (!first_name || !last_name) {
       setError("Enter a first and last name.");
       return;
@@ -1528,6 +1555,13 @@ export default function OwnerScreen() {
   }
   function editBlock(block: Appointment) {
     setError("");
+    setEditingBlock(block);
+    setInitialBlockReason(block.block_reason || "personal");
+    setStart(localCalendarTime(block.starts_at));
+    setCalendarForm("block");
+  }
+  function deleteBlock(block: Appointment) {
+    setError("");
     setConfirm({
       text: "Delete this blocked time?",
       actionLabel: "Delete block",
@@ -1544,6 +1578,8 @@ export default function OwnerScreen() {
           );
           await load(true);
         }
+        setCalendarForm(null);
+        setEditingBlock(null);
         s.notify(demo ? "Block deleted. Time is available." : "Block deleted. Time is available.");
       },
     });
@@ -1646,13 +1682,12 @@ export default function OwnerScreen() {
           error={error}
           onRefresh={refreshWorkspace}
           renderAppointment={renderAppointment}
-        />
-      ) : tab === "Consultations" ? (
-        <ConsultationRequestsPanel
-          key={navigationRevision}
-          services={services}
-          appointments={appointments}
-          onChanged={() => load(true)}
+          demo={demo}
+          onClearDemo={() => {
+            setAppointments((current) => current.filter((item) => !item.id.startsWith("demo-")));
+            setTransactions((current) => current.filter((item) => !item.id.startsWith("demo-")));
+            s.notify("Demo calendar data cleared. Real bookings were not changed.");
+          }}
         />
       ) : tab === "Clients" ? (
         loading ? (
@@ -1744,6 +1779,7 @@ export default function OwnerScreen() {
                           label="Back to Business"
                           icon="ChevronLeft"
                           secondary
+                          compact
                           centered
                           onPress={() => setSection("Overview")}
                         />
@@ -1759,6 +1795,23 @@ export default function OwnerScreen() {
                         clients={clients}
                         demo={demo}
                       />
+                    )}
+                    {section === "Consultations" && (
+                      <ConsultationRequestsPanel
+                        services={services}
+                        appointments={appointments}
+                        focusId={routeParams.consultation}
+                        onChanged={() => load(true)}
+                      />
+                    )}
+                    {section === "Approvals" && (
+                      <View style={{ gap: 18 }}>
+                        <OT size={24} bold>VIP Appointments</OT>
+                        {appointments.filter((a) => a.is_vip && a.approval_status === "pending").map(renderAppointment)}
+                        {!appointments.some((a) => a.is_vip && a.approval_status === "pending") && <OT muted>No VIP approvals waiting.</OT>}
+                        <OT size={24} bold>Consultation Requests</OT>
+                        <ConsultationRequestsPanel services={services} appointments={appointments} focusId={routeParams.consultation} onChanged={() => load(true)} />
+                      </View>
                     )}
                     {section === "Expenses" && (
                       <ExpensesPanel
@@ -1831,8 +1884,18 @@ export default function OwnerScreen() {
                         }
                       />
                     )}
+                    {section === "Backbar" && (
+                      <BackbarPanel
+                        services={services}
+                        demo={demo}
+                        onBack={() => setSection("Overview")}
+                      />
+                    )}
+                    {section === "VendorManagement" && (
+                      <VendorSpendingPanel onBack={() => setSection("Overview")} />
+                    )}
                     {section === "Overview" && (
-                      <View style={{ gap: 28 }}>
+                      <View style={{ gap: 10 }}>
                         <DailyBriefing
                           items={[...attention].sort((a, b) => {
                             const rank = (key: string) =>
@@ -1845,14 +1908,9 @@ export default function OwnerScreen() {
                           }}
                         />
                         <BusinessOverview
-                          services={services.filter((v) => !v.is_special).length}
-                          workshops={workshops.length}
-                          products={products.length}
-                          pending={pending.length}
-                          orders={purchases.filter((v) => v.kind === "product").length}
                           onOpen={setSection}
                           onMedia={() => setMediaContext({ mode: "gallery" })}
-                          bankReady={!!s.settings?.bank_instructions}
+                          urgentApproval={appointments.some((a) => a.is_vip && a.approval_status === "pending")}
                         />
                       </View>
                     )}
@@ -1925,6 +1983,14 @@ export default function OwnerScreen() {
                         {catalogItems
                           .slice(currentCatalogPage * 12, currentCatalogPage * 12 + 12)
                           .map((v) => (
+                            section === "Services" ? (
+                            <View key={v.id} style={{ gap: 6, marginBottom: 12 }}>
+                              <ServiceCard service={v as Service} />
+                              <View style={{ alignItems: "flex-end" }}>
+                                <OA label="Edit Details" compact secondary onPress={() => openEditor("lj_services", v as unknown as Row)} />
+                              </View>
+                            </View>
+                            ) : (
                             <Card key={v.id} style={{ marginBottom: 16, gap: 14 }}>
                               <View style={{ flexDirection: "row", gap: 18, alignItems: "center" }}>
                                 <Photo
@@ -2009,6 +2075,7 @@ export default function OwnerScreen() {
                                 )}
                               </View>
                             </Card>
+                            )
                           ))}
                         {catalogPages > 1 && (
                           <View
@@ -2125,7 +2192,12 @@ export default function OwnerScreen() {
                           .map((p) => (
                             <Card key={p.id} style={{ marginBottom: 16, gap: 14 }}>
                               <OT bold size={22}>
-                                {p.items.map((v) => `${String(v.name)} × ${v.quantity}`).join(", ")}
+                                {(Array.isArray(p.items) ? p.items : [])
+                                  .map(
+                                    (v) =>
+                                      `${String(v?.name ?? "Item")} × ${Number(v?.quantity) || 0}`,
+                                  )
+                                  .join(", ")}
                               </OT>
                               <OT>
                                 {nameFor(p.customer_id)} · {money(p.total)} · {p.fulfillment}
@@ -2325,14 +2397,12 @@ export default function OwnerScreen() {
                     {section === "Royalty" && (
                       <LoyaltySettings
                         demo={demo}
-                        redemptionPoints={Number(s.settings?.loyalty_redemption_points ?? 100)}
-                        redemptionValue={Number(s.settings?.loyalty_redemption_value ?? 5)}
                         onMessageClient={(client) =>
                           setContactActions({
                             name: client.full_name,
                             whatsapp: client.whatsapp_phone,
                             phone: client.phone,
-                            message: `Hello ${client.full_name.split(" ")[0] || ""}, Lady J is thinking of you. `,
+                            message: `Hello ${String(client?.full_name ?? "").split(" ")[0] || ""}, Lady J is thinking of you. `,
                           })
                         }
                       />
@@ -2414,7 +2484,41 @@ export default function OwnerScreen() {
                     )}
                   </>
                 )}
-                {tab === "Maria" && <MariaPanel demo={demo} />}
+                {tab === "Maria" && (
+                  <MariaPanel
+                    demo={demo}
+                    appointments={appointments}
+                    clients={clients}
+                    onAction={(action) => {
+                      if (action.type === "tab") {
+                        setTab(action.value || "Today");
+                        setSection("Overview");
+                      } else if (action.type === "business") {
+                        openBusiness(action.value || "Overview");
+                      } else if (action.type === "calendar") {
+                        setTab("Calendar");
+                        setCalendarDate(action.value || todayKey());
+                        setCalendarSelected(true);
+                        setCalendarView("Day");
+                      } else if (action.type === "client") {
+                        const client = clients.find((value) => value.id === action.value);
+                        setTab("Clients");
+                        if (client) setSelectedClient(client);
+                      } else if (action.type === "appointment") {
+                        const appointment = appointments.find((value) => value.id === action.value);
+                        if (appointment) {
+                          setTab("Calendar");
+                          setCalendarDate(salonDayKey(appointment.starts_at));
+                          setCalendarSelected(true);
+                          setCalendarView("Day");
+                          setExpandedAppointment(appointment.id);
+                        } else {
+                          ownerAction("appointment");
+                        }
+                      }
+                    }}
+                  />
+                )}
               </>
             )}
           </View>
@@ -2502,15 +2606,19 @@ export default function OwnerScreen() {
                     borderRadius: 20,
                   }}
                 >
-                  <ScrollView contentContainerStyle={{ padding: width < 440 ? 18 : 26 }}>
+                  <ScrollView
+                    contentContainerStyle={{
+                      padding: selectedClient ? (width < 440 ? 12 : 18) : width < 440 ? 18 : 26,
+                    }}
+                  >
                     <View
                       style={{
                         flexDirection: "row",
                         justifyContent: "space-between",
                         gap: 10,
                         alignItems: "center",
-                        marginBottom: 25,
-                        minHeight: 54,
+                        marginBottom: selectedClient ? 10 : 25,
+                        minHeight: selectedClient ? 44 : 54,
                       }}
                     >
                       <View
@@ -2702,13 +2810,22 @@ export default function OwnerScreen() {
                               {editor.table === "lj_client_records" &&
                                 f.key === "private_notes" && (
                                   <View style={{ gap: 12, marginBottom: 18 }}>
-                                    <OT bold>Medical Conditions:</OT>
+                                    <OT bold>Health &amp; Safety Notes</OT>
                                     <OT muted>
                                       {String(
                                         profiles.find((p) => p.id === editor.values.customer_id)
-                                          ?.medical_conditions ||
+                                          ?.health_safety_notes ||
+                                          profiles.find((p) => p.id === editor.values.customer_id)
+                                            ?.medical_conditions ||
                                           editor.values.medical_conditions ||
                                           "None recorded",
+                                      )}
+                                    </OT>
+                                    <OT bold>Client Accommodations</OT>
+                                    <OT muted>
+                                      {String(
+                                        profiles.find((p) => p.id === editor.values.customer_id)
+                                          ?.client_accommodations || "None recorded",
                                       )}
                                     </OT>
                                   </View>
@@ -2816,6 +2933,7 @@ export default function OwnerScreen() {
                             block,
                           ]);
                         }}
+                        onDelete={deleteBlock}
                         onSaved={async (savedDate) => {
                           await load(true);
                           setCalendarDate(savedDate);
@@ -2909,32 +3027,41 @@ export default function OwnerScreen() {
                       </>
                     )}
                     {selectedClient && (
-                      <View style={{ gap: 18 }}>
+                      <View style={{ gap: 10 }}>
                         <View style={{ alignItems: "center", gap: 5, marginBottom: 2 }}>
-                          <ProfilePhotoEditor
-                            name={selectedClient.full_name}
-                            mode="owner"
-                            clientId={selectedClient.id}
-                            clientPath={selectedClient.client_photo_path}
-                            ownerPath={selectedClient.owner_photo_path}
-                            useOwnerPhoto={selectedClient.use_owner_photo}
-                            updatedAt={selectedClient.profile_photo_updated_at}
-                            disabled={demo}
-                            size={96}
-                            onChanged={async () => {
-                              const fresh = check(
-                                await db()
-                                  .from("lj_client_records")
-                                  .select("*")
-                                  .eq("id", selectedClient.id)
-                                  .single(),
-                              ) as Client;
-                              setSelectedClient(fresh);
-                              setClients((old) =>
-                                old.map((client) => (client.id === fresh.id ? fresh : client)),
-                              );
+                          <View
+                            style={{
+                              padding: 2,
+                              borderRadius: 52,
+                              borderWidth: 1.5,
+                              borderColor: c.brandAccent,
                             }}
-                          />
+                          >
+                            <ProfilePhotoEditor
+                              name={selectedClient.full_name}
+                              mode="owner"
+                              clientId={selectedClient.id}
+                              clientPath={selectedClient.client_photo_path}
+                              ownerPath={selectedClient.owner_photo_path}
+                              useOwnerPhoto={selectedClient.use_owner_photo}
+                              updatedAt={selectedClient.profile_photo_updated_at}
+                              disabled={demo}
+                              size={96}
+                              onChanged={async () => {
+                                const fresh = check(
+                                  await db()
+                                    .from("lj_client_records")
+                                    .select("*")
+                                    .eq("id", selectedClient.id)
+                                    .single(),
+                                ) as Client;
+                                setSelectedClient(fresh);
+                                setClients((old) =>
+                                  old.map((client) => (client.id === fresh.id ? fresh : client)),
+                                );
+                              }}
+                            />
+                          </View>
                           <OT size={30} bold>
                             {selectedClient.full_name}
                           </OT>
@@ -3030,7 +3157,8 @@ export default function OwnerScreen() {
                               wrap
                               disabled={busy}
                               value={
-                                selectedClient.first_name ?? selectedClient.full_name.split(" ")[0]
+                                selectedClient?.first_name ??
+                                String(selectedClient?.full_name ?? "").split(" ")[0]
                               }
                               onChange={(first_name) =>
                                 setSelectedClient({ ...selectedClient, first_name })
@@ -3042,7 +3170,10 @@ export default function OwnerScreen() {
                               disabled={busy}
                               value={
                                 selectedClient.last_name ??
-                                selectedClient.full_name.split(" ").slice(1).join(" ")
+                                String(selectedClient?.full_name ?? "")
+                                  .split(" ")
+                                  .slice(1)
+                                  .join(" ")
                               }
                               onChange={(last_name) =>
                                 setSelectedClient({ ...selectedClient, last_name })
@@ -3073,7 +3204,7 @@ export default function OwnerScreen() {
                             />
                           </>
                         ) : (
-                          <View style={{ gap: 10, paddingVertical: 2 }}>
+                          <View style={{ gap: 6 }}>
                             <View style={{ gap: 4 }}>
                               <OT bold>Phone</OT>
                               <OT>{selectedClient.phone || "Not provided"}</OT>
@@ -3151,7 +3282,11 @@ export default function OwnerScreen() {
                                 <OT bold>
                                   {dateLabel(upcoming.starts_at)} · {timeLabel(upcoming.starts_at)}
                                 </OT>
-                                <OT>{upcoming.services.map((item) => item.name).join(", ")}</OT>
+                                <OT>
+                                  {(Array.isArray(upcoming.services) ? upcoming.services : [])
+                                    .map((item) => String(item?.name ?? "Service"))
+                                    .join(", ") || "Service"}
+                                </OT>
                                 <OT muted>
                                   {payment.remaining <= 0
                                     ? "Paid in full"
@@ -3192,18 +3327,29 @@ export default function OwnerScreen() {
                             </View>
                           );
                         })()}
-                        <OT size={24} bold>
-                          Important Information
-                        </OT>
-                        <View style={{ gap: 10 }}>
+                        <View style={{ gap: 8 }}>
                           <View style={{ gap: 4 }}>
-                            <OT bold>Medical/Service Considerations</OT>
+                            <OT bold>Health &amp; Safety Notes</OT>
                             <OT muted>
                               {String(
                                 profiles.find((p) => p.id === selectedClient.customer_id)
-                                  ?.medical_conditions ||
+                                  ?.health_safety_notes ||
+                                  profiles.find((p) => p.id === selectedClient.customer_id)
+                                    ?.medical_conditions ||
+                                  selectedClient.health_safety_notes ||
                                   selectedClient.medical_conditions ||
                                   selectedClient.sensitivities ||
+                                  "None recorded",
+                              )}
+                            </OT>
+                          </View>
+                          <View style={{ gap: 4 }}>
+                            <OT bold>Client Accommodations</OT>
+                            <OT muted>
+                              {String(
+                                profiles.find((p) => p.id === selectedClient.customer_id)
+                                  ?.client_accommodations ||
+                                  selectedClient.client_accommodations ||
                                   "None recorded",
                               )}
                             </OT>
@@ -3226,33 +3372,44 @@ export default function OwnerScreen() {
                           )}
                         </View>
                         <OwnerClientLoyalty clientId={selectedClient.id} demo={demo} />
-                        <OT size={24} bold>
-                          Photos &amp; Videos
-                        </OT>
+                        <View
+                          style={{
+                            minHeight: 44,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 12,
+                          }}
+                        >
+                          <OT size={24} bold>
+                            Media
+                          </OT>
+                          <Pressable
+                            accessibilityRole="button"
+                            onPress={() =>
+                              setMediaContext({ mode: "gallery", clientId: selectedClient.id })
+                            }
+                            style={{
+                              minHeight: 44,
+                              paddingHorizontal: 4,
+                              justifyContent: "center",
+                            }}
+                          >
+                            <OT size={16} bold>
+                              All Media
+                            </OT>
+                          </Pressable>
+                        </View>
                         <OwnerClientMediaPreview clientId={selectedClient.id} demo={demo} />
-                        <View style={{ flexDirection: "row", gap: 8 }}>
-                          <View style={{ flex: 1 }}>
-                            <OA
-                              label="View All"
-                              secondary
-                              compact
-                              fill
-                              onPress={() =>
-                                setMediaContext({ mode: "gallery", clientId: selectedClient.id })
-                              }
-                            />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <OA
-                              label="Add Media"
-                              accent
-                              compact
-                              fill
-                              onPress={() =>
-                                setMediaContext({ mode: "upload", clientId: selectedClient.id })
-                              }
-                            />
-                          </View>
+                        <View style={{ alignItems: "center" }}>
+                          <OA
+                            label="Add Media"
+                            accent
+                            compact
+                            onPress={() =>
+                              setMediaContext({ mode: "upload", clientId: selectedClient.id })
+                            }
+                          />
                         </View>
                         <ConsultationRequestsPanel
                           services={services}
@@ -3275,17 +3432,18 @@ export default function OwnerScreen() {
                         />
                         <View
                           style={{
-                            marginTop: 32,
-                            paddingTop: 28,
+                            marginTop: 12,
+                            paddingTop: 12,
                             borderTopWidth: 1,
                             borderColor: c.border,
                           }}
                         >
-                          <View style={{ alignItems: "center" }}>
+                          <View style={{ width: "100%", alignItems: "center" }}>
                             <OA
                               label="Delete Client"
                               icon="Trash2"
                               secondary
+                              centered
                               onPress={() => {
                                 const contact = selectedClient;
                                 setSelectedClient(null);

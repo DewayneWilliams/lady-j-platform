@@ -3,12 +3,10 @@ import { View, Pressable, TextInput, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { productBrands } from "@/lib/salon/categories";
-import { money } from "@/lib/salon/types";
 import { fonts } from "@/lib/salon/design";
 import Shell, { useNav } from "./Shell";
 import { Action, Card, Chip, Empty, LinkText, Tag, Txt, useColors } from "./ui";
-import CatalogGallery from "./CatalogGallery";
-import FavoriteButton from "./FavoriteButton";
+import ProductCard from "./ProductCard";
 
 export default function ProductStore() {
   const s = useSalon();
@@ -108,27 +106,11 @@ export default function ProductStore() {
           flexDirection: "row",
           flexWrap: "wrap",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        <View style={{ flex: 1, minWidth: 200 }}></View>
-        <Action label="Buy Products" icon="ShoppingBag" inverted onPress={() => go("bag")} />
-      </View>
-      <View
-        style={{
-          flexDirection: "row",
-          flexWrap: "wrap",
-          alignItems: "center",
           gap: 10,
           justifyContent: "space-between",
           marginBottom: 24,
         }}
       >
-        <Txt color={c.mutedForeground} className={"justify-center relative"}>
-          {filtered.length} products
-        </Txt>
         <Action
           label={`Filter${brand !== "All brands" || category !== "All products" ? " · Active" : ""}`}
           icon="SlidersHorizontal"
@@ -136,6 +118,9 @@ export default function ProductStore() {
           onPress={() => setFiltersOpen((value) => !value)}
           style={{ minHeight: 46, paddingVertical: 8 }}
         />
+        <Txt color={c.mutedForeground} style={{ marginLeft: "auto", textAlign: "right" }}>
+          {filtered.length} products
+        </Txt>
       </View>
       {filtersOpen && (
         <Card style={{ gap: 18, marginBottom: 24, padding: 18 }}>
@@ -291,74 +276,17 @@ export default function ProductStore() {
           />
         </Card>
       )}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, alignItems: "flex-start" }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "flex-start" }}>
         {filtered.slice(currentPage * 24, currentPage * 24 + 24).map((v) => (
-          <Card
+          <ProductCard
             key={v.id}
+            product={v}
+            onPress={() => go("product", { id: v.id })}
             style={{
-              padding: 0,
-              overflow: "hidden",
-              width: desktop ? "31%" : "100%",
-              maxWidth: desktop ? "33%" : undefined,
+              width: desktop ? "48%" : "100%",
+              maxWidth: desktop ? "50%" : undefined,
             }}
-          >
-            <CatalogGallery photos={v.photos} cover={v.image} height={180} />
-            <View style={{ padding: 16, gap: 8, flex: 1 }}>
-              <Txt size={12} bold color={c.secondaryForeground}>
-                {v.brand || "Lady J collection"}
-              </Txt>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Pressable
-                  style={{ flex: 1 }}
-                  accessibilityRole="button"
-                  onPress={() => go("product", { id: v.id })}
-                >
-                  <Txt serif size={25}>
-                    {v.name}
-                  </Txt>
-                </Pressable>
-                <FavoriteButton kind="product" itemId={v.id} />
-              </View>
-              <Txt size={13} color={c.mutedForeground}>
-                {v.is_demo &&
-                /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
-                  ? "Ask the salon for details."
-                  : v.description}
-              </Txt>
-              <View style={{ marginTop: "auto", gap: 8 }}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 12,
-                  }}
-                >
-                  <Txt size={13} color={c.mutedForeground}>
-                    {v.stock > 0 ? "Pickup or delivery" : "Out of stock"}
-                  </Txt>
-                  <Txt size={16} bold>
-                    {money(v.price)}
-                  </Txt>
-                </View>
-                <Action
-                  label={s.cart[v.id] ? "In bag (" + s.cart[v.id] + ") · Add" : "Add to bag"}
-                  icon="Plus"
-                  disabled={v.stock <= 0 || (s.cart[v.id] || 0) >= v.stock}
-                  style={{ alignSelf: "stretch", paddingHorizontal: 12 }}
-                  onPress={() => {
-                    if (!s.session && !s.testMode) {
-                      go("register", { next: "product?id=" + v.id });
-                      return;
-                    }
-                    s.setCart((old) => ({ ...old, [v.id]: (old[v.id] || 0) + 1 }));
-                    s.notify(v.name + " added to your bag.");
-                  }}
-                />
-                <LinkText onPress={() => go("product", { id: v.id })}>View details</LinkText>
-              </View>
-            </View>
-          </Card>
+          />
         ))}
       </View>
       {!filtered.length && (

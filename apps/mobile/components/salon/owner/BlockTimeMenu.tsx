@@ -8,7 +8,7 @@ export default function BlockTimeMenu({ onSelect }: { onSelect: (reason: string)
       accessibilityLabel="Block Time"
       onPress={() => onSelect("personal")}
       style={({ pressed }) => ({
-        minHeight: 80,
+        minHeight: 52,
         borderRadius: 12,
         borderWidth: 1,
         borderColor: "#000000",
@@ -16,14 +16,14 @@ export default function BlockTimeMenu({ onSelect }: { onSelect: (reason: string)
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: 12,
-        paddingVertical: 14,
+        paddingVertical: 10,
         flexGrow: 1,
         maxWidth: "100%",
         minWidth: 0,
         opacity: pressed ? 0.98 : 1,
       })}
     >
-      <ButtonLabel size={20} color="#FFFFFF">
+      <ButtonLabel size={18} color="#FFFFFF">
         Block Time
       </ButtonLabel>
     </Pressable>

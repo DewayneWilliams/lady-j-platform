@@ -46,7 +46,9 @@ export function BagScreen() {
     });
   return (
     <Shell>
-      <Heading sub="A little Lady J, for your everyday.">Your shopping bag</Heading>
+      <Heading compact singleLine sub="A little Lady J, for your everyday.">
+        Your Shopping Bag
+      </Heading>
       {!hasItems ? (
         <Empty
           title="Make your routine a little more beautiful"

@@ -2,7 +2,7 @@ import React from "react";
 import { View, ViewStyle, ActivityIndicator } from "react-native";
 import { Button } from "@/components/ui/button";
 import Icon, { IconName } from "@/lib/icons/LucideIcon";
-import { Txt, ButtonLabel, Card, useColors } from "../ui";
+import { Txt, ButtonLabel, Card, controlTestId, safeControlLabel, useColors } from "../ui";
 export function OwnerText({
   children,
   size = 20,
@@ -20,14 +20,14 @@ export function OwnerText({
       size={size}
       bold={bold}
       color={muted ? c.mutedForeground : c.foreground}
-      className={"text-sm"}
+      className={"text-xs"}
     >
       {children}
     </Txt>
   );
 }
 export function OwnerButton({
-  label,
+  label: labelProp,
   onPress,
   icon,
   secondary = false,
@@ -41,8 +41,8 @@ export function OwnerButton({
   payment = false,
   id,
 }: {
-  label: string;
-  onPress: () => void;
+  label?: string;
+  onPress?: () => void;
   icon?: IconName;
   secondary?: boolean;
   destructive?: boolean;
@@ -56,30 +56,26 @@ export function OwnerButton({
   id?: string;
 }) {
   const c = useColors();
+  const label = safeControlLabel(labelProp, "Owner action");
+  const unavailable = disabled || busy || !onPress;
   const color = payment
     ? c.paymentPaidBadgeForeground
-    : disabled || busy
+    : unavailable
       ? c.mutedForeground
       : destructive
         ? c.attentionBorder
         : secondary
           ? c.foreground
-          : c.tertiaryForeground;
+          : c.primaryForeground;
   return (
     <Button
       accessibilityLabel={label}
-      testID={
-        id ||
-        `owner-action-${label
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")}`
-      }
+      testID={id || controlTestId("owner-action", label, "owner-action")}
       onPress={onPress}
-      disabled={disabled || busy}
+      disabled={unavailable}
       variant={secondary || destructive ? "outline" : "default"}
       style={{
-        minHeight: 58,
+        minHeight: 46,
         alignSelf: fill ? "stretch" : centered ? "center" : "flex-start",
         width: fill ? "100%" : undefined,
         maxWidth: "100%",
@@ -89,24 +85,24 @@ export function OwnerButton({
         alignItems: "center",
         justifyContent: "center",
         height: "auto",
-        borderRadius: 12,
+        borderRadius: 10,
         paddingHorizontal: compact ? 10 : 12,
-        paddingVertical: 12,
-        gap: 10,
+        paddingVertical: 8,
+        gap: 8,
         flexDirection: "row",
         backgroundColor: payment
           ? c.paymentPaidBadge
-          : disabled || busy
+          : unavailable
             ? c.muted
             : secondary || destructive
               ? c.card
               : accent
                 ? c.brandAccentFill
-                : c.tertiary,
+                : c.brandAccentFill,
         borderWidth: 1,
         borderColor: payment
           ? c.paymentPaidBadge
-          : disabled || busy
+          : unavailable
             ? c.border
             : destructive
               ? c.attentionBorder
@@ -114,7 +110,7 @@ export function OwnerButton({
                 ? c.border
                 : accent
                   ? c.brandAccentFill
-                  : c.tertiary,
+                  : c.brandAccentFill,
       }}
     >
       {busy ? (
@@ -215,8 +211,8 @@ export function OwnerTitle({
         flexWrap: "wrap",
         justifyContent: "space-between",
         alignItems: "center",
-        gap: 16,
-        marginBottom: 22,
+        gap: 12,
+        marginBottom: 16,
       }}
     >
       <View style={{ flex: 1, minWidth: 120 }}>
@@ -240,7 +236,7 @@ export function OwnerEmpty({
 }) {
   const c = useColors();
   return (
-    <Card style={{ alignItems: "center", gap: 14, paddingVertical: 32 }}>
+    <Card style={{ alignItems: "center", gap: 10, paddingVertical: 22 }}>
       <Icon name="CalendarHeart" size={32} color={c.warning} />
       <OwnerText size={24} bold>
         {title}
@@ -265,7 +261,7 @@ export function OwnerStat({
 }) {
   const c = useColors();
   return (
-    <Card style={{ padding: 20, gap: 9, ...style }}>
+    <Card style={{ padding: 14, gap: 7, ...style }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
         <OwnerText muted>{label}</OwnerText>
         <Icon name={icon} size={22} color={c.warning} />

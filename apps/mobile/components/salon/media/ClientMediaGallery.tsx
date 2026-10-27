@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
-import { db, check } from "@/lib/salon/client";
+import { db, check, asRows } from "@/lib/salon/client";
 import { sessionStorage } from "@/lib/salon/sessionStorage";
 import { fonts } from "@/lib/salon/design";
 import { useForegroundRefresh } from "@/lib/salon/useForegroundRefresh";
@@ -153,7 +153,8 @@ export default function ClientMediaGallery({
           .from("lj_media_consent")
           .select("*")
           .eq("client_id", scope || "00000000-0000-0000-0000-000000000000");
-        if (ticket === request.current) setConsents(check(result) || []);
+        if (ticket === request.current)
+          setConsents(asRows<Consent>(check(result), "Media consents"));
         const deleted = check(
           await db()
             .from("lj_client_media")
@@ -292,7 +293,7 @@ export default function ClientMediaGallery({
         .order("id", { ascending: false })
         .limit(100);
       if (scope) query = query.eq("client_id", scope);
-      setAudit(check(await query) || []);
+      setAudit(asRows<(typeof audit)[number]>(check(await query), "Media audit"));
     });
   }
   async function removeSelected() {
@@ -406,33 +407,46 @@ export default function ClientMediaGallery({
                 </Pressable>
               )}
             </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Sort media"
-                onPress={() => {
-                  const sort = filters.sort === "desc" ? "asc" : "desc";
-                  setFilters((v) => ({ ...v, sort }));
-                  void sessionStorage.setItem(prefKey, sort);
-                }}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  backgroundColor: c.card,
-                  borderWidth: 1,
-                  borderColor: c.border,
-                  borderRadius: 99,
-                }}
-              >
-                <Txt size={14} bold>
-                  {filters.sort === "desc" ? "Newest–Oldest" : "Oldest–Newest"}
-                </Txt>
-              </Pressable>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {(["asc", "desc"] as const).map((sort) => (
+                <Pressable
+                  key={sort}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    sort === "asc" ? "Sort oldest to newest" : "Sort newest to oldest"
+                  }
+                  accessibilityState={{ selected: filters.sort === sort }}
+                  onPress={() => {
+                    setFilters((v) => ({ ...v, sort }));
+                    void sessionStorage.setItem(prefKey, sort);
+                  }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    paddingHorizontal: 8,
+                    alignItems: "center",
+                    backgroundColor: filters.sort === sort ? c.brandAccentFill : c.card,
+                    borderWidth: 1,
+                    borderColor: filters.sort === sort ? c.brandAccentFill : c.border,
+                    borderRadius: 99,
+                  }}
+                >
+                  <Txt
+                    size={13}
+                    bold
+                    color={filters.sort === sort ? c.primaryForeground : c.foreground}
+                  >
+                    {sort === "asc" ? "Oldest–Newest" : "Newest–Oldest"}
+                  </Txt>
+                </Pressable>
+              ))}
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Filter media"
                 onPress={() => setPanel("filters")}
-                style={{ padding: 10 }}
+                style={{ flex: 1, padding: 10, alignItems: "center" }}
               >
                 <Txt size={16} color={c.brandAccent}>
                   Filters{filterCount ? " (" + filterCount + ")" : ""}
@@ -445,6 +459,7 @@ export default function ClientMediaGallery({
                   disabled={demo}
                   onPress={() => setPanel("upload")}
                   style={{
+                    flex: 1,
                     paddingVertical: 10,
                     paddingHorizontal: 16,
                     borderRadius: 99,
@@ -776,7 +791,7 @@ export default function ClientMediaGallery({
                     </Txt>
                   )}
                   <View style={{ flexDirection: "row", gap: 5 }}>
-                    {row.items.map((m) => (
+                    {(Array.isArray(row.items) ? row.items : []).map((m) => (
                       <View key={m.id} style={{ flex: 1, minWidth: 0 }}>
                         <Pressable
                           accessibilityRole="button"
@@ -982,8 +997,10 @@ export default function ClientMediaGallery({
                       id: a.id,
                       name:
                         mediaDate(a.starts_at.slice(0, 10)) +
-                        " — " +
-                        a.services.map((v) => v.name).join(", "),
+                          " — " +
+                          (Array.isArray(a.services) ? a.services : [])
+                            .map((v) => String(v?.name ?? "Service"))
+                            .join(", ") || "Service",
                     })),
                 ]}
                 onChange={(appointment) => setFilters((v) => ({ ...v, appointment }))}

@@ -2,7 +2,7 @@ import { displayDate } from "@/lib/salon/dates";
 import { DateField } from "../DateFields";
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
-import { db, check } from "@/lib/salon/client";
+import { db, check, asRows } from "@/lib/salon/client";
 import { Discount } from "@/lib/salon/discounts";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { Card, Chip, Field, Check, ErrorBox, Txt, useColors } from "../ui";
@@ -60,14 +60,17 @@ export default function DiscountsPanel({
     setError("");
     void (async () => {
       try {
-        const data = check(
-          await db()
-            .from("lj_discounts")
-            .select("*,lj_promo_redemptions(discount_amount)")
-            .order("created_at", { ascending: false })
-            .order("id")
-            .range(page * 20, page * 20 + 19),
-        ) as (Discount & { lj_promo_redemptions?: { discount_amount: number }[] })[];
+        const data = asRows<Discount & { lj_promo_redemptions?: { discount_amount: number }[] }>(
+          check(
+            await db()
+              .from("lj_discounts")
+              .select("*,lj_promo_redemptions(discount_amount)")
+              .order("created_at", { ascending: false })
+              .order("id")
+              .range(page * 20, page * 20 + 19),
+          ),
+          "Discounts",
+        );
         if (active)
           setRows(
             data.map((row) => ({
@@ -356,8 +359,12 @@ export default function DiscountsPanel({
                     "Unavailable item"}
                 </OwnerText>
               )}
-              {catalogs[form.scope]
-                .filter((v) => v.name.toLowerCase().includes(search.toLowerCase()))
+              {(catalogs[form.scope] || [])
+                .filter((v) =>
+                  String(v?.name ?? "")
+                    .toLowerCase()
+                    .includes(search.toLowerCase()),
+                )
                 .slice(0, 8)
                 .map((v) => (
                   <Chip

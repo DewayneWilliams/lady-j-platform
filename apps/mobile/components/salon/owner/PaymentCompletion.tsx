@@ -44,27 +44,62 @@ export default function PaymentCompletion({
         <OwnerText muted>Previously verified receipts are already deducted.</OwnerText>
       </Card>
       <Card style={{ gap: 12, borderColor: c.goldBorder, backgroundColor: c.goldSurface }}>
-        <OwnerText size={22} bold>Apply Gift Card</OwnerText>
-        <OwnerText muted>Enter the secure code from the card or QR. Partial and full gift payments are supported and audited.</OwnerText>
-        <Field label="Gift Card Code" value={giftCode} onChangeText={(value) => setGiftCode(value.toUpperCase())} placeholder="LJ-XXXXXX-XXXXXX" />
+        <OwnerText size={22} bold>
+          Apply Gift Card
+        </OwnerText>
+        <OwnerText muted>
+          Enter the secure code from the card or QR. Partial and full gift payments are supported
+          and audited.
+        </OwnerText>
+        <Field
+          label="Gift Card Code"
+          value={giftCode}
+          onChangeText={(value) => setGiftCode(value.toUpperCase())}
+          placeholder="LJ-XXXXXX-XXXXXX"
+        />
         <OwnerButton label="Scan QR Code" secondary onPress={() => setScannerOpen(true)} />
-        <Field label="Amount to Apply" value={giftAmount} onChangeText={setGiftAmount} keyboardType="decimal-pad" placeholder={String(payment.remaining)} />
+        <Field
+          label="Amount to Apply"
+          value={giftAmount}
+          onChangeText={setGiftAmount}
+          keyboardType="decimal-pad"
+          placeholder={String(payment.remaining)}
+        />
         <OwnerButton
           label={busy ? "Applying…" : "Apply Gift Card"}
           secondary
           disabled={busy || !giftCode.trim() || !(Number(giftAmount) > 0)}
           onPress={() => {
-            setBusy(true); setError("");
-            void Promise.resolve(db().rpc("lj_owner_apply_gift_card", { p_appointment: appointment.id, p_code: giftCode.trim(), p_amount: Number(giftAmount) }))
+            setBusy(true);
+            setError("");
+            void Promise.resolve(
+              db().rpc("lj_owner_apply_gift_card", {
+                p_appointment: appointment.id,
+                p_code: giftCode.trim(),
+                p_amount: Number(giftAmount),
+              }),
+            )
               .then(check)
               .then(onGiftApplied)
-              .then(() => { setGiftCode(""); setGiftAmount(""); })
-              .catch((e: unknown) => setError(e instanceof Error ? e.message : "Gift card could not be applied."))
+              .then(() => {
+                setGiftCode("");
+                setGiftAmount("");
+              })
+              .catch((e: unknown) =>
+                setError(e instanceof Error ? e.message : "Gift card could not be applied."),
+              )
               .finally(() => setBusy(false));
           }}
         />
       </Card>
-      <GiftQrScanner visible={scannerOpen} onClose={() => setScannerOpen(false)} onCode={(code) => { setGiftCode(code); if (!giftAmount) setGiftAmount(String(payment.remaining)); }} />
+      <GiftQrScanner
+        visible={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onCode={(code) => {
+          setGiftCode(code);
+          if (!giftAmount) setGiftAmount(String(payment.remaining));
+        }}
+      />
       <OwnerText bold>How was the balance received?</OwnerText>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         <OwnerButton
@@ -101,13 +136,13 @@ export default function PaymentCompletion({
             height: 28,
             borderRadius: 7,
             borderWidth: 2,
-            borderColor: c.tertiary,
-            backgroundColor: accepted ? c.tertiary : "transparent",
+            borderColor: c.brandAccent,
+            backgroundColor: accepted ? c.brandAccentFill : "transparent",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Txt bold color={c.tertiaryForeground}>
+          <Txt bold color={c.primaryForeground}>
             {accepted ? "✓" : ""}
           </Txt>
         </View>

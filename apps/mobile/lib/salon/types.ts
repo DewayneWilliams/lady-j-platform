@@ -57,7 +57,7 @@ export type Appointment = {
   custom_approval?: boolean;
   cleanup_minutes?: number;
   is_vip?: boolean;
-  vip_percentage?: 25 | 35 | null;
+  vip_percentage?: 20 | 30 | null;
   vip_premium?: number;
   vip_reason?: string | null;
   approval_status?: "not_required" | "pending" | "approved" | "declined";
@@ -137,6 +137,8 @@ export type Profile = {
   display_profile_photo_path?: string | null;
   profile_photo_updated_at?: string | null;
   medical_conditions?: string;
+  health_safety_notes?: string;
+  client_accommodations?: string;
   email?: string;
   id: string;
   full_name: string;
@@ -155,6 +157,8 @@ export type Client = {
   use_owner_photo?: boolean;
   profile_photo_updated_at?: string | null;
   medical_conditions?: string;
+  health_safety_notes?: string;
+  client_accommodations?: string;
   deleted_at?: string | null;
   is_minor?: boolean;
   guardian_name?: string;
@@ -177,14 +181,8 @@ export type Client = {
 };
 export type Settings = {
   loyalty_enabled?: boolean;
-  loyalty_points_per_ttd?: number;
-  loyalty_redemption_points?: number;
-  loyalty_redemption_value?: number;
   loyalty_welcome_credit?: number;
   loyalty_birthday_credit?: number;
-  loyalty_referrer_points?: number;
-  loyalty_friend_points?: number;
-  loyalty_minimum_spend?: number;
   loyalty_allow_discount_stacking?: boolean;
   loyalty_birthday_gift_enabled?: boolean;
   loyalty_birthday_gift_note?: string;

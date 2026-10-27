@@ -3,13 +3,11 @@ import { Pressable, View } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { check, db } from "@/lib/salon/client";
 import { royaltyLevel, royaltyLevels } from "@/lib/salon/loyalty";
-import { dateLabel, money } from "@/lib/salon/types";
+import { dateLabel } from "@/lib/salon/types";
 import { ErrorBox, useColors } from "../ui";
 import { OwnerText } from "./OwnerUI";
 
 type Data = {
-  points: number;
-  value_ttd: number;
   level: number;
   annual_visits: number;
   lifetime_visits: number;
@@ -17,8 +15,6 @@ type Data = {
   history: { kind: string; title: string; detail: string; created_at: string }[];
 };
 const demoData: Data = {
-  points: 1240,
-  value_ttd: 62,
   level: 3,
   annual_visits: 8,
   lifetime_visits: 19,
@@ -39,8 +35,6 @@ export default function OwnerClientLoyalty({
     demo
       ? demoData
       : {
-          points: 0,
-          value_ttd: 0,
           level: 1,
           annual_visits: 0,
           lifetime_visits: 0,
@@ -94,8 +88,7 @@ export default function OwnerClientLoyalty({
             {level.icon} {level.name}
           </OwnerText>
           <OwnerText size={15} muted>
-            {data.annual_visits} annual · {data.lifetime_visits} lifetime visits ·{" "}
-            {Number(data.points).toLocaleString("en-TT")} points
+            {data.annual_visits} annual visits · {data.lifetime_visits} lifetime visits
           </OwnerText>
         </View>
         <Icon name={open ? "ChevronUp" : "ChevronDown"} size={20} color={c.foreground} />
@@ -122,21 +115,6 @@ export default function OwnerClientLoyalty({
                   ? `${remaining} visit${remaining === 1 ? "" : "s"} to ${next.name}`
                   : "Royal Circle achieved"}
               </OwnerText>
-            </View>
-            <View
-              style={{
-                flex: 1,
-                minWidth: 130,
-                padding: 12,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: c.border,
-              }}
-            >
-              <OwnerText size={14} muted>
-                Points value
-              </OwnerText>
-              <OwnerText bold>{money(data.value_ttd)}</OwnerText>
             </View>
             <View
               style={{

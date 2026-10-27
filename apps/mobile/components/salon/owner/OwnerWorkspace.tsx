@@ -10,7 +10,6 @@ import { OwnerButton } from "./OwnerUI";
 const tabs = [
   { name: "Today", icon: "Gem" as const },
   { name: "Calendar", icon: "CalendarRange" as const },
-  { name: "Consultations", icon: "ClipboardList" as const },
   { name: "Clients", icon: "UsersRound" as const },
   { name: "Business", icon: "BriefcaseBusiness" as const },
   { name: "Maria", icon: "AudioLines" as const },
@@ -102,27 +101,27 @@ export default function OwnerWorkspace({
         {desktop && (
           <View
             style={{
-              width: 246,
+              width: 228,
               borderRightWidth: 1,
               borderColor: c.border,
               backgroundColor: c.card,
-              paddingHorizontal: 21,
-              paddingTop: 28,
-              paddingBottom: 24,
+              paddingHorizontal: 16,
+              paddingTop: 20,
+              paddingBottom: 18,
             }}
           >
             <Brand />
-            <Txt size={16} color={c.warning} style={{ marginTop: 23, marginBottom: 26 }}>
+            <Txt size={16} color={c.warning} style={{ marginTop: 16, marginBottom: 18 }}>
               Owner workspace
             </Txt>
-            <View accessibilityLabel="Owner navigation" style={{ gap: 7 }}>
+            <View accessibilityLabel="Owner navigation" style={{ gap: 4 }}>
               {tabs.map(navItem)}
             </View>
-            <View style={{ marginTop: 28 }}>
+            <View style={{ marginTop: 18 }}>
               <OwnerButton label="Appointment" icon="Plus" onPress={onAdd} />
             </View>
             <View style={{ flex: 1 }} />
-            <View style={{ borderTopWidth: 1, borderColor: c.border, paddingTop: 20, gap: 9 }}>
+            <View style={{ borderTopWidth: 1, borderColor: c.border, paddingTop: 14, gap: 6 }}>
               <Icon name="ShieldCheck" size={24} color={c.warning} />
               <Txt size={18} bold>
                 Just for the owner
@@ -136,8 +135,8 @@ export default function OwnerWorkspace({
         <View style={{ flex: 1, minHeight: 0, minWidth: 0 }}>
           <View
             style={{
-              height: desktop ? 86 : 79,
-              paddingHorizontal: desktop ? 32 : 20,
+              height: desktop ? 74 : 70,
+              paddingHorizontal: desktop ? 24 : 16,
               backgroundColor: c.headerGold,
               borderBottomWidth: 1,
               borderColor: c.border,
@@ -163,7 +162,7 @@ export default function OwnerWorkspace({
               <ThemeToggle color={c.headerInk} />
               {desktop ? (
                 <OwnerButton
-                  label={demo ? "Client View" : "View salon"}
+                  label={demo ? "CLIENT MODE" : "View salon"}
                   secondary
                   onPress={onSalon}
                 />
@@ -184,7 +183,7 @@ export default function OwnerWorkspace({
                 >
                   <Icon name="ArrowUpRight" size={18} color={c.headerInk} />
                   <Txt size={11} bold color={c.headerInk}>
-                    {demo ? "Client View" : "Salon"}
+                    {demo ? "CLIENT MODE" : "Salon"}
                   </Txt>
                 </Pressable>
               )}
@@ -205,7 +204,7 @@ export default function OwnerWorkspace({
             >
               <Icon name="Sparkles" size={15} color={c.warning} />
               <Txt size={12} color={c.warning} style={{ flex: 1 }}>
-                Sample data
+                DEMO · OWNER MODE · Sample data
               </Txt>
             </View>
           )}

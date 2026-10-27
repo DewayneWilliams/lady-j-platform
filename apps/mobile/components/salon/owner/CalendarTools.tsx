@@ -237,7 +237,7 @@ export default function CalendarTools({
           width: "100%",
           maxWidth: 560,
           alignSelf: "center",
-          minHeight: 80,
+          minHeight: 52,
         }}
       >
         <View style={{ flex: 1, minWidth: 0 }}>

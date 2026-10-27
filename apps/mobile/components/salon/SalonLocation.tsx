@@ -2,16 +2,23 @@ import React from "react";
 import { Linking, useWindowDimensions, View } from "react-native";
 import { salonDirectionsUrl } from "@/lib/salon/location";
 import SalonMap from "./SalonMap";
-import { Action, Heading, Txt, useColors } from "./ui";
+import { Action, Txt, useColors } from "./ui";
 
 export default function SalonLocation() {
   const c = useColors();
   const { width } = useWindowDimensions();
   return (
     <View style={{ marginTop: 8, gap: 10 }}>
-      <Heading compact singleLine>
+      <Txt
+        bold
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.68}
+        size={Math.min(28, Math.max(19, (width - 32) / 14.5))}
+        style={{ textAlign: "center", lineHeight: 34 }}
+      >
         Find Lady J Salon & Day Spa
-      </Heading>
+      </Txt>
       <View accessibilityLabel="Lady J Salon & Day Spa address" style={{ alignItems: "center" }}>
         <Txt bold numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
           On My Way Plaza

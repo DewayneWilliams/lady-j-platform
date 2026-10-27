@@ -16,6 +16,7 @@ import {
   ProfileScreen,
   RecordsScreen,
   FavoritesScreen,
+  RoyaltyRewardsScreen,
 } from "@/components/salon/AccountScreens";
 import { BagScreen, CheckoutScreen } from "@/components/salon/CommerceScreens";
 import { useSalon } from "@/lib/salon/SalonProvider";
@@ -42,6 +43,7 @@ const titles: Record<string, string> = {
   favorites: "Favorites",
   agreements: "My service agreements",
   "my-media": "My media",
+  "royalty-rewards": "Royalty Rewards",
   bag: "Shopping Bag",
   checkout: "Secure Checkout",
   about: "About Lady J",
@@ -106,6 +108,10 @@ export default function Page() {
       ) : (
         <AccountGate next="my-media" />
       );
+      break;
+    case "royalty-rewards":
+      content =
+        s.session || s.testMode ? <RoyaltyRewardsScreen /> : <AccountGate next="royalty-rewards" />;
       break;
     case "agreements":
       content = (

@@ -16,7 +16,7 @@ export const predefinedServiceCategories = [
 
 /** Stable ordering keeps the saved order within each category. */
 export function orderServicesByCategory<
-  T extends { category: string; is_special?: boolean; catalog_sort_order?: number | null },
+  T extends { category: string; name?: string; is_special?: boolean; catalog_sort_order?: number | null },
 >(
   services: readonly T[],
 ): T[] {
@@ -25,10 +25,19 @@ export function orderServicesByCategory<
     return index < 0 ? predefinedServiceCategories.length : index;
   };
   return [...services].sort(
-    (a, b) =>
-      rank(a) - rank(b) ||
-      (a.catalog_sort_order ?? Number.MAX_SAFE_INTEGER) -
-        (b.catalog_sort_order ?? Number.MAX_SAFE_INTEGER),
+    (a, b) => {
+      const washRank = (service: T) => {
+        const match = /^Wash & Blow Dry — (Short|Medium|Long)$/i.exec(service.name || "");
+        return match ? ["Short", "Medium", "Long"].indexOf(match[1]) : -1;
+      };
+      const aWash = washRank(a), bWash = washRank(b);
+      return (
+        rank(a) - rank(b) ||
+        (aWash >= 0 && bWash >= 0 ? aWash - bWash : 0) ||
+        (a.catalog_sort_order ?? Number.MAX_SAFE_INTEGER) -
+          (b.catalog_sort_order ?? Number.MAX_SAFE_INTEGER)
+      );
+    },
   );
 }
 export const productBrands = [

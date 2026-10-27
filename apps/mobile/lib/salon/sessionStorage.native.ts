@@ -4,14 +4,19 @@ type Manifest = { revision: string; count: number };
 async function manifest(key: string): Promise<Manifest | null> {
   const raw = await SecureStore.getItemAsync(key, options);
   if (!raw) return null;
-  const value = JSON.parse(raw) as Manifest;
-  return typeof value.revision === "string" &&
-    /^[a-z0-9]+$/.test(value.revision) &&
-    Number.isInteger(value.count) &&
-    value.count > 0 &&
-    value.count <= 256
-    ? value
-    : null;
+  try {
+    const value = JSON.parse(raw) as Manifest;
+    return typeof value.revision === "string" &&
+      /^[a-z0-9]+$/.test(value.revision) &&
+      Number.isInteger(value.count) &&
+      value.count > 0 &&
+      value.count <= 256
+      ? value
+      : null;
+  } catch {
+    // Treat corrupt or legacy values as signed out instead of preventing native startup.
+    return null;
+  }
 }
 async function removeChunks(key: string, old: Manifest | null) {
   if (old)

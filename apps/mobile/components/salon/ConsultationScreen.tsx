@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Image, Linking, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Image, Linking, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { check, db } from "@/lib/salon/client";
@@ -8,10 +9,12 @@ import {
   outcomeChoices,
   screeningQuestions,
   serviceGroup,
+  clientConsultationWhatsAppSummary,
+  CONSULTATION_WHATSAPP_PHONE,
   type ConsultationRequest,
 } from "@/lib/salon/consultations";
 import { fonts, fieldLabel } from "@/lib/salon/design";
-import { whatsappContactUrl } from "@/lib/salon/whatsapp";
+import { internationalNumber, whatsappContactUrl } from "@/lib/salon/whatsapp";
 import { DateField } from "./DateFields";
 import Shell, { useNav } from "./Shell";
 import { Action, Card, ErrorBox, Heading, Txt, useColors } from "./ui";
@@ -177,6 +180,7 @@ export default function ConsultationScreen() {
   const c = useColors();
   const go = useNav();
   const requestKey = useRef(uuid());
+  const categoryScroll = useRef<ScrollView>(null);
   const [category, setCategory] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [primary, setPrimary] = useState("");
@@ -205,10 +209,8 @@ export default function ConsultationScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState<ConsultationRequest | null>(null);
+  const [whatsappError, setWhatsappError] = useState("");
 
-  useEffect(() => {
-    if (!s.session && s.authReady) go("login", { next: "consultation" });
-  }, [s.session, s.authReady]);
   useEffect(() => {
     setName(
       (current) =>
@@ -232,9 +234,6 @@ export default function ConsultationScreen() {
     () => [...new Set(services.map((service) => service.category))],
     [services],
   );
-  useEffect(() => {
-    if (!category && categories.length) setCategory(categories[0]);
-  }, [category, categories]);
   useEffect(() => {
     if (selected.length === 1) setPrimary(selected[0]);
     else if (!selected.includes(primary)) setPrimary("");
@@ -273,9 +272,27 @@ export default function ConsultationScreen() {
         selectionLimit: 3 - photos.length,
         quality: 0.82,
         base64: true,
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       });
       if (result.canceled) return;
-      const next = result.assets.slice(0, 3 - photos.length);
+      const next = await Promise.all(
+        result.assets.slice(0, 3 - photos.length).map(async (asset) => {
+          const normalized = await manipulateAsync(asset.uri, [], {
+            compress: 0.84,
+            format: SaveFormat.JPEG,
+            base64: true,
+          });
+          return {
+            ...asset,
+            uri: normalized.uri,
+            base64: normalized.base64 || null,
+            mimeType: "image/jpeg",
+            fileName: (asset.fileName || "inspiration-photo").replace(/\.[^.]+$/, ".jpg"),
+            fileSize: normalized.base64 ? Math.ceil((normalized.base64.length * 3) / 4) : asset.fileSize,
+          };
+        }),
+      );
       if (next.some((asset) => (asset.fileSize || 0) > 10 * 1024 * 1024))
         throw new Error("Each inspiration photo must be 10 MB or smaller.");
       setPhotos((current) => [...current, ...next].slice(0, 3));
@@ -297,21 +314,21 @@ export default function ConsultationScreen() {
       return "Complete each service safety question.";
     if (name.trim().length < 2 || !email.includes("@"))
       return "Add your name and a valid email address.";
-    if (!/^\+[1-9][0-9\s().-]{7,20}$/.test(whatsapp.trim()))
+    if (whatsapp.trim() && !/^\+[1-9][0-9\s().-]{7,20}$/.test(whatsapp.trim()))
       return "Enter WhatsApp with a country code, for example +1 868 555 0123.";
-    if (!whatsappConsent)
-      return "Confirm that Lady J may contact you through WhatsApp about this request.";
+    if (whatsapp.trim() && !whatsappConsent)
+      return "Confirm WhatsApp consent or clear the WhatsApp field to submit without it.";
     return "";
   }
 
   async function submit() {
     const issue = validate();
     setError(issue);
-    if (issue || !s.session) return;
+    if (issue) return;
     setBusy(true);
     const paths: string[] = [];
     try {
-      for (let index = 0; index < photos.length; index++) {
+      for (let index = 0; s.session && index < photos.length; index++) {
         const asset = photos[index];
         const mime = asset.mimeType || "image/jpeg";
         const extension = mime.includes("png")
@@ -339,7 +356,7 @@ export default function ConsultationScreen() {
         client_name: name.trim(),
         client_email: email.trim(),
         whatsapp_phone: whatsapp.trim(),
-        whatsapp_consent: true,
+        whatsapp_consent: Boolean(whatsapp.trim() && whatsappConsent),
         service_ids: selected,
         primary_service_id: primary || selected[0],
         desired_outcomes: finalOutcomes,
@@ -359,20 +376,38 @@ export default function ConsultationScreen() {
         accessibility_details: accessibilityDetails,
         screening,
       };
-      const id = check(
-        await db().rpc("lj_submit_consultation", {
-          p_request_key: requestKey.current,
-          p_answers: answers,
-          p_inspiration_paths: paths,
+      const guestPhotos = s.session
+        ? []
+        : photos.map((asset) => ({
+            base64: asset.base64,
+            mimeType: asset.mimeType || "image/jpeg",
+          }));
+      if (guestPhotos.some((photo) => !photo.base64))
+        throw new Error(
+          "Please choose the inspiration photos again so they can be securely uploaded.",
+        );
+      const delivery = check(
+        await db().functions.invoke("lj-submit-consultation", {
+          body: {
+            requestKey: requestKey.current,
+            answers,
+            inspirationPaths: paths,
+            photos: guestPhotos,
+          },
         }),
-      ) as string;
+      ) as {
+        id: string;
+        inspirationPaths?: string[];
+        whatsappStatus?: ConsultationRequest["owner_alert_status"];
+      };
+      const id = delivery.id;
       const primaryService = selectedServices.find(
         (service) => service.id === (primary || selected[0]),
       )!;
-      setSubmitted({
+      const completedRequest: ConsultationRequest = {
         id,
-        customer_id: s.session.user.id,
-        client_id: "",
+        customer_id: s.session?.user.id || null,
+        client_id: null,
         client_name: name.trim(),
         client_email: email.trim(),
         whatsapp_phone: whatsapp.trim(),
@@ -402,13 +437,14 @@ export default function ConsultationScreen() {
         accessibility_needs: accessibility,
         accessibility_details: accessibilityDetails,
         screening,
-        inspiration_paths: paths,
+        inspiration_paths: delivery.inspirationPaths || paths,
         summary: `Primary goal: ${primaryService.name}. Desired outcome: ${finalOutcomes.join(", ")}. What makes the visit special: ${visitSpecial}.`,
         status: "new",
-        owner_alert_status: "manual_required",
+        owner_alert_status: delivery.whatsappStatus || "queued",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      });
+      };
+      setSubmitted(completedRequest);
     } catch (reason) {
       if (paths.length) await db().storage.from("lj-consultation-media").remove(paths);
       setError(
@@ -419,17 +455,33 @@ export default function ConsultationScreen() {
     }
   }
 
-  if (!s.session) return null;
+  async function openWhatsAppSummary(request: ConsultationRequest) {
+    setWhatsappError("");
+    const message = clientConsultationWhatsAppSummary(request);
+    const phone = internationalNumber(CONSULTATION_WHATSAPP_PHONE);
+    const browserUrl = whatsappContactUrl(CONSULTATION_WHATSAPP_PHONE, message);
+    if (!phone || !browserUrl) {
+      setWhatsappError("The WhatsApp summary could not be prepared. Your request remains saved.");
+      return;
+    }
+    try {
+      if (Platform.OS === "web") {
+        await Linking.openURL(browserUrl);
+        return;
+      }
+      try {
+        await Linking.openURL(`whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`);
+      } catch {
+        await Linking.openURL(browserUrl);
+      }
+    } catch {
+      setWhatsappError(
+        "WhatsApp could not open. Your request and complete summary are saved; tap Open WhatsApp Summary to try again.",
+      );
+    }
+  }
+
   if (submitted) {
-    const safeMessage = [
-      "Hello Lady J, I have submitted a free consultation request.",
-      `Name: ${submitted.client_name}`,
-      `Services: ${submitted.selected_services.map((service) => service.name).join(", ")}`,
-      `Primary service: ${submitted.primary_service.name}`,
-      `Preferred availability: ${submitted.availability_days.join(", ")} · ${submitted.availability_times.join(", ")}`,
-      "My private comfort, safety, and photo responses are available only in your secure owner dashboard.",
-    ].join("\n");
-    const url = whatsappContactUrl(s.settings?.whatsapp_phone, safeMessage);
     return (
       <Shell>
         <Card style={{ gap: 20, padding: 24, borderColor: c.goldBorder }}>
@@ -454,20 +506,18 @@ export default function ConsultationScreen() {
           <View style={{ gap: 10 }}>
             <Action label="Done" onPress={() => go("home")} style={{ alignSelf: "stretch" }} />
             <Action
-              label="Message Lady J"
+              label="Open WhatsApp Summary"
               icon="MessageCircle"
               secondary
-              disabled={!url}
-              onPress={() => {
-                if (url)
-                  void Linking.openURL(url).catch(() => s.notify("WhatsApp could not open."));
-              }}
+              onPress={() => void openWhatsAppSummary(submitted)}
               style={{ alignSelf: "stretch" }}
             />
           </View>
+          {!!whatsappError && <ErrorBox message={whatsappError} />}
           <Txt size={14} color={c.mutedForeground}>
-            Your request is saved securely. WhatsApp opens a draft for you to review and send;
-            delivery is never reported until you send it in WhatsApp.
+            {submitted.owner_alert_status === "sent"
+              ? "Your request is saved securely and Lady J has been notified through WhatsApp."
+              : "Your request is saved securely. If the automatic owner alert is unavailable, Lady J can still review it in the secure owner workspace."}
           </Txt>
         </Card>
       </Shell>
@@ -484,28 +534,54 @@ export default function ConsultationScreen() {
         <Card style={{ gap: 24 }}>
           <Question title="Which services are you interested in?">
             <Txt color={c.mutedForeground}>{selected.length}/3 selected</Txt>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {categories.map((item) => (
-                <Pressable
-                  key={item}
-                  onPress={() => setCategory(item)}
-                  style={{
-                    paddingHorizontal: 15,
-                    paddingVertical: 12,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: category === item ? c.brandAccent : c.border,
-                    backgroundColor: category === item ? c.brandAccentSurface : c.card,
-                  }}
-                >
-                  <Txt bold={category === item}>{item}</Txt>
-                </Pressable>
-              ))}
-            </ScrollView>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Previous service categories"
+                onPress={() => categoryScroll.current?.scrollTo({ x: 0, animated: true })}
+                style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+              >
+                <Icon name="ChevronLeft" size={14} strokeWidth={1.5} color={c.mutedForeground} />
+              </Pressable>
+              <ScrollView
+                ref={categoryScroll}
+                horizontal
+                style={{ flex: 1 }}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8 }}
+              >
+                {categories.map((item) => (
+                  <Pressable
+                    key={item}
+                    onPress={() => setCategory(item)}
+                    style={{
+                      minHeight: 44,
+                      paddingHorizontal: 15,
+                      paddingVertical: 11,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: category === item ? c.brandAccent : c.border,
+                      backgroundColor: category === item ? c.brandAccentSurface : c.card,
+                    }}
+                  >
+                    <Txt bold={category === item}>{item}</Txt>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="More service categories"
+                onPress={() => categoryScroll.current?.scrollToEnd({ animated: true })}
+                style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+              >
+                <Icon name="ChevronRight" size={14} strokeWidth={1.5} color={c.mutedForeground} />
+              </Pressable>
+            </View>
+            {!category && (
+              <Txt size={14} color={c.mutedForeground}>
+                Choose a category to see its services.
+              </Txt>
+            )}
             <View style={{ gap: 9 }}>
               {services
                 .filter((service) => service.category === category)
@@ -628,6 +704,9 @@ export default function ConsultationScreen() {
                       source={{ uri: photo.uri }}
                       style={{ width: 96, height: 96, borderRadius: 12 }}
                     />
+                    <Txt size={11} color={c.mutedForeground} numberOfLines={1}>
+                      {photo.fileName || "Inspiration photo"}
+                    </Txt>
                     <Pressable
                       accessibilityRole="button"
                       onPress={() =>
@@ -756,13 +835,17 @@ export default function ConsultationScreen() {
             <Txt serif size={29}>
               Your Details
             </Txt>
-            <Txt color={c.mutedForeground}>We filled in what is already saved to your account.</Txt>
+            <Txt color={c.mutedForeground}>
+              {s.session
+                ? "We filled in what is already saved to your account."
+                : "No account is required. Add the details Lady J should use for this consultation."}
+            </Txt>
           </View>
           {[
             { label: "Name", value: name, set: setName, type: "default" },
             { label: "Email", value: email, set: setEmail, type: "email-address" },
             {
-              label: "WhatsApp with country code",
+              label: "WhatsApp with country code (optional)",
               value: whatsapp,
               set: setWhatsapp,
               type: "phone-pad",
@@ -799,7 +882,13 @@ export default function ConsultationScreen() {
             label="Send My Consultation Request"
             busy={busy}
             onPress={() => void submit()}
-            style={{ alignSelf: "stretch", minHeight: 62 }}
+            contentColor="#FFFFFF"
+            style={{
+              alignSelf: "stretch",
+              minHeight: 62,
+              backgroundColor: "#2563EB",
+              borderColor: "#2563EB",
+            }}
           />
           <Txt bold style={{ textAlign: "center" }}>
             15 Minutes • Complimentary • No Obligation

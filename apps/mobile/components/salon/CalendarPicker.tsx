@@ -8,10 +8,12 @@ export default function CalendarPicker({
   onChange,
   unrestricted = false,
   allowVipDays = false,
+  roundedSelection = false,
 }: {
   value: string;
   unrestricted?: boolean;
   allowVipDays?: boolean;
+  roundedSelection?: boolean;
   onChange: (d: string) => void;
 }) {
   const c = useColors();
@@ -96,12 +98,14 @@ export default function CalendarPicker({
               {n > 0 && (
                 <View
                   style={{
-                    minWidth: 40,
-                    minHeight: 48,
-                    paddingVertical: 12,
+                    width: roundedSelection ? 42 : undefined,
+                    minWidth: roundedSelection ? undefined : 40,
+                    height: roundedSelection ? 42 : undefined,
+                    minHeight: roundedSelection ? undefined : 48,
+                    paddingVertical: roundedSelection ? 0 : 12,
                     alignItems: "center",
                     justifyContent: "center",
-                    borderRadius: 20,
+                    borderRadius: roundedSelection ? 12 : 20,
                     backgroundColor: value === key ? c.primary : "transparent",
                   }}
                 >

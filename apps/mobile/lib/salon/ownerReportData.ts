@@ -1,4 +1,4 @@
-import { db, check } from "./client";
+import { db, check, asRows } from "./client";
 import type { ReportRecords } from "./ownerReports";
 
 /** Recheck owner authorization and page every source at export time; never use a cached public catalog. */
@@ -29,7 +29,7 @@ export async function loadOwnerReportRecords(): Promise<ReportRecords> {
           .range(offset, offset + 999);
         if (["lj_client_records", "lj_products"].includes(table))
           query = query.is("deleted_at", null);
-        const page = check(await query) as unknown[];
+        const page = asRows<unknown>(check(await query), table);
         rows.push(...page);
         if (page.length < 1000) break;
       }

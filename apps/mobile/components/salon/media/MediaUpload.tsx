@@ -192,7 +192,11 @@ export default function MediaUpload({
   }
   const client = clients.find((v) => v.id === selectedClient);
   const choices = clients
-    .filter((v) => v.full_name.toLowerCase().includes(clientQuery.toLowerCase()))
+    .filter((v) =>
+      String(v?.full_name ?? "")
+        .toLowerCase()
+        .includes(clientQuery.toLowerCase()),
+    )
     .slice(0, 12);
   return (
     <MediaSheet
@@ -252,8 +256,10 @@ export default function MediaUpload({
                       id: v.id,
                       name:
                         mediaDate(v.starts_at.slice(0, 10)) +
-                        " — " +
-                        v.services.map((s) => s.name).join(", "),
+                          " — " +
+                          (Array.isArray(v.services) ? v.services : [])
+                            .map((s) => String(s?.name ?? "Service"))
+                            .join(", ") || "Service",
                     })),
                 ]}
                 onChange={setAppointment}

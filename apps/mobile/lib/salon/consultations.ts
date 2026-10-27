@@ -10,8 +10,8 @@ export type ConsultationStatus =
 
 export type ConsultationRequest = {
   id: string;
-  customer_id: string;
-  client_id: string;
+  customer_id: string | null;
+  client_id: string | null;
   client_name: string;
   client_email: string;
   whatsapp_phone: string;
@@ -36,7 +36,13 @@ export type ConsultationRequest = {
   inspiration_paths: string[];
   summary: string;
   status: ConsultationStatus;
-  owner_alert_status: "manual_required" | "draft_opened";
+  owner_alert_status:
+    | "manual_required"
+    | "draft_opened"
+    | "queued"
+    | "sent"
+    | "failed"
+    | "configuration_required";
   appointment_id?: string | null;
   converted_appointment_id?: string | null;
   created_at: string;
@@ -148,17 +154,89 @@ export const screeningQuestions: Record<string, { id: string; label: string }[]>
   ],
 };
 
+export const CONSULTATION_WHATSAPP_PHONE = "+1 868-374-5517";
+
+const consultationAnswer = (value?: string | null) => value?.trim() || "Not provided";
+
+/** A complete client-reviewed WhatsApp handoff. Nothing is sent automatically. */
+export function clientConsultationWhatsAppSummary(request: ConsultationRequest) {
+  const services = Array.isArray(request?.selected_services) ? request.selected_services : [];
+  const questionLabels = new Map(
+    services
+      .flatMap((service) => screeningQuestions[serviceGroup(service)] || [])
+      .map((question) => [question.id, question.label]),
+  );
+  const screeningAnswers = Object.entries(request?.screening || {}).map(
+    ([id, answer]) =>
+      `• ${questionLabels.get(id) || id.replace(/_/g, " ")}: ${consultationAnswer(answer)}`,
+  );
+  return [
+    "LADY J — FREE CONSULTATION REQUEST",
+    `Reference: ${consultationAnswer(request?.id)}`,
+    "",
+    "CLIENT DETAILS",
+    `Name: ${consultationAnswer(request?.client_name)}`,
+    `Email: ${consultationAnswer(request?.client_email)}`,
+    `WhatsApp: ${consultationAnswer(request?.whatsapp_phone)}`,
+    "WhatsApp contact consent: Confirmed",
+    "",
+    "SERVICES & GOALS",
+    `Services: ${
+      services
+        .map((service) => service?.name)
+        .filter(Boolean)
+        .join(", ") || "Not provided"
+    }`,
+    `Primary service: ${consultationAnswer(request?.primary_service?.name)}`,
+    `Desired outcomes: ${request?.desired_outcomes?.join(", ") || "Not provided"}`,
+    `What would make the visit special: ${consultationAnswer(request?.visit_special)}`,
+    `Occasion: ${consultationAnswer(request?.occasion)}`,
+    `Event date: ${consultationAnswer(request?.event_date)}`,
+    `Previous experience: ${consultationAnswer(request?.previous_experience)}`,
+    `Visit comfort request: ${consultationAnswer(request?.comfort_note)}`,
+    `Prefers to discuss comfort privately: ${request?.comfort_private ? "Yes" : "No"}`,
+    `Inspiration photos submitted: ${request?.inspiration_paths?.length || 0}`,
+    "",
+    "AVAILABILITY",
+    `Preferred days: ${request?.availability_days?.join(", ") || "Not provided"}`,
+    `Preferred times: ${request?.availability_times?.join(", ") || "Not provided"}`,
+    `Preferred date: ${consultationAnswer(request?.preferred_date)}`,
+    `Additional comments: ${consultationAnswer(request?.additional_notes)}`,
+    "",
+    "COMFORT & SAFETY",
+    `Allergy or health selection: ${consultationAnswer(request?.allergy_status)}`,
+    `Allergy or health details: ${consultationAnswer(request?.allergy_details)}`,
+    `Accessibility needs: ${request?.accessibility_needs?.join(", ") || "Not provided"}`,
+    `Accessibility details: ${consultationAnswer(request?.accessibility_details)}`,
+    "Service safety answers:",
+    ...(screeningAnswers.length ? screeningAnswers : ["• Not provided"]),
+    "",
+    "Please review this request and let me know what consultation times are available. Thank you.",
+  ].join("\n");
+}
+
 export function safeConsultationWhatsApp(request: ConsultationRequest, dashboardLink: string) {
+  const selectedServices = Array.isArray(request?.selected_services)
+    ? request.selected_services
+    : [];
+  const outcomes = Array.isArray(request?.desired_outcomes) ? request.desired_outcomes : [];
+  const days = Array.isArray(request?.availability_days) ? request.availability_days : [];
+  const times = Array.isArray(request?.availability_times) ? request.availability_times : [];
   return [
     "NEW CONSULTATION REQUEST",
-    `Client: ${request.client_name}`,
-    `Contact: ${request.whatsapp_phone} · ${request.client_email}`,
-    `Services: ${request.selected_services.map((v) => v.name).join(", ")}`,
-    `Primary: ${request.primary_service.name}`,
-    `Desired outcome: ${request.desired_outcomes.join(", ")}`,
+    `Client: ${request?.client_name || "Not provided"}`,
+    `Contact: ${request?.whatsapp_phone || "Not provided"} · ${request?.client_email || "Not provided"}`,
+    `Services: ${
+      selectedServices
+        .map((v) => v?.name)
+        .filter(Boolean)
+        .join(", ") || "Not provided"
+    }`,
+    `Primary: ${request?.primary_service?.name || "Not provided"}`,
+    `Desired outcome: ${outcomes.join(", ") || "Not provided"}`,
     `Occasion: ${request.occasion}${request.event_date ? ` (${request.event_date})` : ""}`,
     `Previous experience: ${request.previous_experience}`,
-    `Preferred availability: ${request.availability_days.join(", ")} · ${request.availability_times.join(", ")}${request.preferred_date ? ` · ${request.preferred_date}` : ""}`,
+    `Preferred availability: ${days.join(", ") || "No days provided"} · ${times.join(", ") || "No times provided"}${request.preferred_date ? ` · ${request.preferred_date}` : ""}`,
     request.additional_notes ? `General comments: ${request.additional_notes}` : "",
     `WHAT MATTERS MOST TO THIS CLIENT: ${request.summary}`,
     `Secure dashboard: ${dashboardLink}`,

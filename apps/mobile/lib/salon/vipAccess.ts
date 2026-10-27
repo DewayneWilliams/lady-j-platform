@@ -1,6 +1,27 @@
 export const VIP_PURPLE = "#7543B8";
 export const BOOKING_TIME_ZONE = "America/Port_of_Spain";
 
+/** Iconography is intentionally based on the appointment start, never availability or pricing. */
+export function shouldShowVipIcon(dayOfWeek: number, time: string): boolean {
+  // Sunday = 0, Monday = 1
+  if (dayOfWeek === 0 || dayOfWeek === 1) {
+    return true; // Closed-day appointments require VIP approval
+  }
+
+  const [hour, minute] = time.split(":").map(Number);
+  const totalMinutes = hour * 60 + minute;
+
+  // Absolute prohibition during regular hours
+  if (totalMinutes >= 600 && totalMinutes <= 1065) {
+    return false;
+  }
+
+  return (
+    (totalMinutes >= 360 && totalMinutes <= 585) ||
+    (totalMinutes >= 1080 && totalMinutes <= 1305)
+  );
+}
+
 function localMinutes(iso: string) {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: BOOKING_TIME_ZONE,

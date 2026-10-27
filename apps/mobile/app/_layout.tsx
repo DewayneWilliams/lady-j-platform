@@ -16,14 +16,12 @@ import { SalonProvider } from "@/lib/salon/SalonProvider";
 import { ThemeProvider, useTheme } from "@/theming/ThemeProvider";
 import darkTheme from "@/theming/themes/dark";
 import lightTheme from "@/theming/themes/light";
-import {
-  useFonts,
-  Inter_300Light,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
+import { useFonts } from "expo-font";
+import { Inter_300Light } from "@expo-google-fonts/inter/300Light";
+import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
+import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
+import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
+import { Inter_700Bold } from "@expo-google-fonts/inter/700Bold";
 import { PlayfairDisplay_500Medium } from "@expo-google-fonts/playfair-display/500Medium";
 import { PortalHost } from "@rn-primitives/portal";
 import { WebPortalContext } from "@/components/WebPortalContext";

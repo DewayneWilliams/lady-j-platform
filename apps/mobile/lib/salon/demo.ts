@@ -74,11 +74,9 @@ const today = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
 }).format(new Date());
-const weekday = new Date(today + "T12:00:00Z").getUTCDay();
-const daysUntilNextMonday = ((8 - weekday) % 7) || 7;
-const nextMonday = addCalendarDays(today, daysUntilNextMonday);
-const nextWeekDates = Array.from({ length: 5 }, (_, index) => addCalendarDays(nextMonday, index + 1));
-const appointmentTimes = ["06:30", "08:15", "10:00", "12:00", "14:15", "17:00"];
+const demoDates = Array.from({ length: 14 }, (_, index) => addCalendarDays(today, index));
+const regularTimes = ["10:00", "11:45", "14:00", "16:15"];
+const vipTimes = ["07:00", "10:00", "14:00", "18:30"];
 const contactPhotoIndexes = [1, 0, 2, 3, 10, 15, 7, 4, 12, 13, 6, 9, 5, 1, 4, 11, 8, 6, 15, 6];
 export const demoClients: Client[] = people.map(([first_name, last_name], i) => ({
   id: "demo-client-" + i,
@@ -95,6 +93,11 @@ export const demoClients: Client[] = people.map(([first_name, last_name], i) => 
   is_minor: i === 2,
   guardian_name: i === 2 ? "Geralt of Rivia" : "",
   medical_conditions: conditions[i % conditions.length],
+  health_safety_notes: conditions[i % conditions.length],
+  client_accommodations:
+    i % 2 === 0
+      ? "Prefers a quiet appointment and an extra neck cushion."
+      : "Allow a brief stretch break during longer services.",
   preferences: "Prefers a calm appointment and clear aftercare guidance.",
   sensitivities: conditions[i % conditions.length],
   private_notes: "Confirm aftercare preferences.",
@@ -102,30 +105,99 @@ export const demoClients: Client[] = people.map(([first_name, last_name], i) => 
   client_photo_path: demoContactPhotoPath(contactPhotoIndexes[i]),
   profile_photo_updated_at: "demo",
 }));
-export const demoAppointments: Appointment[] = nextWeekDates.flatMap((date, dayOffset) =>
-  appointmentTimes.map((start, slot) => {
-    const i = dayOffset * appointmentTimes.length + slot;
-    const client = demoClients[i % demoClients.length];
-    const startsAt = new Date(`${date}T${start}:00-04:00`);
-    const [name, duration, price] = treatments[i];
-    const pending = [2, 11, 23].includes(i);
+const historyClients = [...demoClients]
+  .sort((a, b) => a.full_name.localeCompare(b.full_name, "en", { sensitivity: "base" }))
+  .slice(0, 2);
+const demoCompletedHistory: Appointment[] = historyClients.flatMap((client, clientIndex) =>
+  [
+    [12 + clientIndex * 3, "Silk press and trim", 90, 420],
+    [38 + clientIndex * 4, "Hydrating facial", 60, 450],
+  ].map(([daysAgo, name, duration, total], visitIndex) => {
+    const startsAt = new Date(Date.now() - Number(daysAgo) * 86400000);
+    startsAt.setUTCHours(14 + visitIndex * 2, 0, 0, 0);
     return {
-      id: "demo-appointment-" + i,
+      id: `demo-history-${client.id}-${visitIndex}`,
       customer_id: client.id,
+      client_id: client.id,
       starts_at: startsAt.toISOString(),
-      ends_at: new Date(startsAt.getTime() + duration * 60000).toISOString(),
+      ends_at: new Date(startsAt.getTime() + Number(duration) * 60000).toISOString(),
       kind: "appointment",
-      status: pending ? "pending" : "confirmed",
-      services: [{ name, price }],
-      total: price,
-      deposit: price / 2,
-      deposit_paid: !pending,
-      note: client.full_name,
-    };
+      status: "completed",
+      services: [{ name: String(name), price: Number(total) }],
+      total: Number(total),
+      deposit: Number(total) / 2,
+      deposit_paid: true,
+      note: `DEMO history · ${client.full_name}`,
+      is_vip: false,
+      vip_percentage: null,
+      vip_premium: 0,
+    } as Appointment;
   }),
 );
+
+const demoUpcomingAppointments: Appointment[] = demoDates.flatMap((date, dayOffset) =>
+  (() => {
+    const weekday = new Date(date + "T12:00:00Z").getUTCDay();
+    const closedDay = weekday === 0 || weekday === 1;
+    const times = closedDay
+      ? vipTimes
+      : dayOffset % 3 === 1
+        ? ["10:00", "11:45", "14:00", "18:30"]
+        : regularTimes;
+    return times.map((start, slot) => {
+      const i = dayOffset * 4 + slot;
+      const client = demoClients[i % demoClients.length];
+      const startsAt = new Date(`${date}T${start}:00-04:00`);
+      const consultation = !closedDay && slot === 1 && dayOffset % 4 === 0;
+      const [serviceName, serviceDuration, price] = treatments[i % treatments.length];
+      const name = consultation ? "Free Consultation" : serviceName;
+      const duration = consultation ? 15 : Math.min(serviceDuration, 90);
+      const cancelled = !closedDay && slot === 2 && dayOffset % 4 === 2;
+      const vip = closedDay || start === "18:30";
+      const pending = vip || (!cancelled && i % 7 === 2);
+      const percentage = closedDay ? 30 : vip ? 20 : null;
+      const subtotal = consultation ? 0 : closedDay ? Math.max(250, price) : price;
+      return {
+        id: "demo-appointment-" + i,
+        customer_id: client.id,
+        starts_at: startsAt.toISOString(),
+        ends_at: new Date(startsAt.getTime() + duration * 60000).toISOString(),
+        kind: "appointment",
+        status: cancelled ? "cancelled" : pending ? "pending" : "confirmed",
+        services: [{ name, price: consultation ? 0 : price, duration }],
+        total: subtotal + Math.round(subtotal * Number(percentage || 0)) / 100,
+        deposit: (subtotal + Math.round(subtotal * Number(percentage || 0)) / 100) / 2,
+        deposit_paid: !pending,
+        note: `DEMO · ${client.full_name}`,
+        is_vip: vip,
+        vip_percentage: percentage,
+        vip_premium: vip ? Math.round(subtotal * Number(percentage)) / 100 : 0,
+        approval_status: vip ? "pending" : undefined,
+      };
+    });
+  })(),
+);
+export const demoAppointments: Appointment[] = [
+  ...demoCompletedHistory,
+  ...demoUpcomingAppointments,
+];
 const paymentDate = new Date().toISOString();
 export const demoTransactions: Transaction[] = demoAppointments.flatMap((a, i) => {
+  if (a.id.startsWith("demo-history-"))
+    return [
+      {
+        id: "demo-history-transaction-" + i,
+        customer_id: a.customer_id,
+        appointment_id: a.id,
+        purchase_id: null,
+        amount: a.total,
+        method: "bank",
+        reference: "DEMO-PAID-" + (1000 + i),
+        status: "verified",
+        created_at: a.starts_at,
+        received_at: a.starts_at,
+      } as Transaction,
+    ];
   const pending = a.status === "pending";
   const deposit: Transaction = {
     id: "demo-transaction-" + i,

@@ -18,6 +18,7 @@ export default function BlockTimeEditor({
   onSaved,
   onBusyChange,
   onDemoSave,
+  onDelete,
 }: {
   date: string;
   block: Appointment | null;
@@ -26,6 +27,7 @@ export default function BlockTimeEditor({
   onSaved: (date: string) => Promise<void>;
   onBusyChange: (busy: boolean) => void;
   onDemoSave: (block: Appointment) => void;
+  onDelete: (block: Appointment) => void;
 }) {
   const c = useColors(),
     s = useSalon();
@@ -141,6 +143,16 @@ export default function BlockTimeEditor({
         fill
         onPress={() => void save()}
       />
+      {!!block && (
+        <OwnerButton
+          label="Delete Block"
+          icon="Trash2"
+          destructive
+          centered
+          disabled={busy}
+          onPress={() => onDelete(block)}
+        />
+      )}
     </View>
   );
 }

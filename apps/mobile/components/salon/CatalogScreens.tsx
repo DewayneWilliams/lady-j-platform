@@ -1,15 +1,14 @@
-import { useFonts, PlayfairDisplay_700Bold } from "@expo-google-fonts/dev";
-import { serviceDurationLabel } from "@/lib/salon/duration";
 import CatalogGallery from "./CatalogGallery";
 import ServiceCategories from "./ServiceCategories";
 import React, { useState } from "react";
 import { Image, View, Pressable, TextInput, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
-import { money, servicePriceLabel, dateLabel, timeLabel } from "@/lib/salon/types";
+import { money, dateLabel, timeLabel, servicePriceLabel } from "@/lib/salon/types";
+import { serviceDurationLabel } from "@/lib/salon/duration";
 import { salonIdentity } from "@/lib/salon/identity";
 import Shell, { useNav } from "./Shell";
-import { Txt, Action, Heading, Tag, LinkText, Card, Empty, useColors } from "./ui";
+import { Txt, Action, Heading, Tag, LinkText, Card, Empty, useColors, ButtonLabel, Photo } from "./ui";
 import { fonts } from "@/lib/salon/design";
 import FavoriteButton from "./FavoriteButton";
 export function Search({
@@ -82,10 +81,15 @@ export function ServicesScreen() {
   const pages = Math.max(1, Math.ceil(filtered.length / 12));
   const currentPage = Math.min(page, pages - 1);
   return (
-    <Shell scrollRevision={`${currentPage}-${topRevision}`}>
-      <Heading sub="Expert hands. Thoughtful treatments. Care that feels like you.">
-        Find your kind of beautiful
-      </Heading>
+    <Shell contentTopPadding={4} scrollRevision={`${currentPage}-${topRevision}`}>
+      <Search
+        value={query}
+        onChange={(value) => {
+          setQuery(value);
+          setPage(0);
+        }}
+        placeholder="Search services or treatments"
+      />
       {!s.session && !s.testMode && (
         <Card
           style={{
@@ -108,15 +112,6 @@ export function ServicesScreen() {
           </LinkText>
         </Card>
       )}
-      <View style={{ height: 6 }} />
-      <Search
-        value={query}
-        onChange={(value) => {
-          setQuery(value);
-          setPage(0);
-        }}
-        placeholder="Search services or treatments"
-      />
       <ServiceCategories
         includeAll={false}
         interactiveArrows
@@ -131,51 +126,34 @@ export function ServicesScreen() {
           {filtered.length} {filtered.length === 1 ? "service" : "services"} found
         </Txt>
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
         {filtered.slice(currentPage * 12, currentPage * 12 + 12).map((v) => (
-          <Card
+          <Pressable
             key={v.id}
+            accessibilityRole="button"
+            onPress={() => go("booking", { id: v.id })}
             style={{
-              padding: 0,
-              overflow: "hidden",
-              width: desktop ? "31%" : "100%",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 16,
+              padding: 15,
+              borderWidth: 1,
+              borderColor: c.border,
+              borderRadius: 14,
+              backgroundColor: c.card,
+              width: desktop ? "48%" : "100%",
               flexGrow: 1,
-              maxWidth: desktop ? "33%" : undefined,
+              maxWidth: desktop ? "50%" : undefined,
             }}
           >
-            <CatalogGallery photos={v.photos} cover={v.image} height={180} />
-            <View style={{ padding: 16, gap: 8 }}>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                <Tag>{v.category}</Tag>
-                {v.is_add_on && <Tag>Add-on</Tag>}
-              </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Txt serif size={25} style={{ flex: 1 }}>
-                  {v.name}
-                </Txt>
-                <FavoriteButton kind="service" itemId={v.id} />
-              </View>
-              <Txt size={13} color={c.mutedForeground}>
-                {v.is_demo &&
-                /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
-                  ? "Ask the salon for details."
-                  : v.description}
-              </Txt>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                <Txt size={13} color={c.mutedForeground}>
-                  {serviceDurationLabel(v)}
-                </Txt>
-                <Txt bold size={16}>
-                  {servicePriceLabel(v)}
-                </Txt>
-              </View>
-              {v.bookable === false && (
-                <Txt size={12} color={c.mutedForeground}>
-                  {v.is_add_on ? "Available as an add-on" : "Contact the salon to book"}
-                </Txt>
-              )}
+            <Photo name={v.image} style={{ width: 72, height: 82, borderRadius: 10 }} />
+            <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
+              <ButtonLabel size={20}>{v.name}</ButtonLabel>
+              <Txt size={12} color={c.mutedForeground} numberOfLines={2}>{v.description}</Txt>
+              <Txt size={13}>{serviceDurationLabel(v)} · {servicePriceLabel(v)}</Txt>
             </View>
-          </Card>
+            <FavoriteButton kind="service" itemId={v.id} />
+          </Pressable>
         ))}
       </View>
       {!filtered.length && (

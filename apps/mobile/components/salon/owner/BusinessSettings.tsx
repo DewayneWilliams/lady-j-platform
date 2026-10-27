@@ -163,7 +163,7 @@ export default function BusinessSettings({
       opens_at: String(settings?.opens_at || "10:00").slice(0, 5),
       closes_at: String(settings?.closes_at || "18:00").slice(0, 5),
       vip_before_start: String(settings?.vip_before_start || "06:00").slice(0, 5),
-      vip_after_end: String(settings?.vip_after_end || "22:00").slice(0, 5),
+      vip_after_end: String(settings?.vip_after_end || "19:45").slice(0, 5),
       cleanup_buffer_minutes: String(settings?.cleanup_buffer_minutes ?? 0),
       max_daily_bookings_per_client: String(settings?.max_daily_bookings_per_client ?? 1),
       bank_name: settings?.bank_name || "",
@@ -172,14 +172,8 @@ export default function BusinessSettings({
       bank_account_number: settings?.bank_account_number || "",
       bank_currency: settings?.bank_currency || "TTD",
       bank_instructions: settings?.bank_instructions || "",
-      loyalty_points_per_ttd: String(settings?.loyalty_points_per_ttd ?? 1),
-      loyalty_redemption_points: String(settings?.loyalty_redemption_points ?? 100),
-      loyalty_redemption_value: String(settings?.loyalty_redemption_value ?? 5),
       loyalty_welcome_credit: String(settings?.loyalty_welcome_credit ?? 50),
       loyalty_birthday_credit: String(settings?.loyalty_birthday_credit ?? 50),
-      loyalty_referrer_points: String(settings?.loyalty_referrer_points ?? 300),
-      loyalty_friend_points: String(settings?.loyalty_friend_points ?? 150),
-      loyalty_minimum_spend: String(settings?.loyalty_minimum_spend ?? 250),
       loyalty_birthday_gift_note:
         settings?.loyalty_birthday_gift_note || "Complimentary surprise gift presented in person",
     }),
@@ -325,14 +319,8 @@ export default function BusinessSettings({
                   ...form,
                   cleanup_buffer_minutes: cleanup,
                   max_daily_bookings_per_client: limit,
-                  loyalty_points_per_ttd: Number(form.loyalty_points_per_ttd),
-                  loyalty_redemption_points: Number(form.loyalty_redemption_points),
-                  loyalty_redemption_value: Number(form.loyalty_redemption_value),
                   loyalty_welcome_credit: Number(form.loyalty_welcome_credit),
                   loyalty_birthday_credit: Number(form.loyalty_birthday_credit),
-                  loyalty_referrer_points: Number(form.loyalty_referrer_points),
-                  loyalty_friend_points: Number(form.loyalty_friend_points),
-                  loyalty_minimum_spend: Number(form.loyalty_minimum_spend),
                 } as Partial<Settings>,
                 "Business settings saved.",
               )
@@ -478,7 +466,7 @@ export default function BusinessSettings({
       <Section title="Royalty Program & Rewards">
         <ToggleRow
           label="Lady J Royalty Program"
-          detail="Automatically enroll clients, track qualifying visits and credit points after eligible service payments."
+          detail="Automatically enroll clients and track qualifying completed visits."
           value={settings?.loyalty_enabled !== false}
           disabled={busy || demo}
           onChange={(loyalty_enabled) =>
@@ -515,30 +503,6 @@ export default function BusinessSettings({
         {editing ? (
           <>
             <Field
-              label="Points Earned Per TT$1 Paid"
-              value={form.loyalty_points_per_ttd}
-              keyboardType="decimal-pad"
-              onChangeText={(loyalty_points_per_ttd) =>
-                setForm({ ...form, loyalty_points_per_ttd })
-              }
-            />
-            <Field
-              label="Points Per Redemption Unit"
-              value={form.loyalty_redemption_points}
-              keyboardType="decimal-pad"
-              onChangeText={(loyalty_redemption_points) =>
-                setForm({ ...form, loyalty_redemption_points })
-              }
-            />
-            <Field
-              label="TT$ Value Per Redemption Unit"
-              value={form.loyalty_redemption_value}
-              keyboardType="decimal-pad"
-              onChangeText={(loyalty_redemption_value) =>
-                setForm({ ...form, loyalty_redemption_value })
-              }
-            />
-            <Field
               label="Welcome Credit (TT$)"
               value={form.loyalty_welcome_credit}
               keyboardType="decimal-pad"
@@ -555,26 +519,6 @@ export default function BusinessSettings({
               }
             />
             <Field
-              label="Referrer Points"
-              value={form.loyalty_referrer_points}
-              keyboardType="decimal-pad"
-              onChangeText={(loyalty_referrer_points) =>
-                setForm({ ...form, loyalty_referrer_points })
-              }
-            />
-            <Field
-              label="Referred Friend Points"
-              value={form.loyalty_friend_points}
-              keyboardType="decimal-pad"
-              onChangeText={(loyalty_friend_points) => setForm({ ...form, loyalty_friend_points })}
-            />
-            <Field
-              label="Minimum Qualifying Spend (TT$)"
-              value={form.loyalty_minimum_spend}
-              keyboardType="decimal-pad"
-              onChangeText={(loyalty_minimum_spend) => setForm({ ...form, loyalty_minimum_spend })}
-            />
-            <Field
               label="Private Birthday Gift Note"
               value={form.loyalty_birthday_gift_note}
               onChangeText={(loyalty_birthday_gift_note) =>
@@ -585,24 +529,8 @@ export default function BusinessSettings({
         ) : (
           <>
             <ReadValue
-              label="Earning Rate"
-              value={`${form.loyalty_points_per_ttd} point per TT$1 paid`}
-            />
-            <ReadValue
-              label="Redemption Rate"
-              value={`${form.loyalty_redemption_points} points = TT$${form.loyalty_redemption_value}`}
-            />
-            <ReadValue
               label="Welcome / Birthday"
               value={`TT$${form.loyalty_welcome_credit} / TT$${form.loyalty_birthday_credit}`}
-            />
-            <ReadValue
-              label="Referral Rewards"
-              value={`${form.loyalty_referrer_points} / ${form.loyalty_friend_points} points`}
-            />
-            <ReadValue
-              label="Minimum Qualifying Spend"
-              value={`TT$${form.loyalty_minimum_spend}`}
             />
           </>
         )}

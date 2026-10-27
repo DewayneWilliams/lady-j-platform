@@ -1719,10 +1719,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@expo-google-fonts/dev@npm:^0.4.85":
-  version: 0.4.85
-  resolution: "@expo-google-fonts/dev@npm:0.4.85"
-  checksum: 10c0/6765b796e762d896400d825ab76e03ff137b071dac42a01ffe64e764b47777f5453dc48730425bde5998eda44222f1c557fe622c5498d5c43429fa873e0c78f2
+"@expo-google-fonts/dev@npm:^0.4.86":
+  version: 0.4.86
+  resolution: "@expo-google-fonts/dev@npm:0.4.86"
+  checksum: 10c0/392d19c4a2b3eacf3a2c73a0328f25638d5162005ea7f23b26cc833afbb1bf57527523c696e4688dd741037b9ca858713ffb3455e4364bc732641e6650a1af83
   languageName: node
   linkType: hard
 
@@ -6229,6 +6229,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"badgin@npm:^1.1.5":
+  version: 1.2.3
+  resolution: "badgin@npm:1.2.3"
+  checksum: 10c0/f8ba1090240a8602a8d174214e3426b1a7ec3ecb820ec7e4561fd6181c07df572f02ad0e7ec9250e19dd9594d05a57719a5717a126d769f91fc0cc5d233119cf
+  languageName: node
+  linkType: hard
+
 "balanced-match@npm:^1.0.0":
   version: 1.0.2
   resolution: "balanced-match@npm:1.0.2"
@@ -7983,6 +7990,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-notifications@npm:~55.0.27":
+  version: 55.0.27
+  resolution: "expo-notifications@npm:55.0.27"
+  dependencies:
+    "@expo/image-utils": "npm:^0.8.17"
+    abort-controller: "npm:^3.0.0"
+    badgin: "npm:^1.1.5"
+    expo-application: "npm:~55.0.19"
+    expo-constants: "npm:~55.0.17"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/329683875111de728486d45702343d8c0175ff6f8bd4ed878f7040261992dfb79e55e468df8f357ae4bd8f965e944b6fe503cbd6af9bfc6181f5ee8f185ddf28
+  languageName: node
+  linkType: hard
+
 "expo-router@npm:~55.0.18":
   version: 55.0.18
   resolution: "expo-router@npm:55.0.18"
@@ -8077,6 +8101,26 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10c0/d2c5cd937330fe7ad0b09eccc665051478719668adcd25abe8719be96ed5dcf48941031ae06bd444a9db5d072700f3e45dce6a35ff1a7f41647fcb9c7aa58e26
+  languageName: node
+  linkType: hard
+
+"expo-speech-recognition@npm:^3.1.3":
+  version: 3.1.3
+  resolution: "expo-speech-recognition@npm:3.1.3"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/0e88dc2c485b1f60435039f8d00f83039d690d70b71e19fcbc49b6b2199e2060bfcb84fbdacf4e45cafa069c7624c6f65b71dbca1ac0ad647f3462c92545d3ca
+  languageName: node
+  linkType: hard
+
+"expo-speech@npm:~55.0.18":
+  version: 55.0.18
+  resolution: "expo-speech@npm:55.0.18"
+  peerDependencies:
+    expo: "*"
+  checksum: 10c0/eed0495c1c66ce0a67dc1ed25e52d29d6617b1da9b818447724db518c3342bf258cdd6a189fee21b635b6da96f0f46013169e9b8672af75daf8e2e8f59de9e87
   languageName: node
   linkType: hard
 
@@ -10814,7 +10858,7 @@ __metadata:
     "@draftbit/ui": "npm:55.0.4"
     "@eslint/compat": "npm:^1.4.1"
     "@eslint/js": "npm:^8.57.0"
-    "@expo-google-fonts/dev": "npm:^0.4.85"
+    "@expo-google-fonts/dev": "npm:^0.4.86"
     "@expo-google-fonts/inter": "npm:^0.4.1"
     "@expo-google-fonts/playfair-display": "npm:^0.4.2"
     "@expo/metro-runtime": "npm:~55.0.12"
@@ -10878,9 +10922,12 @@ __metadata:
     expo-image-picker: "npm:~55.0.24"
     expo-linking: "npm:~55.0.17"
     expo-navigation-bar: "npm:~55.0.17"
+    expo-notifications: "npm:~55.0.27"
     expo-router: "npm:~55.0.18"
     expo-secure-store: "npm:~55.0.8"
     expo-sharing: "npm:~55.0.25"
+    expo-speech: "npm:~55.0.18"
+    expo-speech-recognition: "npm:^3.1.3"
     expo-splash-screen: "npm:~55.0.25"
     expo-status-bar: "npm:~55.0.6"
     expo-system-ui: "npm:~55.0.22"

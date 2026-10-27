@@ -54,7 +54,9 @@ Then use **Business → Communication → Turn on email reminders**. Activation 
 
 Jobs use database leases, per-message provider idempotency keys, frozen request payloads, up to five attempts and a retry window shorter than 24 hours. Old, cancelled or rescheduled appointments are checked before sending; stale jobs are cancelled. Failed or exhausted deliveries require owner review. Provider acceptance is shown separately from inbox delivery; bounce/delivery webhooks are not connected. No live provider send can be verified until the salon supplies a valid sender/key.
 
-WhatsApp buttons open a reviewed composer and do not send automatically. WhatsApp Cloud API sender/template approval and a dedicated provider worker are still required for automated WhatsApp. Promotions/birthdays require explicit, revocable marketing consent and are not sent by the service-email worker.
+Consultation submissions call `lj-submit-consultation`, which securely saves guest or signed-in requests and sends an approved WhatsApp Business template to `18683745517`. In the selected Supabase environment, add `LJ_WHATSAPP_ACCESS_TOKEN`, `LJ_WHATSAPP_PHONE_NUMBER_ID`, `LJ_WHATSAPP_TEMPLATE_NAME`, `LJ_APP_URL`, and optionally `LJ_WHATSAPP_API_VERSION` / `LJ_OWNER_WHATSAPP_NUMBER` under **Secrets**. The Meta template must use `en_US`, five body variables (name, contact, services, responses, request ID), and one dynamic URL button whose prefix is the published app URL plus `/owner?tab=Business&consultation=`. The button opens the owner-authenticated request; only the owner RPC can approve a confirmed date/time, and the database rejects duplicates and conflicts. Without these secrets, the request still saves and is visibly marked for owner attention; delivery is never falsely reported.
+
+Other WhatsApp support and client-message buttons open a reviewed composer and do not send automatically. Promotions/birthdays require explicit, revocable marketing consent and are not sent by the service-email worker.
 
 ## Workshops and media
 

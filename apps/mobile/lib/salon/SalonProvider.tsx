@@ -4,7 +4,7 @@ import { useForegroundRefresh } from "./useForegroundRefresh";
 import { orderServicesByCategory } from "./categories";
 import type { Session } from "@supabase/supabase-js";
 import type { ClientLanguage } from "./clientLanguage";
-import { supabase, db, check } from "./client";
+import { supabase, db, check, asRows } from "./client";
 import { developmentTestMode } from "./testMode";
 import { sessionStorage } from "./sessionStorage";
 import {
@@ -164,15 +164,18 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         client.from("lj_public_home_specials").select("*").order("name").limit(2),
       ]);
       if (generation !== catalogGeneration.current) return;
-      setServices(orderServicesByCategory(check(results[0]) as Service[]));
-      setProducts(check(results[1]) as Product[]);
-      setWorkshops(check(results[2]) as Workshop[]);
-      const currentSettings = check(results[3]) as Settings;
+      setServices(orderServicesByCategory(asRows<Service>(check(results[0]), "Services")));
+      setProducts(asRows<Product>(check(results[1]), "Products"));
+      setWorkshops(asRows<Workshop>(check(results[2]), "Workshops"));
+      const settingsValue = check(results[3]);
+      if (!settingsValue || typeof settingsValue !== "object")
+        throw new Error("Settings returned an invalid response.");
+      const currentSettings = settingsValue as Settings;
       setSettings(
         signedIn ? currentSettings : { ...currentSettings, bank_instructions: "", delivery_fee: 0 },
       );
-      setPromotions(check(results[4]) as Promotion[]);
-      setHomeSpecials(check(results[5]) as Service[]);
+      setPromotions(asRows<Promotion>(check(results[4]), "Promotions"));
+      setHomeSpecials(asRows<Service>(check(results[5]), "Home specials"));
     } catch (e) {
       if (generation === catalogGeneration.current)
         setError(e instanceof Error ? e.message : "Unable to connect. Please try again.");
@@ -217,12 +220,17 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       ]);
       if (generation !== privateGeneration.current) return;
       setProfile(check(results[0]) as Profile | null);
-      setAppointments(check(results[1]) as Appointment[]);
-      setPurchases(check(results[2]) as Purchase[]);
-      setTransactions(check(results[3]) as Transaction[]);
-      setCredits(check(results[4]) as Credit[]);
-      setRewards(check(results[5]) as RewardSummary);
-      setFavorites(check(results[6]) as Favorite[]);
+      setAppointments(asRows<Appointment>(check(results[1]), "Appointments"));
+      setPurchases(asRows<Purchase>(check(results[2]), "Purchases"));
+      setTransactions(asRows<Transaction>(check(results[3]), "Transactions"));
+      setCredits(asRows<Credit>(check(results[4]), "Credits"));
+      const rewardValue = check(results[5]);
+      setRewards(
+        rewardValue && typeof rewardValue === "object"
+          ? (rewardValue as RewardSummary)
+          : emptyRewardSummary,
+      );
+      setFavorites(asRows<Favorite>(check(results[6]), "Favorites"));
     } catch (e) {
       if (generation === privateGeneration.current)
         notify(e instanceof Error ? e.message : "Unable to load your account.");
@@ -392,8 +400,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         purchases,
         transactions,
         credits,
-        rewards:
-          testMode && !session ? { ...emptyRewardSummary, points: 1240, value_ttd: 62 } : rewards,
+        rewards: testMode && !session ? emptyRewardSummary : rewards,
         favorites,
         toggleFavorite,
         cart,

@@ -7,23 +7,6 @@ import { reportFont } from "./reportFile";
 // The self-contained distribution avoids Metro resolving tslib through its Node ESM shim.
 const { PDFDocument, rgb } = require("pdf-lib/dist/pdf-lib.js") as typeof import("pdf-lib");
 
-function color(value: string) {
-  if (value.startsWith("#"))
-    return rgb(
-      ...([1, 3, 5].map((i) => parseInt(value.slice(i, i + 2), 16) / 255) as [
-        number,
-        number,
-        number,
-      ]),
-    );
-  const [h, s, l] = (value.match(/[\d.]+/g) || ["42", "76", "32"]).map(Number);
-  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
-  const channel = (n: number) => {
-    const k = (n + h / 30) % 12;
-    return l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-  };
-  return rgb(channel(0), channel(8), channel(4));
-}
 function wrap(text: string, font: PDFFont, size: number, width: number) {
   const lines: string[] = [];
   for (const paragraph of String(text).split(/\r?\n/)) {
@@ -53,7 +36,6 @@ function wrap(text: string, font: PDFFont, size: number, width: number) {
 let fontBytes: Promise<Uint8Array[]> | undefined;
 export async function ownerReportPdf(
   doc: ReportDocument,
-  palette: { gold: string; accent: string },
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -72,8 +54,7 @@ export async function ownerReportPdf(
   pdf.setSubject(`${doc.range.from} to ${doc.range.to}`);
   const ink = rgb(0.12, 0.12, 0.12),
     muted = rgb(0.34, 0.34, 0.34),
-    gold = color(palette.gold),
-    accent = color(palette.accent);
+    black = rgb(0.05, 0.05, 0.05);
   const white = rgb(1, 1, 1),
     band = rgb(0.965, 0.96, 0.95);
   const width = 842,
@@ -91,7 +72,7 @@ export async function ownerReportPdf(
     configuredBrand.length <= 3 ? doc.notes : ["Business: " + doc.businessName, ...doc.notes];
   const bandHeight = 64 + (brand.length - 1) * 23;
   function heading() {
-    page.drawRectangle({ x: 0, y: height - bandHeight, width, height: bandHeight, color: gold });
+    page.drawRectangle({ x: 0, y: height - bandHeight, width, height: bandHeight, color: black });
     page.drawText(brand.join("\n"), {
       x: margin,
       y: height - 29,
@@ -123,7 +104,7 @@ export async function ownerReportPdf(
       y: height - bandHeight - 55,
       width: 38,
       height: 3,
-      color: accent,
+      color: black,
     });
     y = height - bandHeight - 76;
   }
@@ -177,7 +158,7 @@ export async function ownerReportPdf(
       y: y - headerHeight,
       width: content,
       height: headerHeight,
-      color: gold,
+      color: black,
     });
     let x = margin;
     headerLines.forEach((lines, i) => {

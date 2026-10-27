@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   Image,
   Linking,
@@ -105,11 +106,13 @@ export default function ConsultationRequestsPanel({
   services,
   appointments,
   clientId,
+  focusId,
   onChanged,
 }: {
   services: Service[];
   appointments: Appointment[];
   clientId?: string;
+  focusId?: string;
   onChanged?: () => Promise<void> | void;
 }) {
   const c = useColors();
@@ -137,14 +140,16 @@ export default function ConsultationRequestsPanel({
         .select("*")
         .order("created_at", { ascending: false });
       if (clientId) query = query.eq("client_id", clientId);
-      const value = check(await query) as ConsultationRequest[];
+      const result = check(await query);
+      const value = Array.isArray(result) ? (result as ConsultationRequest[]) : [];
       setRows(value);
+      if (focusId && value.some((request) => request.id === focusId)) setExpanded(focusId);
       setFollowups((current) =>
         Object.fromEntries(
           value.map((request) => [
             request.id,
             current[request.id] ||
-              `Hello ${request.client_name.split(" ")[0]}, thank you for sharing your goals with Lady J. I reviewed your interest in ${request.primary_service.name.toLowerCase()} and your wish for ${request.desired_outcomes.join(", ").toLowerCase()}. I’d love to arrange your complimentary 15-minute consultation. Would ${request.availability_days.slice(0, 2).join(" or ")} during ${request.availability_times[0]?.toLowerCase()} work for you?`,
+              `Hello ${String(request?.client_name ?? "there").split(" ")[0]}, thank you for sharing your goals with Lady J. I reviewed your interest in ${String(request?.primary_service?.name ?? "your selected service").toLowerCase()} and your wish for ${(Array.isArray(request?.desired_outcomes) ? request.desired_outcomes : ["your desired result"]).join(", ").toLowerCase()}. I’d love to arrange your complimentary 15-minute consultation. Would ${(Array.isArray(request?.availability_days) ? request.availability_days : ["your preferred day"]).slice(0, 2).join(" or ")} during ${String(request?.availability_times?.[0] ?? "your preferred time").toLowerCase()} work for you?`,
           ]),
         ),
       );
@@ -153,7 +158,7 @@ export default function ConsultationRequestsPanel({
     } finally {
       setLoading(false);
     }
-  }, [clientId]);
+  }, [clientId, focusId]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -197,13 +202,8 @@ export default function ConsultationRequestsPanel({
 
   return (
     <>
-      <FlatList
-        scrollEnabled={!clientId}
-        data={ordered}
-        keyExtractor={(item) => item.id}
-        refreshing={loading}
-        onRefresh={() => void load()}
-        contentContainerStyle={{
+      <View
+        style={{
           padding: width >= 1100 ? 32 : 20,
           paddingBottom: Math.max(40, spacing),
           maxWidth: 1100,
@@ -211,27 +211,24 @@ export default function ConsultationRequestsPanel({
           alignSelf: "center",
           gap: 14,
         }}
-        ListHeaderComponent={
-          <View style={{ gap: 12, marginBottom: 8 }}>
-            <OwnerText size={32} bold>
-              {clientId ? "Consultations" : "Consultation Requests"}
+      >
+        <View style={{ gap: 12, marginBottom: 8 }}>
+          <OwnerText size={32} bold>
+            {clientId ? "Consultations" : "Consultation Requests"}
+          </OwnerText>
+          {!clientId && (
+            <OwnerText muted>
+              Personal goals, private care notes, and follow-up in one secure place.
             </OwnerText>
-            {!clientId && (
-              <OwnerText muted>
-                Personal goals, private care notes, and follow-up in one secure place.
-              </OwnerText>
-            )}
-            {!!error && <ErrorBox message={error} retry={() => void load()} />}
-          </View>
-        }
-        ListEmptyComponent={
-          !loading ? (
-            <Card>
-              <OwnerText muted>No consultation requests yet.</OwnerText>
-            </Card>
-          ) : null
-        }
-        renderItem={({ item: request }) => {
+          )}
+          {!!error && <ErrorBox message={error} retry={() => void load()} />}
+        </View>
+        {!loading && ordered.length === 0 && (
+          <Card>
+            <OwnerText muted>No consultation requests yet.</OwnerText>
+          </Card>
+        )}
+        {ordered.map((request) => {
           const appointment = appointments.find((value) => value.id === request.appointment_id);
           const isOpen = expanded === request.id;
           return (
@@ -297,7 +294,11 @@ export default function ConsultationRequestsPanel({
                     {request.selected_services.map((value) => value.name).join(", ")}
                     {"\n"}Primary: {request.primary_service.name}
                   </Detail>
-                  <Detail label="Desired outcome">{request.desired_outcomes.join(", ")}</Detail>
+                  <Detail label="Desired outcome">
+                    {(Array.isArray(request.desired_outcomes) ? request.desired_outcomes : []).join(
+                      ", ",
+                    ) || "Not provided"}
+                  </Detail>
                   <Detail label="What makes this visit special">{request.visit_special}</Detail>
                   <Detail label="Occasion">
                     {request.occasion}
@@ -305,7 +306,15 @@ export default function ConsultationRequestsPanel({
                   </Detail>
                   <Detail label="Previous experience">{request.previous_experience}</Detail>
                   <Detail label="Preferred availability">
-                    {request.availability_days.join(", ")} · {request.availability_times.join(", ")}
+                    {(Array.isArray(request.availability_days)
+                      ? request.availability_days
+                      : []
+                    ).join(", ") || "No days provided"}{" "}
+                    ·{" "}
+                    {(Array.isArray(request.availability_times)
+                      ? request.availability_times
+                      : []
+                    ).join(", ") || "No times provided"}
                     {request.preferred_date ? ` · Preferred date ${request.preferred_date}` : ""}
                   </Detail>
                   <Detail label="General comments">{request.additional_notes}</Detail>
@@ -384,9 +393,13 @@ export default function ConsultationRequestsPanel({
                   </View>
                   <Txt size={15} color={c.mutedForeground}>
                     Owner WhatsApp alert:{" "}
-                    {request.owner_alert_status === "draft_opened"
-                      ? "manual draft opened; delivery not confirmed"
-                      : "automatic WhatsApp delivery is unavailable; manual send required"}
+                    {request.owner_alert_status === "sent"
+                      ? "delivered automatically"
+                      : request.owner_alert_status === "queued"
+                        ? "queued for automatic delivery"
+                        : request.owner_alert_status === "draft_opened"
+                          ? "manual draft opened; delivery not confirmed"
+                          : "automatic delivery needs attention; the secure request remains available"}
                     . Private safety answers and photos are excluded.
                   </Txt>
                   {!clientId && (
@@ -397,8 +410,8 @@ export default function ConsultationRequestsPanel({
                       onPress={() => {
                         const dashboardLink =
                           Platform.OS === "web" && typeof globalThis.location !== "undefined"
-                            ? `${globalThis.location.origin}/owner/Consultations`
-                            : "lady-j://owner/Consultations";
+                            ? `${globalThis.location.origin}/owner?tab=Business&consultation=${request.id}`
+                            : `lady-j://owner?tab=Business&consultation=${request.id}`;
                         const url = whatsappContactUrl(
                           salon.settings?.whatsapp_phone,
                           safeConsultationWhatsApp(request, dashboardLink),
@@ -428,16 +441,50 @@ export default function ConsultationRequestsPanel({
                   <View style={{ gap: 9 }}>
                     {!request.appointment_id &&
                       !["completed", "converted", "cancelled"].includes(request.status) && (
-                        <OwnerButton
-                          fill
-                          accent
-                          label="Schedule Consultation"
-                          icon="CalendarPlus"
-                          onPress={() => {
-                            setStart(localStart());
-                            setEditor({ request, mode: "schedule" });
-                          }}
-                        />
+                        <View style={{ flexDirection: "row", gap: 9 }}>
+                          <View style={{ flex: 1 }}>
+                            <OwnerButton
+                              fill
+                              accent
+                              label="Approve"
+                              icon="CalendarPlus"
+                              onPress={() => {
+                                setStart(localStart());
+                                setEditor({ request, mode: "schedule" });
+                              }}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <OwnerButton
+                              fill
+                              secondary
+                              label="Decline"
+                              icon="CalendarX2"
+                              busy={busy === request.id + "cancel"}
+                              onPress={() =>
+                                Alert.alert(
+                                  "Decline this consultation?",
+                                  "No consultation appointment will be created.",
+                                  [
+                                    { text: "Keep request", style: "cancel" },
+                                    {
+                                      text: "Decline",
+                                      style: "destructive",
+                                      onPress: () =>
+                                        void update(request, "cancel", async () =>
+                                          check(
+                                            await db().rpc("lj_cancel_consultation", {
+                                              p_id: request.id,
+                                            }),
+                                          ),
+                                        ),
+                                    },
+                                  ],
+                                )
+                              }
+                            />
+                          </View>
+                        </View>
                       )}
                     {!!request.appointment_id && request.status === "scheduled" && (
                       <OwnerButton
@@ -456,7 +503,8 @@ export default function ConsultationRequestsPanel({
                         }}
                       />
                     )}
-                    {!["completed", "converted", "cancelled"].includes(request.status) && (
+                    {!!request.appointment_id &&
+                      !["completed", "converted", "cancelled"].includes(request.status) && (
                       <OwnerButton
                         fill
                         secondary
@@ -505,8 +553,8 @@ export default function ConsultationRequestsPanel({
               )}
             </Card>
           );
-        }}
-      />
+        })}
+      </View>
       {!!editor && (
         <Modal
           visible
@@ -535,7 +583,7 @@ export default function ConsultationRequestsPanel({
                       ? "Convert to Service Booking"
                       : editor.mode === "reschedule"
                         ? "Reschedule Consultation"
-                        : "Schedule Consultation"}
+                        : "Approve Consultation"}
                   </OwnerText>
                 </View>
                 <Pressable

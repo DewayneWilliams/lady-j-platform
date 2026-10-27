@@ -25,3 +25,8 @@ export function check<T extends { data: unknown; error: { message: string } | nu
   if (result.error) throw new Error(result.error.message);
   return result.data;
 }
+export function asRows<T>(value: unknown, source: string): T[] {
+  if (value == null) return [];
+  if (!Array.isArray(value)) throw new Error(`${source} returned an invalid response.`);
+  return value as T[];
+}

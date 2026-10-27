@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { check, db } from "@/lib/salon/client";
-import { RewardSummary, rewardMilestones } from "@/lib/salon/loyalty";
+import { RewardSummary } from "@/lib/salon/loyalty";
 import { Appointment, money } from "@/lib/salon/types";
 import { Action, ErrorBox, Txt, useColors } from "./ui";
 
@@ -51,7 +51,7 @@ export default function LoyaltyActions({
         <>
           <Txt bold>Redeem on your next appointment</Txt>
           {!appointment && (
-            <Txt color={c.mutedForeground}>Book an appointment before redeeming points.</Txt>
+            <Txt color={c.mutedForeground}>Book an appointment before applying a privilege.</Txt>
           )}
           {rewards.entitlements
             .filter((item) => item.status === "available")
@@ -75,33 +75,6 @@ export default function LoyaltyActions({
                     .then(onChanged)
                     .catch((e: unknown) =>
                       setError(e instanceof Error ? e.message : "Unable to apply this privilege."),
-                    )
-                    .finally(() => setBusy(false));
-                }}
-              />
-            ))}
-          {rewardMilestones
-            .filter((item) => rewards.points >= item.points)
-            .map((item) => (
-              <Action
-                key={item.points}
-                label={`${item.name} · ${item.points.toLocaleString("en-TT")} points for ${money(item.value)}`}
-                secondary
-                disabled={busy || !appointment}
-                onPress={() => {
-                  if (!appointment) return;
-                  setBusy(true);
-                  setError("");
-                  void Promise.resolve(
-                    db().rpc("lj_redeem_rewards", {
-                      p_appointment: appointment.id,
-                      p_points: item.points,
-                    }),
-                  )
-                    .then(check)
-                    .then(onChanged)
-                    .catch((e: unknown) =>
-                      setError(e instanceof Error ? e.message : "Unable to redeem this reward."),
                     )
                     .finally(() => setBusy(false));
                 }}
