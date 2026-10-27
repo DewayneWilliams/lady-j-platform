@@ -255,11 +255,10 @@ export default function Shell({
             flexGrow: 1,
             flexShrink: 1,
             flexBasis: 0,
-            minHeight: 0,
+            minHeight: "auto",
             backgroundColor: c.background,
-            height: "auto",
+            height: 579,
             flexDirection: "column",
-            paddingTop: 10,
           }}
           contentContainerStyle={{ paddingBottom: navigationSpacing + 12 }}
           showsVerticalScrollIndicator={false}

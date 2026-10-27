@@ -10,13 +10,11 @@ import {
   type ViewProps,
   Image,
   ImageStyle,
-  ActivityIndicator,
 } from "react-native";
 import { useTheme } from "@/theming/ThemeProvider";
 import Icon, { IconName } from "@/lib/icons/LucideIcon";
 import { fonts, fieldLabel } from "@/lib/salon/design";
 import { catalogPhotoSource } from "@/lib/salon/images";
-import SubtleShimmer from "./SubtleShimmer";
 export function useColors() {
   return useTheme().theme.colors;
 }
@@ -140,11 +138,11 @@ export function Heading({
   return (
     <View
       style={{
-        flexDirection: "row",
-        justifyContent: "space-between",
+        flexDirection: "column",
         alignItems: "center",
         gap: 12,
         marginBottom: compact ? 6 : 16,
+        justifyContent: "center",
       }}
     >
       <View
@@ -152,6 +150,9 @@ export function Heading({
           flex: 1,
           minWidth: 0,
           gap: sub ? 5 : 0,
+          justifyContent: "center",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
         <Txt
@@ -160,11 +161,17 @@ export function Heading({
           numberOfLines={singleLine ? 1 : undefined}
           adjustsFontSizeToFit={singleLine}
           minimumFontScale={singleLine ? 0.72 : undefined}
-          className={"text-sm w-80 mr-24"}
+          className={
+            "text-sm w-80 mr-0 2xl:mr-40 lg:text-center lg:justify-center lg:flex-col lg:w-64 lg:pt-20 text-center pt-4"
+          }
         >
           {children}
         </Txt>
-        {!!sub && <Txt color={theme.colors.mutedForeground}>{sub}</Txt>}
+        {!!sub && (
+          <Txt color={theme.colors.mutedForeground} className={"pb-8"}>
+            {sub}
+          </Txt>
+        )}
       </View>
       {action}
     </View>
@@ -217,67 +224,7 @@ export function Action({
           : gold
             ? c.primaryForeground
             : c.primaryForeground);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: unavailable, busy }}
-      testID={id || controlTestId("action", label, "action")}
-      disabled={unavailable}
-      onPress={onPress}
-      style={({ pressed }) => [
-        {
-          minHeight: prominent ? 52 : 46,
-          borderRadius: 10,
-          paddingHorizontal: 12,
-          paddingVertical: prominent ? 11 : 8,
-          maxWidth: "100%",
-          minWidth: 0,
-          flexShrink: 1,
-          flexDirection: "row",
-          gap: 8,
-          alignItems: "center",
-          justifyContent: "center",
-          alignSelf: "flex-start",
-          overflow: "hidden",
-          backgroundColor: secondary
-            ? c.card
-            : gold
-              ? c.brandAccentFill
-              : inverted
-                ? c.foreground
-                : c.primary,
-          borderColor: secondary
-            ? c.border
-            : gold
-              ? c.brandAccentFill
-              : inverted
-                ? c.foreground
-                : c.primary,
-          borderWidth: 1,
-          opacity: pressed ? 0.86 : 1,
-        },
-        style,
-        unavailable && { backgroundColor: c.muted, borderColor: c.border, opacity: 1 },
-      ]}
-    >
-      {shimmer && !unavailable && (
-        <SubtleShimmer interval={shimmerInterval} travelDistance={620} borderRadius={11} />
-      )}
-      {busy ? (
-        <ActivityIndicator color={contentColor} />
-      ) : icon ? (
-        <Icon name={icon} size={22} color={iconColor || contentColor} />
-      ) : null}
-      <ButtonLabel
-        size={prominent ? 22 : secondary ? 18 : 20}
-        color={contentColor}
-        style={{ textAlign: "center" }}
-      >
-        {label}
-      </ButtonLabel>
-    </Pressable>
-  );
+  return null;
 }
 export function IconButton({
   name,
@@ -517,7 +464,14 @@ export function Empty({
   action?: React.ReactNode;
 }) {
   return (
-    <Card style={{ paddingVertical: 30, alignItems: "center", gap: 10 }}>
+    <Card
+      style={{
+        paddingVertical: 30,
+        alignItems: "center",
+        gap: 10,
+        flexDirection: "column",
+      }}
+    >
       <Txt serif size={26} style={{ textAlign: "center" }}>
         {title}
       </Txt>

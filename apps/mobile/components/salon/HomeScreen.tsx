@@ -166,12 +166,11 @@ export default function HomeScreen() {
           <Pressable
             testID="home-consultation-cta"
             collapsable={false}
-            renderToHardwareTextureAndroid
-            accessibilityRole="button"
+                        accessibilityRole="button"
             accessibilityLabel="Request Your Free Consultation, 15 Minutes, Complimentary"
             accessibilityHint="Opens the complete free consultation request"
             onPress={() => go("consultation")}
-            style={({ pressed }) => ({
+            style={{
               width: "100%",
               maxWidth: 560,
               minWidth: 0,
@@ -186,7 +185,7 @@ export default function HomeScreen() {
               paddingVertical: 12,
               alignItems: "center",
               justifyContent: "center",
-              opacity: pressed ? 0.9 : 1,
+              opacity: 1,
               ...(Platform.OS === "web"
                 ? ({ boxShadow: "0 5px 10px rgba(29, 78, 216, 0.18)" } as object)
                 : {
@@ -196,15 +195,13 @@ export default function HomeScreen() {
                     shadowOffset: { width: 0, height: 5 },
                     elevation: 6,
                   }),
-            })}
+            }}
           >
             <Txt
               bold
               size={18}
               color="#FFFFFF"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.82}
+              minimumFontScale={1}
               style={{ width: "100%", textAlign: "center", lineHeight: 24, opacity: 1 }}
             >
               Request Your Free Consultation
@@ -212,11 +209,7 @@ export default function HomeScreen() {
             <Txt
               size={14}
               color="#FFFFFF"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.88}
-              style={{
-                width: "100%",
+                style={{
                 textAlign: "center",
                 marginTop: 3,
                 lineHeight: 20,
