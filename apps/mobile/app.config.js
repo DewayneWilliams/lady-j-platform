@@ -69,6 +69,7 @@ module.exports = {
 
 
 
+
   scheme: "lady-j",
   slug: "lady-j",
   splash: {
