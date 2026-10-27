@@ -105,12 +105,14 @@ function Detail({
 export default function ConsultationRequestsPanel({
   services,
   appointments,
+  demo = false,
   clientId,
   focusId,
   onChanged,
 }: {
   services: Service[];
   appointments: Appointment[];
+  demo?: boolean;
   clientId?: string;
   focusId?: string;
   onChanged?: () => Promise<void> | void;
@@ -135,6 +137,73 @@ export default function ConsultationRequestsPanel({
   const load = useCallback(async () => {
     setError("");
     try {
+      if (demo) {
+        const names = [
+          "Mary Magdalene",
+          "Esther of Susa",
+          "Ruth of Moab",
+          "Martha of Bethany",
+          "Priscilla of Corinth",
+          "Sarah Matriarch",
+        ];
+        const statuses: ConsultationRequest["status"][] = [
+          "new",
+          "contacted",
+          "scheduled",
+          "completed",
+          "new",
+          "cancelled",
+        ];
+        const value = names.map((client_name, index) => {
+          const service = services[index % Math.max(1, services.length)];
+          const selected = {
+            id: service?.id || `demo-service-${index}`,
+            name: service?.name || "Signature salon consultation",
+            category: service?.category || "Hair",
+          };
+          return {
+            id: `demo-consultation-${index + 1}`,
+            customer_id: `demo-client-${index + 1}`,
+            client_id: `demo-client-${index + 1}`,
+            client_name,
+            client_email: `consultation${index + 1}@demo.invalid`,
+            whatsapp_phone: `+1 868 555 ${String(5200 + index)}`,
+            selected_services: [selected],
+            primary_service: selected,
+            desired_outcomes: ["A polished, healthy-looking result", "Personalized aftercare"],
+            visit_special: index % 2 ? "Self-care appointment" : "Special occasion",
+            occasion: index % 2 ? "" : "Demo celebration",
+            event_date: null,
+            previous_experience: "Fictional consultation history for Development Test Mode.",
+            comfort_note: "Prefers a calm explanation before the service begins.",
+            comfort_private: index % 2 === 0,
+            availability_days: ["Tuesday", "Thursday"],
+            availability_times: ["Morning", "Afternoon"],
+            preferred_date: null,
+            additional_notes: "Demo request only; no real client information.",
+            allergy_status: "No known allergies disclosed in this demo.",
+            allergy_details: "",
+            accessibility_needs: index === 3 ? ["Extra seating support"] : [],
+            accessibility_details: "",
+            screening: { demo_screening: "Reviewed for testing" },
+            inspiration_paths: [],
+            summary: `${client_name} is requesting a ${selected.name.toLowerCase()} consultation.`,
+            status: statuses[index],
+            owner_alert_status: index < 2 ? "sent" : "manual_required",
+            appointment_id:
+              statuses[index] === "scheduled"
+                ? appointments.find((item) => item.customer_id === `demo-client-${index + 1}`)
+                    ?.id || null
+                : null,
+            converted_appointment_id: null,
+            created_at: new Date(Date.now() - index * 86400000).toISOString(),
+            updated_at: new Date().toISOString(),
+          } satisfies ConsultationRequest;
+        });
+        setRows(clientId ? value.filter((request) => request.client_id === clientId) : value);
+        setLoading(false);
+        return;
+      }
       let query = db()
         .from("lj_consultation_requests")
         .select("*")
@@ -158,7 +227,7 @@ export default function ConsultationRequestsPanel({
     } finally {
       setLoading(false);
     }
-  }, [clientId, focusId]);
+  }, [appointments, clientId, demo, focusId, services]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -505,19 +574,19 @@ export default function ConsultationRequestsPanel({
                     )}
                     {!!request.appointment_id &&
                       !["completed", "converted", "cancelled"].includes(request.status) && (
-                      <OwnerButton
-                        fill
-                        secondary
-                        label="Cancel"
-                        icon="CalendarX2"
-                        onPress={() =>
-                          void update(request, "cancel", async () =>
-                            check(await db().rpc("lj_cancel_consultation", { p_id: request.id })),
-                          )
-                        }
-                        busy={busy === request.id + "cancel"}
-                      />
-                    )}
+                        <OwnerButton
+                          fill
+                          secondary
+                          label="Cancel"
+                          icon="CalendarX2"
+                          onPress={() =>
+                            void update(request, "cancel", async () =>
+                              check(await db().rpc("lj_cancel_consultation", { p_id: request.id })),
+                            )
+                          }
+                          busy={busy === request.id + "cancel"}
+                        />
+                      )}
                     {request.status === "scheduled" && (
                       <OwnerButton
                         fill

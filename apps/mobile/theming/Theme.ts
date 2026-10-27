@@ -47,6 +47,8 @@ export interface Theme {
     calendarBlocked?: string;
     calendarVip?: string;
     calendarConsultation?: string;
+    consultationFill?: string;
+    consultationForeground?: string;
     calendarEvent?: string;
     calendarDotBorder?: string;
     goldSurface?: string;

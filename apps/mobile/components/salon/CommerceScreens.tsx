@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { View, useWindowDimensions } from "react-native";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
@@ -7,7 +7,8 @@ import { useDiscountQuote } from "@/lib/salon/discounts";
 import { db, check } from "@/lib/salon/client";
 import { money } from "@/lib/salon/types";
 import Shell, { useNav } from "./Shell";
-import { PaymentChoice } from "./BookingScreen";
+import { PaymentChoice, requestUuid } from "./BookingScreen";
+import FavoriteButton from "./FavoriteButton";
 import {
   Txt,
   Action,
@@ -69,7 +70,9 @@ export function BagScreen() {
                   style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
                 >
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Txt bold>{service.name}</Txt>
+                    <Txt bold numberOfLines={1} ellipsizeMode="tail">
+                      {service.name}
+                    </Txt>
                     <Txt size={13} color={c.mutedForeground}>
                       {money(service.price)}
                     </Txt>
@@ -130,13 +133,16 @@ export function BagScreen() {
             </Txt>
           )}
           {items.map((v) => (
-            <Card key={v.id} style={{ flexDirection: "row", gap: 18, padding: 17 }}>
+            <Card
+              key={v.id}
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 8 }}
+            >
               <Photo name={v.image} style={{ width: 85, height: 105, borderRadius: 10 }} />
-              <View style={{ flex: 1, gap: 5 }}>
-                <Txt bold size={17}>
+              <View style={{ flex: 1, minWidth: 0, gap: 3, paddingRight: 38 }}>
+                <Txt bold size={17} numberOfLines={1} ellipsizeMode="tail">
                   {v.name}
                 </Txt>
-                <Txt>{money(v.price)}</Txt>
+                <Txt>TTD {money(v.price)}</Txt>
                 <View style={shared.row}>
                   <IconButton
                     name="Minus"
@@ -155,13 +161,16 @@ export function BagScreen() {
                   <LinkText onPress={() => update(v.id, 0)}>Remove</LinkText>
                 </View>
               </View>
+              <View style={{ position: "absolute", right: 4, bottom: 4 }}>
+                <FavoriteButton compact kind="product" itemId={v.id} />
+              </View>
             </Card>
           ))}
           <Card style={{ gap: 15 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Txt size={20}>Bag total</Txt>
               <Txt size={23} bold>
-                {money(total)}
+                TTD {money(total)}
               </Txt>
             </View>
             <Txt size={12} color={c.mutedForeground}>
@@ -169,7 +178,7 @@ export function BagScreen() {
             </Txt>
             {!!items.length && (
               <Action
-                label="Checkout Products"
+                label="Proceed to Checkout"
                 icon="ArrowRight"
                 onPress={() => go("checkout", { kind: "product" })}
                 style={{ alignSelf: "stretch" }}
@@ -186,14 +195,26 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
     go = useNav(),
     c = useColors(),
     { width } = useWindowDimensions();
-  const [method, setMethod] = useState(s.testMode ? "simulation" : "bank"),
+  const [method, setMethod] = useState(s.testMode ? "card" : "bank"),
+    [demoCardReady, setDemoCardReady] = useState(false),
     [fulfillment, setFulfillment] = useState("pickup"),
     [address, setAddress] = useState(""),
     [reference, setReference] = useState(""),
+    [contactName, setContactName] = useState(s.profile?.full_name || ""),
+    [contactEmail, setContactEmail] = useState(s.profile?.email || s.session?.user.email || ""),
+    [contactPhone, setContactPhone] = useState(s.profile?.phone || ""),
     [accepted, setAccepted] = useState(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [done, setDone] = useState("");
+    [done, setDone] = useState<null | {
+      orderNumber: string;
+      paymentStatus: string;
+      demo: boolean;
+      method: string;
+      total: number;
+      items: typeof items;
+    }>(null);
+  const checkoutRequestKey = useRef(requestUuid());
   const workshop = s.workshops.find((v) => v.id === id),
     isWorkshop = kind === "workshop";
   const items = isWorkshop
@@ -220,8 +241,23 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
       setError("Please enter your complete delivery address.");
       return;
     }
-    if (method === "simulation") {
-      setDone("demo");
+    if (!contactName.trim() || !contactEmail.includes("@") || contactPhone.trim().length < 7) {
+      setError("Confirm your name, email address and phone number.");
+      return;
+    }
+    if (method === "card" && !demoCardReady) {
+      setError("Enter the successful demo card details before continuing.");
+      return;
+    }
+    if (s.testMode) {
+      setDone({
+        orderNumber: "DEMO-CHECKOUT",
+        paymentStatus: "Test payment only · No order created",
+        demo: true,
+        method: method === "card" ? "Demo Credit Card" : "Bank Wire Transfer (Demo)",
+        total,
+        items,
+      });
       return;
     }
     if (!s.session && !s.testMode) {
@@ -231,16 +267,27 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
     setBusy(true);
     try {
       const result = check(
-        await db().rpc("lj_checkout", {
+        await db().rpc("lj_checkout_v2", {
           p_kind: isWorkshop ? "workshop" : "product",
           p_items: items.map(({ id, quantity }) => ({ id, quantity })),
           p_fulfillment: isWorkshop ? "online" : fulfillment,
           p_address: address,
           p_reference: reference,
           p_code: pricing.code,
+          p_request_key: checkoutRequestKey.current,
+          p_contact_name: contactName.trim(),
+          p_contact_email: contactEmail.trim(),
+          p_contact_phone: contactPhone.trim(),
         }),
-      );
-      setDone(String(result));
+      ) as { id: string; order_number: string; payment_status: string };
+      setDone({
+        orderNumber: result.order_number,
+        paymentStatus: result.payment_status,
+        demo: false,
+        method: "Bank Wire Transfer",
+        total,
+        items,
+      });
       if (isWorkshop && workshop) {
         s.setWorkshopCart((old) => old.filter((workshopId) => workshopId !== workshop.id));
       } else {
@@ -264,27 +311,44 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
       </Heading>
       {done ? (
         <Card style={{ maxWidth: 650, gap: 20, alignSelf: "center", alignItems: "center" }}>
-          <Icon
-            name={done === "demo" ? "Sparkles" : "CircleCheck"}
-            size={40}
-            color={c.brandAccent}
-          />
-          <Tag>{done === "demo" ? "No purchase created" : "Request saved · Payment pending"}</Tag>
+          <Icon name={done.demo ? "Sparkles" : "CircleCheck"} size={40} color={c.brandAccent} />
+          <Tag>
+            {done.demo
+              ? "Demo only · No purchase created"
+              : "Order submitted · Awaiting payment verification"}
+          </Tag>
           <Txt serif size={31}>
-            {done === "demo"
-              ? "Your checkout preview is complete."
-              : "Your request is with Lady J."}
+            {done.demo ? "Your checkout preview is complete." : "Your order is with Lady J."}
           </Txt>
+          <Txt bold size={18}>
+            Order {done.orderNumber}
+          </Txt>
+          <View style={{ width: "100%", gap: 7 }}>
+            {done.items.map((item) => (
+              <View
+                key={item.id}
+                style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}
+              >
+                <Txt style={{ flex: 1 }}>
+                  {item.name} × {item.quantity}
+                </Txt>
+                <Txt>TTD {money(item.price * item.quantity)}</Txt>
+              </View>
+            ))}
+            <Txt bold>Total: TTD {money(done.total)}</Txt>
+            <Txt>Payment: {done.method}</Txt>
+            <Txt>Status: {done.paymentStatus.replaceAll("_", " ")}</Txt>
+          </View>
           <Txt style={{ textAlign: "center" }}>
-            {done === "demo"
+            {done.demo
               ? "No payment was taken, no stock was reserved and no purchase or registration was created."
-              : "Your bank transfer must be verified by the owner before your purchase is confirmed or workshop access opens."}
+              : "Submitting an order is not proof of payment. Lady J must verify the bank transfer before the order is marked paid or prepared."}
           </Txt>
-          {done === "demo" ? (
+          {done.demo ? (
             <Action
               label="Choose bank transfer"
               onPress={() => {
-                setDone("");
+                setDone(null);
                 setMethod("bank");
               }}
             />
@@ -347,15 +411,36 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
                 )}
               </Card>
             )}
-            {s.session && <PromoCode pricing={pricing} />}
-            <PaymentChoice method={method} setMethod={setMethod} />
-            {method === "bank" && (
+            <Card style={{ gap: 12 }}>
+              <Txt bold size={17}>
+                Confirm your contact information
+              </Txt>
+              <Field label="Full Name" value={contactName} onChangeText={setContactName} />
               <Field
-                label="Transfer reference (if available)"
-                value={reference}
-                onChangeText={setReference}
+                label="Email Address"
+                value={contactEmail}
+                onChangeText={setContactEmail}
+                keyboardType="email-address"
               />
-            )}
+              <Field
+                label="Phone Number"
+                value={contactPhone}
+                onChangeText={setContactPhone}
+                keyboardType="phone-pad"
+              />
+            </Card>
+            {s.session && <PromoCode pricing={pricing} />}
+            <PaymentChoice
+              method={method}
+              setMethod={setMethod}
+              deposit={total}
+              fullTotal={total}
+              allowDeposit={false}
+              reference={reference}
+              setReference={setReference}
+              collectReceipt={false}
+              onDemoCardReady={setDemoCardReady}
+            />
             <Check
               checked={accepted}
               onPress={() => setAccepted(!accepted)}
@@ -366,13 +451,14 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
               busy={busy}
               disabled={
                 !accepted ||
-                (method === "bank" && !s.session) ||
+                (method === "bank" && !s.session && !s.testMode) ||
+                (method === "card" && !demoCardReady) ||
                 ((!!s.session || s.testMode) && !pricing.ready)
               }
               label={
-                method === "simulation"
-                  ? "Try simulated card checkout"
-                  : "Submit bank transfer request"
+                method === "card"
+                  ? `Pay TTD ${money(total)} with Demo Card`
+                  : "Submit Bank Transfer Order"
               }
               onPress={() => void submit()}
               style={{ alignSelf: "stretch" }}
@@ -397,19 +483,19 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
                 <Txt size={15} style={{ flex: 1 }}>
                   {v.name} × {v.quantity}
                 </Txt>
-                <Txt>{money(v.price * v.quantity)}</Txt>
+                <Txt>TTD {money(v.price * v.quantity)}</Txt>
               </View>
             ))}
             {Number(pricing.quote?.discount_total) > 0 && (
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Txt color={c.success}>Discount</Txt>
-                <Txt color={c.success}>−{money(pricing.quote!.discount_total)}</Txt>
+                <Txt color={c.success}>−TTD {money(pricing.quote!.discount_total)}</Txt>
               </View>
             )}
             {!isWorkshop && (
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Txt size={14}>{fulfillment === "pickup" ? "Salon pickup" : "Delivery fee"}</Txt>
-                <Txt>{delivery ? money(delivery) : "Complimentary"}</Txt>
+                <Txt>{delivery ? `TTD ${money(delivery)}` : "Complimentary"}</Txt>
               </View>
             )}
             <View
@@ -425,7 +511,7 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
                 Total
               </Txt>
               <Txt size={24} bold>
-                {money(total)}
+                TTD {money(total)}
               </Txt>
             </View>
             <Txt size={12} color={c.mutedForeground}>

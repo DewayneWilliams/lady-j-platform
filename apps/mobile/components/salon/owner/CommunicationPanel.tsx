@@ -47,10 +47,28 @@ const eventLabels: Record<string, string> = {
   referral_successful: "Referral successful",
 };
 export default function CommunicationPanel({ demo }: { demo: boolean }) {
-  const [connection, setConnection] = useState<Connection | null>(null),
-    [messages, setMessages] = useState<Message[]>([]),
+  const demoMessages: Message[] = [
+    ["appointment_confirmed", "sent", "Mary Magdalene"],
+    ["reminder_24h", "queued", "Esther of Susa"],
+    ["payment_receipt", "sent", "David of Bethlehem"],
+    ["order_ready", "queued", "Ruth of Moab"],
+    ["waitlist_opening", "sent", "Martha of Bethany"],
+    ["service_thanks", "failed", "Solomon of Jerusalem"],
+  ].map(([event, status, name], index) => ({
+    id: `demo-message-${index + 1}`,
+    event,
+    status,
+    scheduled_at: new Date(Date.now() - index * 3600000).toISOString(),
+    sent_at: status === "sent" ? new Date(Date.now() - index * 3600000).toISOString() : null,
+    last_error: status === "failed" ? `Demo delivery failure for ${name}` : null,
+    attempts: status === "failed" ? 2 : status === "sent" ? 1 : 0,
+  }));
+  const [connection, setConnection] = useState<Connection | null>(
+      demo ? { configured: true, enabled: false, missing: [] } : null,
+    ),
+    [messages, setMessages] = useState<Message[]>(demo ? demoMessages : []),
     [page, setPage] = useState(0),
-    [total, setTotal] = useState(0),
+    [total, setTotal] = useState(demo ? demoMessages.length : 0),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [result, setResult] = useState("");

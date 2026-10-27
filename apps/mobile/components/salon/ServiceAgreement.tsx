@@ -25,19 +25,26 @@ export type GuestAgreementDraft = {
 
 function AgreementCopy() {
   const c = useColors();
+  const lines = agreementText.split("\n");
   return (
-    <View style={{ gap: 10 }}>
-      {agreementText.split("\n\n").map((paragraph, index) => {
-        const heading = paragraph.startsWith("# ") || paragraph.startsWith("### ");
-        const content = paragraph.replace(/^#{1,3}\s*/, "");
+    <View style={{ gap: 0 }}>
+      {lines.map((line, index) => {
+        const content = line.replace(/^#{1,6}\s*/, "").trim();
+        if (!content) return <View key={`space-${index}`} style={{ height: 9 }} />;
+        const markdownHeading = /^#{1,6}\s/.test(line);
+        const numberedHeading = /^\d+\.\s/.test(content);
+        const title = line.startsWith("# ");
         return (
           <Txt
             key={`${index}-${content.slice(0, 16)}`}
-            serif={heading}
-            bold={heading}
-            size={heading ? (paragraph.startsWith("# ") ? 22 : 17) : 13}
-            color={heading ? c.foreground : c.mutedForeground}
-            style={{ lineHeight: heading ? 24 : 19 }}
+            serif={markdownHeading}
+            bold={markdownHeading || numberedHeading}
+            size={title ? 21 : markdownHeading ? 16 : 14}
+            color={c.foreground}
+            style={{
+              lineHeight: title ? 25 : markdownHeading ? 21 : 21,
+              marginTop: numberedHeading && index > 0 ? 3 : 0,
+            }}
           >
             {content}
           </Txt>
@@ -47,12 +54,41 @@ function AgreementCopy() {
   );
 }
 
+function AgreementPdfButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const c = useColors();
+  return (
+    <View style={{ alignItems: "center" }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        style={({ pressed }) => ({
+          minHeight: 42,
+          maxWidth: "100%",
+          paddingHorizontal: 14,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: c.border,
+          backgroundColor: c.card,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 7,
+          opacity: pressed ? 0.82 : 1,
+        })}
+      >
+        <Icon name="FileCheck" size={17} color={c.brandAccent} />
+        <Txt size={13} bold>{label}</Txt>
+      </Pressable>
+    </View>
+  );
+}
+
 function CompactAgreement({
   name,
   setName,
   accepted,
   setAccepted,
-  signature,
   setSignature,
   open,
   setOpen,
@@ -67,7 +103,6 @@ function CompactAgreement({
   setName: (value: string) => void;
   accepted: boolean;
   setAccepted: React.Dispatch<React.SetStateAction<boolean>>;
-  signature: SignatureStroke[];
   setSignature: (value: SignatureStroke[]) => void;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -151,13 +186,36 @@ function CompactAgreement({
                 label="I have read, understood, and agree to all terms and consent to signing electronically."
               />
               {!!error && <ErrorBox message={error} />}
-              <Action
-                label="Sign & Accept Agreement"
-                onPress={() => void save()}
-                busy={busy}
-                disabled={!valid}
-                style={{ alignSelf: "stretch", minHeight: 50 }}
-              />
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Submit signed agreement"
+                  accessibilityState={{ disabled: !valid || busy }}
+                  disabled={!valid || busy}
+                  onPress={() => void save()}
+                  style={({ pressed }) => ({
+                    minHeight: 48,
+                    minWidth: 224,
+                    maxWidth: "100%",
+                    paddingHorizontal: 18,
+                    borderRadius: 14,
+                    backgroundColor: c.brandAccent,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                    opacity: !valid || busy ? 0.48 : pressed ? 0.86 : 1,
+                  })}
+                >
+                  <Icon name="FileCheck" size={18} color={c.primaryForeground} />
+                  <Txt size={14} bold color={c.primaryForeground}>
+                    {busy ? "Saving agreement…" : "Submit signed agreement"}
+                  </Txt>
+                </Pressable>
+                <Txt size={11} color={c.mutedForeground} style={{ textAlign: "center" }}>
+                  Your signed PDF is saved securely to your account.
+                </Txt>
+              </View>
             </>
           )}
         </View>
@@ -221,14 +279,11 @@ export function AppointmentAgreement({ appointmentId }: { appointmentId: string 
   if (!validAppointmentId) return null;
   if (!agreement) return error ? <ErrorBox message={error} /> : null;
   return (
-    <Action
+    <AgreementPdfButton
       label="View Signed Service Agreement"
-      icon="FileCheck"
-      secondary
       onPress={() =>
         void openAgreementPdf(agreement.object_path).catch((reason) => setError(reason.message))
       }
-      style={{ alignSelf: "stretch" }}
     />
   );
 }
@@ -380,7 +435,6 @@ export default function ServiceAgreement({
       setName={setName}
       accepted={accepted}
       setAccepted={setAccepted}
-      signature={signature}
       setSignature={setSignature}
       open={open}
       setOpen={setOpen}
@@ -493,9 +547,8 @@ export function AgreementList({
               Client service agreement ·{" "}
               {row.appointment_id ? "Linked to appointment" : "Ready for booking"}
             </Txt>
-            <Action
-              label="View Agreement"
-              secondary
+            <AgreementPdfButton
+              label="View signed PDF"
               onPress={() => {
                 void openAgreementPdf(row.object_path).catch((e) => setError(e.message));
               }}

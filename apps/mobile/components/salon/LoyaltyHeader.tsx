@@ -1,3 +1,4 @@
+import { useFonts, PlayfairDisplay_700Bold } from "@expo-google-fonts/dev";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
@@ -174,6 +175,8 @@ function RoyaltyJourneyCard({
           shadowOpacity: lifted ? 0.12 : 0,
           shadowRadius: 10,
           shadowOffset: { width: 0, height: 4 },
+          paddingTop: 0,
+          paddingBottom: 0
         }}
       >
         {current && <SubtleShimmer interval={14000} travelDistance={width + 60} />}
@@ -279,6 +282,14 @@ export default function LoyaltyHeader({
     return () => clearTimeout(timer);
   }, [cardWidth, journeyWidth, reduced, royalty.level]);
 
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_700Bold
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   const scrollTo = (index: number) => {
     const nextIndex = Math.max(0, Math.min(royaltyLevels.length - 1, index));
     setJourneyIndex(nextIndex);
@@ -290,7 +301,11 @@ export default function LoyaltyHeader({
   if (!rewards.enabled) return null;
   return (
     <View style={{ gap: compact ? 0 : 5, paddingBottom: compact ? 0 : 4 }}>
-      <Txt size={18} bold style={{ textAlign: "center" }}>
+      <Txt size={18} bold style={{
+        textAlign: "center",
+        fontSize: 14,
+        fontFamily: "PlayfairDisplay_700Bold"
+      }}>
         Royalty Program
       </Txt>
       <View

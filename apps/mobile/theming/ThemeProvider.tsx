@@ -14,6 +14,29 @@ const ThemeContext = createContext<ThemeContextValue>({
   setTheme: () => {},
 });
 
+function hexToHslChannels(value: string) {
+  const hex = value.replace("#", "");
+  if (!/^[\da-f]{3}([\da-f]{3})?$/i.test(hex)) return undefined;
+  const normalized = hex.length === 3 ? hex.split("").map((part) => part + part).join("") : hex;
+  const red = Number.parseInt(normalized.slice(0, 2), 16) / 255;
+  const green = Number.parseInt(normalized.slice(2, 4), 16) / 255;
+  const blue = Number.parseInt(normalized.slice(4, 6), 16) / 255;
+  const maximum = Math.max(red, green, blue);
+  const minimum = Math.min(red, green, blue);
+  const lightness = (maximum + minimum) / 2;
+  const delta = maximum - minimum;
+  const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+  let hue = 0;
+  if (delta !== 0) {
+    if (maximum === red) hue = ((green - blue) / delta) % 6;
+    else if (maximum === green) hue = (blue - red) / delta + 2;
+    else hue = (red - green) / delta + 4;
+    hue *= 60;
+    if (hue < 0) hue += 360;
+  }
+  return `${Math.round(hue)} ${Math.round(saturation * 100)}% ${Math.round(lightness * 100)}%`;
+}
+
 export const ThemeProvider = ({
   initialThemeName,
   themes,
@@ -79,8 +102,12 @@ export const ThemeProvider = ({
   const strippedHslColors = useMemo(() => {
     const stripped: Record<string, string> = {};
     Object.entries(currentTheme.colors).forEach(([key, value]) => {
+      if (!value) return;
       if (value.startsWith('hsl(')) {
         stripped[key] = value.replace('hsl(', '').replace(')', '');
+      } else {
+        const channels = hexToHslChannels(value);
+        if (channels) stripped[key] = channels;
       }
     });
     return stripped;

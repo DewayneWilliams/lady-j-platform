@@ -1,3 +1,4 @@
+import { useFonts, PlayfairDisplay_700Bold } from "@expo-google-fonts/dev";
 import SalonLocation from "./SalonLocation";
 import { formatDuration } from "@/lib/salon/duration";
 import React, { useEffect, useState } from "react";
@@ -34,6 +35,15 @@ export default function HomeScreen() {
     );
     return () => clearTimeout(timer);
   }, [s.homeSpecials, now, s.refresh]);
+
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_700Bold
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   const specials = s.homeSpecials
     .filter(
       (v) =>
@@ -71,6 +81,8 @@ export default function HomeScreen() {
           marginBottom: 0,
           gap: 4,
           minHeight: 72,
+          paddingTop: 4,
+          paddingBottom: 4
         }}
       >
         {[
@@ -147,6 +159,10 @@ export default function HomeScreen() {
               lineHeight: careHeadlineSize * 1.2,
               textAlign: "center",
               alignItems: "center",
+              fontFamily: "PlayfairDisplay_700Bold",
+              fontSize: 20,
+              paddingTop: 4,
+              paddingBottom: 4
             }}
           >
             Look Your Best. Feel Your Best!
@@ -155,13 +171,16 @@ export default function HomeScreen() {
             color={c.mutedForeground}
             style={{
               lineHeight: 26,
-              flexDirection: "row",
+              flexDirection: "column",
               fontSize: 16,
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+              paddingBottom: 4,
+              paddingTop: 4
             }}
           >
-            {
-              "You work hard, give your best to others, and deserve to feel just as good as you make everyone else feel. But finding time for yourself—and someone you can truly trust with your care—isn't always easy. At LADY J SALON & DAY SPA, we take the time to listen, understand your needs, and provide personalized beauty, grooming, and wellness services designed around you. Whether you're preparing for a special occasion or simply making yourself a priority, we're here to make every visit comfortable, relaxing, and rewarding. Because you deserve more than great results. \n\nYou deserve to leave feeling confident, refreshed, and ready to take on the world!"
-            }
+            {"You work hard, give your best to others, and deserve to feel just as good as you make everyone else feel. But finding time for yourself—and someone you can truly trust with your care—isn't always easy. At LADY J SALON & DAY SPA, we take the time to listen, understand your needs, and provide personalized beauty, grooming, and wellness services designed around you. Whether you're preparing for a special occasion or simply making yourself a priority, we're here to make every visit comfortable, relaxing, and rewarding. Because you deserve more than great results. You deserve to leave feeling confident, refreshed, and ready to take on the world!"}
           </Txt>
           <Pressable
             testID="home-consultation-cta"
@@ -177,7 +196,7 @@ export default function HomeScreen() {
               minHeight: 72,
               alignSelf: "center",
               borderRadius: 16,
-              backgroundColor: "#2563EB",
+              backgroundColor: c.consultationFill,
               position: "relative",
               zIndex: 2,
               overflow: "visible",
@@ -189,7 +208,7 @@ export default function HomeScreen() {
               ...(Platform.OS === "web"
                 ? ({ boxShadow: "0 5px 10px rgba(29, 78, 216, 0.18)" } as object)
                 : {
-                    shadowColor: "#1D4ED8",
+                    shadowColor: c.consultationFill,
                     shadowOpacity: 0.18,
                     shadowRadius: 10,
                     shadowOffset: { width: 0, height: 5 },
@@ -200,21 +219,28 @@ export default function HomeScreen() {
             <Txt
               bold
               size={18}
-              color="#FFFFFF"
+              color={c.consultationForeground}
               minimumFontScale={1}
-              style={{ width: "100%", textAlign: "center", lineHeight: 24, opacity: 1 }}
+              style={{
+                width: "100%",
+                textAlign: "center",
+                lineHeight: 24,
+                opacity: 1,
+                fontSize: 24
+              }}
             >
               Request Your Free Consultation
             </Txt>
             <Txt
               size={14}
-              color="#FFFFFF"
+              color={c.consultationForeground}
                 style={{
-                textAlign: "center",
-                marginTop: 3,
-                lineHeight: 20,
-                opacity: 1,
-              }}
+                  textAlign: "center",
+                  marginTop: 3,
+                  lineHeight: 20,
+                  opacity: 1,
+                  fontSize: 18
+                }}
             >
               15 Minutes • Complimentary
             </Txt>

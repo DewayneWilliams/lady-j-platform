@@ -2,8 +2,10 @@ import StatusNotice from "./StatusNotice";
 import { useBottomNavigationSpacing } from "./BottomNavigation";
 import React, { useRef, useState, useEffect } from "react";
 import {
+  Animated,
   View,
   ScrollView,
+  Platform,
   Pressable,
   useWindowDimensions,
   ActivityIndicator,
@@ -18,6 +20,7 @@ import { clientNavigationCopy } from "@/lib/salon/clientLanguage";
 import { useTheme } from "@/theming/ThemeProvider";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
+import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreference";
 import { Txt, ButtonLabel, useColors, shared, LinkText, ErrorBox } from "./ui";
 import FloatingBag from "./FloatingBag";
 import SubtleShimmer from "./SubtleShimmer";
@@ -52,6 +55,20 @@ export function Brand({
   const { theme } = useTheme();
   const c = theme.colors;
   const go = useNav();
+  const reducedMotion = useReducedMotionPreference();
+  const motion = useRef(new Animated.Value(0)).current;
+  const animate = (value: number) => {
+    if (reducedMotion !== false || Platform.OS !== "web") {
+      motion.setValue(0);
+      return;
+    }
+    Animated.spring(motion, {
+      toValue: value,
+      speed: 24,
+      bounciness: 7,
+      useNativeDriver: false,
+    }).start();
+  };
   const wordmark = (
     <>
       <Txt
@@ -83,18 +100,111 @@ export function Brand({
   );
   const style = { flexShrink: compact ? 0 : 1, width: compact ? 84 : undefined };
   return interactive ? (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Lady J home"
-      onPress={() => go("home")}
-      style={style}
+    <Animated.View
+      style={{
+        transform: [
+          {
+            scale: motion.interpolate({
+              inputRange: [0, 1],
+              outputRange: [1, 1.055],
+            }),
+          },
+          {
+            rotate: motion.interpolate({
+              inputRange: [0, 1],
+              outputRange: ["0deg", "-1.5deg"],
+            }),
+          },
+        ],
+      }}
     >
-      {wordmark}
-    </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Lady J home"
+        onPress={() => go("home")}
+        onHoverIn={() => animate(1)}
+        onHoverOut={() => animate(0)}
+        style={style}
+      >
+        {wordmark}
+      </Pressable>
+    </Animated.View>
   ) : (
     <View style={style}>{wordmark}</View>
   );
 }
+
+function HeaderActionButton({
+  label,
+  onPress,
+  compact,
+  alternate,
+}: {
+  label: string;
+  onPress: () => void;
+  compact: boolean;
+  alternate: boolean;
+}) {
+  const c = useColors();
+  const reducedMotion = useReducedMotionPreference();
+  const motion = useRef(new Animated.Value(0)).current;
+  const animate = (value: number) => {
+    if (reducedMotion !== false || Platform.OS !== "web") {
+      motion.setValue(0);
+      return;
+    }
+    Animated.spring(motion, {
+      toValue: value,
+      speed: 26,
+      bounciness: 5,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  return (
+    <Animated.View
+      style={{
+        flexGrow: compact ? 1 : 0,
+        flexShrink: compact ? 1 : 0,
+        flexBasis: "auto",
+        minWidth: 0,
+        maxWidth: "100%",
+        width: 202,
+        transform: [
+          {
+            scale: motion.interpolate({
+              inputRange: [0, 1],
+              outputRange: [1, 1.045],
+            }),
+          },
+        ],
+      }}
+    >
+      <Button
+        accessibilityLabel={label}
+        onPress={onPress}
+        onHoverIn={() => animate(1)}
+        onHoverOut={() => animate(0)}
+        style={{
+          width: "100%",
+          backgroundColor: alternate ? "#000000" : c.primary,
+          borderRadius: 14,
+          overflow: "hidden",
+          minHeight: 44,
+          height: "auto",
+          paddingHorizontal: compact ? 7 : 12,
+          paddingVertical: 8,
+        }}
+      >
+        <SubtleShimmer interval={alternate ? 8000 : 6500} travelDistance={280} />
+        <ButtonLabel size={compact ? 11 : 20} color={alternate ? "#FFFFFF" : c.primaryForeground}>
+          {label}
+        </ButtonLabel>
+      </Button>
+    </Animated.View>
+  );
+}
+
 export default function Shell({
   children,
   wide = false,
@@ -168,8 +278,8 @@ export default function Shell({
           </View>
           <HeaderLanguageSelector compact={compact} />
           <ThemeToggle color={c.headerInk} label={copy.theme} />
-          <Button
-            accessibilityLabel={headerAction?.label || copy.booking}
+          <HeaderActionButton
+            label={headerAction?.label || copy.booking}
             onPress={
               headerAction?.onPress ||
               (() =>
@@ -178,29 +288,9 @@ export default function Shell({
                   s.session || s.testMode ? {} : { next: "booking" },
                 ))
             }
-            style={{
-              backgroundColor: headerAction ? "#000000" : c.primary,
-              borderRadius: 14,
-              overflow: "hidden",
-              minHeight: 44,
-              height: "auto",
-              paddingHorizontal: compact ? 7 : 12,
-              paddingVertical: 8,
-              flexGrow: compact ? 1 : 0,
-              flexShrink: compact ? 1 : 0,
-              flexBasis: "auto",
-              minWidth: 0,
-              maxWidth: "100%",
-            }}
-          >
-            <SubtleShimmer interval={headerAction ? 8000 : 6500} travelDistance={280} />
-            <ButtonLabel
-              size={compact ? 11 : 20}
-              color={headerAction ? "#FFFFFF" : c.primaryForeground}
-            >
-              {headerAction?.label || copy.booking}
-            </ButtonLabel>
-          </Button>
+            compact={compact}
+            alternate={Boolean(headerAction)}
+          />
         </View>
       </View>
       {s.testMode && (
@@ -257,7 +347,7 @@ export default function Shell({
             flexBasis: 0,
             minHeight: "auto",
             backgroundColor: c.background,
-            height: 579,
+            height: "auto",
             flexDirection: "column",
           }}
           contentContainerStyle={{ paddingBottom: navigationSpacing + 12 }}
@@ -303,6 +393,7 @@ export default function Shell({
                 paddingHorizontal: desktop ? 28 : 16,
                 paddingVertical: 9,
                 marginTop: 8,
+                paddingTop: 12,
               }}
             >
               <View
@@ -312,10 +403,18 @@ export default function Shell({
                     alignItems: "center",
                     gap: 9,
                     minHeight: 72,
+                    paddingTop: 8,
                   },
                 ]}
               >
-                <View style={{ alignItems: "center", gap: 3 }}>
+                <View
+                  style={{
+                    alignItems: "center",
+                    gap: 3,
+                    width: 184,
+                    height: 115,
+                  }}
+                >
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
                     <Icon name="Clock3" size={14} color={c.brandAccent} />
                     <Txt size={11} bold color={c.brandAccent} style={{ letterSpacing: 0.8 }}>
@@ -326,7 +425,7 @@ export default function Shell({
                     Tuesday – Saturday
                   </Txt>
                   <Txt size={15}>10:00 AM – 6:00 PM</Txt>
-                  <Txt size={12} color={c.mutedForeground}>
+                  <Txt size={12} color={c.mutedForeground} className={"text-base"}>
                     Sunday & Monday · Closed
                   </Txt>
                 </View>

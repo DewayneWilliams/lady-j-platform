@@ -12,13 +12,13 @@ const businessRows: Array<{
 }> = [
   {
     title: "VIP Appointments & Consultation Requests",
-    description: "Review pending appointment and consultation approvals",
+    description: "Approve or Decline pending requests",
     section: "Approvals",
     icon: "ClipboardList",
   },
   {
     title: "Service Menu & Pricing",
-    description: "Manage treatments, pricing and service durations",
+    description: "Manage services, pricing and consultations",
     section: "Services",
     icon: "Scissors",
   },
@@ -105,33 +105,82 @@ export default function BusinessOverview({
           onPress={() => (row.section === "Media" ? onMedia() : onOpen(row.section))}
           style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}
         >
-          {row.section === "Approvals" && urgentApproval ? <AttentionCard urgent><View style={{ minHeight: 64, paddingLeft: 6, flexDirection: "row", alignItems: "center", gap: 11 }}>
-              <Icon name={row.icon} size={21} color={c.brandAccent} />
-              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                <Txt size={16} bold numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.68} style={{ lineHeight: 21 }}>
-                  {row.title}
-                </Txt>
-                <Txt
-                  size={14}
-                  color={c.mutedForeground}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.78}
-                  style={{ paddingRight: 20, lineHeight: 19 }}
-                >
-                  {row.description}
-                </Txt>
+          {row.section === "Approvals" && urgentApproval ? (
+            <AttentionCard urgent>
+              <View
+                style={{
+                  minHeight: 84,
+                  paddingLeft: 6,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 11,
+                }}
+              >
+                <Icon name={row.icon} size={21} color={c.brandAccent} />
+                <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                  <Txt
+                    size={16}
+                    bold
+                    numberOfLines={2}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.68}
+                    ellipsizeMode="clip"
+                    style={{ lineHeight: 21 }}
+                  >
+                    {row.title}
+                  </Txt>
+                  <Txt
+                    size={14}
+                    color={c.mutedForeground}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.68}
+                    ellipsizeMode="clip"
+                    style={{ flexShrink: 1, lineHeight: 19 }}
+                  >
+                    {row.description}
+                  </Txt>
+                </View>
               </View>
-          </View></AttentionCard> : <Card style={{ minHeight: 72, paddingHorizontal: 16, paddingVertical: 10, justifyContent: "center", gap: 3 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 11 }}>
-              <Icon name={row.icon} size={21} color={c.brandAccent} />
-              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                <Txt size={17} bold numberOfLines={row.section === "Approvals" ? undefined : 1} style={{ flexShrink: 1, lineHeight: 22 }}>{row.title}</Txt>
-                <Txt size={14} color={c.mutedForeground} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78} style={{ paddingRight: 20, lineHeight: 19 }}>{row.description}</Txt>
+            </AttentionCard>
+          ) : (
+            <Card
+              style={{
+                minHeight: row.section === "Approvals" ? 92 : 72,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                justifyContent: "center",
+                gap: 3,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 11 }}>
+                <Icon name={row.icon} size={21} color={c.brandAccent} />
+                <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                  <Txt
+                    size={17}
+                    bold
+                    numberOfLines={row.section === "Approvals" ? 2 : 1}
+                    ellipsizeMode="clip"
+                    style={{ flexShrink: 1, lineHeight: 22 }}
+                  >
+                    {row.title}
+                  </Txt>
+                  <Txt
+                    size={14}
+                    color={c.mutedForeground}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.68}
+                    ellipsizeMode="clip"
+                    style={{ flexShrink: 1, lineHeight: 19 }}
+                  >
+                    {row.description}
+                  </Txt>
+                </View>
+                <Icon name="ChevronRight" size={18} color={c.mutedForeground} />
               </View>
-              <Icon name="ChevronRight" size={18} color={c.mutedForeground} />
-            </View>
-          </Card>}
+            </Card>
+          )}
         </Pressable>
       ))}
     </View>

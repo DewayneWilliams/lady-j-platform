@@ -38,14 +38,14 @@ export default function AppointmentCard({
         padding: 0,
         marginBottom: 14,
         overflow: "hidden",
-        borderColor: a.is_vip ? "#7543B8" : c.border,
+        borderColor: a.is_vip ? c.vipFill : c.border,
         borderWidth: a.is_vip ? 2 : 1,
       }}
     >
       {a.is_vip && (
         <View
           style={{
-            backgroundColor: "#7543B8",
+            backgroundColor: c.vipFill,
             minHeight: 46,
             paddingHorizontal: 14,
             paddingVertical: 9,
@@ -54,11 +54,11 @@ export default function AppointmentCard({
             gap: 8,
           }}
         >
-          <Icon name="Crown" size={20} color="#C49A36" />
-          <Txt bold color="#FFFFFF" style={{ flex: 1 }}>
+          <Icon name="Crown" size={20} color={c.vipForeground} />
+          <Txt bold color={c.vipForeground} style={{ flex: 1 }}>
             VIP Access +{a.vip_percentage}%
           </Txt>
-          <Txt size={13} bold color="#FFFFFF">
+          <Txt size={13} bold color={c.vipForeground}>
             {a.approval_status === "pending" ? "Pending Approval" : a.approval_status}
           </Txt>
         </View>
@@ -68,7 +68,7 @@ export default function AppointmentCard({
         style={{
           borderLeftWidth: 7,
           borderColor: a.is_vip
-            ? "#7543B8"
+            ? c.vipFill
             : a.kind === "block"
               ? c.mutedForeground
               : calendarColor === "consultation"

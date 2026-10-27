@@ -5,7 +5,7 @@ import { useSalon } from "@/lib/salon/SalonProvider";
 import { productBrands } from "@/lib/salon/categories";
 import { fonts } from "@/lib/salon/design";
 import Shell, { useNav } from "./Shell";
-import { Action, Card, Chip, Empty, LinkText, Tag, Txt, useColors } from "./ui";
+import { Action, ButtonLabel, Card, Chip, Empty, LinkText, Tag, Txt, useColors } from "./ui";
 import ProductCard from "./ProductCard";
 
 export default function ProductStore() {
@@ -111,13 +111,35 @@ export default function ProductStore() {
           marginBottom: 24,
         }}
       >
-        <Action
-          label={`Filter${brand !== "All brands" || category !== "All products" ? " · Active" : ""}`}
-          icon="SlidersHorizontal"
-          secondary
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Filter products"
+          accessibilityState={{ expanded: filtersOpen }}
           onPress={() => setFiltersOpen((value) => !value)}
-          style={{ minHeight: 46, paddingVertical: 8 }}
-        />
+          style={({ pressed }) => ({
+            minHeight: 46,
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            maxWidth: "100%",
+            minWidth: 0,
+            flexShrink: 1,
+            flexDirection: "row",
+            gap: 8,
+            alignItems: "center",
+            justifyContent: "center",
+            alignSelf: "flex-start",
+            backgroundColor: c.card,
+            borderColor: c.border,
+            borderWidth: 1,
+            opacity: pressed ? 0.86 : 1,
+          })}
+        >
+          <Icon name="SlidersHorizontal" size={22} color={c.foreground} />
+          <ButtonLabel size={18} color={c.foreground}>
+            Filter{brand !== "All brands" || category !== "All products" ? " · Active" : ""}
+          </ButtonLabel>
+        </Pressable>
         <Txt color={c.mutedForeground} style={{ marginLeft: "auto", textAlign: "right" }}>
           {filtered.length} products
         </Txt>

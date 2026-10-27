@@ -15,13 +15,6 @@ import { Card, Txt, useColors } from "../ui";
 import { OwnerText } from "./OwnerUI";
 
 type VoiceState = "idle" | "listening" | "processing" | "speaking" | "error";
-const stateColor: Record<VoiceState, string> = {
-  idle: "#94A3B8",
-  listening: "#10B981",
-  processing: "#7C3AED",
-  speaking: "#A855F7",
-  error: "#F87171",
-};
 const description =
   "Maria is a private, local demonstration of a future voice companion for Lady J. She can discuss the isolated demo diary, business opportunities and wellness without changing real salon records.";
 
@@ -42,6 +35,13 @@ export default function MariaPanel({
   const c = useColors();
   const reducedMotion = useReducedMotionPreference();
   const [state, setState] = useState<VoiceState>("idle");
+  const voiceColor = {
+    idle: c.mutedForeground,
+    listening: c.paymentPaid,
+    processing: c.calendarConsultation,
+    speaking: c.brandAccent,
+    error: c.attentionBorder,
+  }[state];
   const [status, setStatus] = useState("DEMO · Tap the ring when you’re ready");
   const [volume, setVolume] = useState(0);
   const active = useRef(false);
@@ -359,7 +359,7 @@ export default function MariaPanel({
               StyleSheet.absoluteFillObject,
               {
                 borderWidth: state === "processing" ? 4 : 3,
-                borderColor: stateColor[state],
+                borderColor: voiceColor,
                 borderRadius: 104,
                 opacity: motion.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] }),
                 transform: [
@@ -388,7 +388,7 @@ export default function MariaPanel({
               borderRadius: 77,
               backgroundColor: c.primary,
               borderWidth: 3,
-              borderColor: stateColor[state],
+              borderColor: voiceColor,
               alignItems: "center",
               justifyContent: "center",
               transform: [{ scale: pressed ? 0.96 : 1 }],
@@ -414,7 +414,7 @@ export default function MariaPanel({
           accessibilityLiveRegion="polite"
           size={15}
           bold
-          color={stateColor[state]}
+          color={voiceColor}
           style={{ textAlign: "center" }}
         >
           {status}

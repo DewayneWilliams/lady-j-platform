@@ -666,6 +666,8 @@ export function AccountScreen() {
           alignItems: "center",
           gap: 14,
           marginBottom: 4,
+          paddingTop: 2,
+          paddingBottom: 2
         }}
       >
         <Animated.View
@@ -701,7 +703,13 @@ export function AccountScreen() {
           />
         </Animated.View>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Txt size={21} bold numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          <Txt
+            size={21}
+            bold
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            className={"text-sm"}>
             Welcome Back, {firstName}
           </Txt>
           <Pressable

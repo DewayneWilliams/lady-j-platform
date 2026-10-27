@@ -69,3 +69,5 @@ Owner catalog tools support public photo galleries, combined service specials wi
 - Consultation intake accepts secure guest submissions without WhatsApp; WhatsApp summaries remain optional after confirmation.
   Royalty is visit-only; protected client care notes replace the combined medical/service field, and demo contact history remains local-only.
 - Booking time cards use start-time-only VIP presentation with 56pt high-contrast regular and shared gold VIP surfaces across light and dark themes.
+- Product checkout retains bank transfer as the live method while adding idempotent numbered orders with independent payment and fulfillment states; demo cards remain local, labeled simulations.
+- Development Test Mode uses 50 fictional Bible-name contacts and populated owner workflows, including the 12 disciples-inspired vendor companies, without entering live client or financial records.

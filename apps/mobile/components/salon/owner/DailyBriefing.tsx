@@ -61,7 +61,11 @@ export default function DailyBriefing({
         adjustsFontSizeToFit
         minimumFontScale={0.72}
         color={items.length ? c.foreground : c.mutedForeground}
-        style={{ flex: 1, lineHeight: 21 }}
+        style={{
+          flex: 1,
+          lineHeight: 21,
+          paddingBottom: 2,
+        }}
       >
         {summary}
       </Txt>

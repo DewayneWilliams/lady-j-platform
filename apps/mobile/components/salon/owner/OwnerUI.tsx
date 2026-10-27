@@ -8,11 +8,13 @@ export function OwnerText({
   size = 20,
   muted = false,
   bold = false,
+  centered = bold && size >= 24,
 }: {
   children: React.ReactNode;
   size?: number;
   muted?: boolean;
   bold?: boolean;
+  centered?: boolean;
 }) {
   const c = useColors();
   return (
@@ -20,7 +22,8 @@ export function OwnerText({
       size={size}
       bold={bold}
       color={muted ? c.mutedForeground : c.foreground}
-      className={"text-xs"}
+      className={"text-base"}
+      style={centered ? { alignSelf: "stretch", textAlign: "center" } : undefined}
     >
       {children}
     </Txt>
@@ -204,22 +207,23 @@ export function OwnerTitle({
   description?: string;
   action?: React.ReactNode;
 }) {
+  const centered = !action;
   return (
     <View
       style={{
         flexDirection: "row",
         flexWrap: "wrap",
-        justifyContent: "space-between",
+        justifyContent: centered ? "center" : "space-between",
         alignItems: "center",
         gap: 12,
         marginBottom: 16,
       }}
     >
-      <View style={{ flex: 1, minWidth: 120 }}>
-        <OwnerText size={28} bold>
+      <View style={{ flex: centered ? undefined : 1, minWidth: 120, width: centered ? "100%" : undefined }}>
+        <OwnerText size={28} bold centered={centered}>
           {title}
         </OwnerText>
-        {description && <OwnerText muted>{description}</OwnerText>}
+        {description && <OwnerText muted centered={centered}>{description}</OwnerText>}
       </View>
       {action}
     </View>
@@ -252,23 +256,35 @@ export function OwnerStat({
   note,
   icon,
   style,
+  compact = false,
+  valueSingleLine = false,
 }: {
   label: string;
   value: string;
   note?: string;
   icon: IconName;
   style?: ViewStyle;
+  compact?: boolean;
+  valueSingleLine?: boolean;
 }) {
   const c = useColors();
   return (
-    <Card style={{ padding: 14, gap: 7, ...style }}>
+    <Card style={{ padding: compact ? 7 : 14, gap: compact ? 3 : 7, ...style }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-        <OwnerText muted>{label}</OwnerText>
-        <Icon name={icon} size={22} color={c.warning} />
+        <OwnerText size={compact ? 14 : 20} muted>
+          {label}
+        </OwnerText>
+        <Icon name={icon} size={compact ? 18 : 22} color={c.warning} />
       </View>
-      <OwnerText size={30} bold>
+      <Txt
+        size={compact ? 22 : 30}
+        bold
+        numberOfLines={valueSingleLine ? 1 : undefined}
+        adjustsFontSizeToFit={valueSingleLine}
+        minimumFontScale={valueSingleLine ? 0.7 : undefined}
+      >
         {value}
-      </OwnerText>
+      </Txt>
       {note && <OwnerText muted>{note}</OwnerText>}
     </Card>
   );

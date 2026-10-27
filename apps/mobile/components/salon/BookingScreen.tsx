@@ -1,3 +1,4 @@
+import { PlayfairDisplay_400Regular, useFonts } from "@expo-google-fonts/dev";
 import CalendarPicker from "./CalendarPicker";
 export { default as CalendarPicker } from "./CalendarPicker";
 import { useCalendarRealtime } from "@/lib/salon/useCalendarRealtime";
@@ -33,9 +34,11 @@ import { useSalon } from "@/lib/salon/SalonProvider";
 import PromoCode from "./PromoCode";
 import { useDiscountQuote } from "@/lib/salon/discounts";
 import { db, check, asRows } from "@/lib/salon/client";
-import { money, dateLabel, timeLabel, servicePriceLabel } from "@/lib/salon/types";
+import { money, dateLabel, timeLabel, servicePriceLabel, type Service } from "@/lib/salon/types";
+import { catalogPhotoSource } from "@/lib/salon/images";
 import Shell, { useNav } from "./Shell";
 import { Search } from "./CatalogScreens";
+import FavoriteButton from "./FavoriteButton";
 import {
   Txt,
   ButtonLabel,
@@ -57,7 +60,7 @@ export const todayKey = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-const requestUuid = () =>
+export const requestUuid = () =>
   globalThis.crypto?.randomUUID?.() ||
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (value) => {
     const random = Math.floor(Math.random() * 16);
@@ -69,6 +72,238 @@ async function receiptBytes(asset: ImagePicker.ImagePickerAsset) {
   return Uint8Array.from(atob(asset.base64), (char) => char.charCodeAt(0)).buffer;
 }
 type AvailableSlot = { starts_at: string; is_vip: boolean; vip_percentage: 20 | 30 | null };
+
+function BookingSummaryBar({
+  selected,
+  duration,
+  total,
+  totalLabel,
+  updating,
+  step,
+  nextLabel,
+  nextDisabled,
+  width,
+  onBack,
+  onNext,
+}: {
+  selected: Service[];
+  duration: number;
+  total: number;
+  totalLabel?: string;
+  updating: boolean;
+  step: number;
+  nextLabel: string;
+  nextDisabled: boolean;
+  width: number;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  const c = useColors();
+  const reducedMotion = useReducedMotionPreference();
+  const summaryMotion = useRef(new Animated.Value(1)).current;
+  const selectionKey = `${selected.map((service) => service.id).join(",")}:${duration}:${total}:${totalLabel || ""}`;
+  const compact = width < 560;
+  const hasBack = step > 1;
+
+  useEffect(() => {
+    if (reducedMotion !== false) {
+      summaryMotion.setValue(1);
+      return;
+    }
+    summaryMotion.setValue(0.985);
+    Animated.spring(summaryMotion, {
+      toValue: 1,
+      speed: 22,
+      bounciness: 5,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
+  }, [reducedMotion, selectionKey, summaryMotion]);
+
+  const thumbnailBorder = c.card || c.background || "#FFFFFF";
+  const metric = (
+    icon: "Clock3" | "Tag",
+    label: string,
+    value: string,
+    key: string,
+  ) => (
+    <View key={key} style={{ flexDirection: "row", alignItems: "center", gap: 5, minWidth: 0 }}>
+      <Icon name={icon} size={15} color={c.brandAccent} />
+      <View style={{ minWidth: 0 }}>
+        <Txt size={10} color={c.mutedForeground} numberOfLines={1}>
+          {label}
+        </Txt>
+        <Txt size={13} bold numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>
+          {value}
+        </Txt>
+      </View>
+    </View>
+  );
+
+  return (
+    <View
+      accessibilityLabel="Booking totals and navigation"
+      style={{ flexShrink: 0, backgroundColor: c.background, paddingHorizontal: width > 700 ? 24 : 10, paddingTop: 8, paddingBottom: 10 }}
+    >
+      <Animated.View
+        style={{
+          width: "100%",
+          maxWidth: 840,
+          alignSelf: "center",
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: c.border,
+          backgroundColor: c.card,
+          paddingHorizontal: compact ? 10 : 12,
+          paddingVertical: 10,
+          gap: compact ? 10 : 8,
+          transform: [{ scale: summaryMotion }],
+          ...(Platform.OS === "web"
+            ? ({ boxShadow: "0 5px 18px rgba(0, 0, 0, 0.12)" } as object)
+            : {
+                shadowColor: "#000000",
+                shadowOpacity: 0.12,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 3,
+              }),
+        }}
+      >
+        <View
+          style={{
+            flexDirection: compact ? "column" : "row",
+            alignItems: compact ? "stretch" : "center",
+            gap: compact ? 10 : 12,
+          }}
+        >
+          <View
+            style={{
+              flex: 1,
+              minWidth: 0,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: compact ? 10 : 12,
+            }}
+          >
+            <View style={{ minWidth: selected.length ? 68 : 38, height: 36, flexDirection: "row", alignItems: "center" }}>
+              {selected.slice(0, 4).map((service, index) => (
+                <Image
+                  key={service.id}
+                  source={catalogPhotoSource(service.image)}
+                  resizeMode="cover"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 11,
+                    borderWidth: 2,
+                    borderColor: thumbnailBorder,
+                    marginLeft: index ? -12 : 0,
+                  }}
+                />
+              ))}
+              {!selected.length && (
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 11,
+                    backgroundColor: c.brandAccentSurface,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name="Sparkles" size={17} color={c.brandAccent} />
+                </View>
+              )}
+              {selected.length > 4 && (
+                <View
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    marginLeft: -8,
+                    backgroundColor: c.brandAccent,
+                    borderWidth: 2,
+                    borderColor: thumbnailBorder,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Txt size={10} bold color={c.primaryForeground}>
+                    +{selected.length - 4}
+                  </Txt>
+                </View>
+              )}
+            </View>
+            <View style={{ minWidth: 0, flexShrink: 1 }}>
+              <Txt size={10} color={c.mutedForeground} numberOfLines={1}>
+                Your selection
+              </Txt>
+              <Txt size={13} bold numberOfLines={1}>
+                {selected.length} service{selected.length === 1 ? "" : "s"}
+              </Txt>
+            </View>
+            <View style={{ width: 1, height: 28, backgroundColor: c.border }} />
+            {metric("Clock3", "Duration", formatDuration(duration), "duration")}
+            <View style={{ width: 1, height: 28, backgroundColor: c.border }} />
+            {metric("Tag", "Estimated total", updating ? "Updating…" : totalLabel || money(total), "total")}
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              accessibilityState={{ disabled: !hasBack }}
+              disabled={!hasBack}
+              onPress={onBack}
+              style={({ pressed }) => ({
+                minHeight: 42,
+                paddingHorizontal: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: c.border,
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 4,
+                opacity: !hasBack ? 0.42 : pressed ? 0.8 : 1,
+              })}
+            >
+              <Icon name="ArrowLeft" size={15} color={c.foreground} />
+              <Txt size={13} bold>Back</Txt>
+            </Pressable>
+            {step < 3 && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={nextLabel}
+                accessibilityState={{ disabled: nextDisabled }}
+                disabled={nextDisabled}
+                onPress={onNext}
+                style={({ pressed }) => ({
+                  minHeight: 42,
+                  flex: 1,
+                  minWidth: compact ? 0 : 132,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  backgroundColor: c.brandAccent,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "row",
+                  gap: 6,
+                  opacity: nextDisabled ? 0.45 : pressed ? 0.86 : 1,
+                })}
+              >
+                <Txt size={13} bold color={c.primaryForeground} numberOfLines={1}>
+                  {nextLabel}
+                </Txt>
+                <Icon name="ArrowRight" size={16} color={c.primaryForeground} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
 
 function TimeSlotButton({
   label,
@@ -99,7 +334,7 @@ function TimeSlotButton({
   const vipCard = showVipIcon;
   const regularBackground = theme.name === "light" ? "#FFFFFF" : "#151515";
   const regularInk = theme.name === "light" ? "#000000" : "#FFFFFF";
-  const vipInk = "#24180F";
+  const vipInk = c.vipForeground || c.foreground;
   const motion = useRef(new Animated.Value(0)).current;
   const hovered = useRef(false);
   const [hoverShadow, setHoverShadow] = useState(false);
@@ -216,6 +451,9 @@ export function PaymentChoice({
   fullTotal,
   paymentSelection = "full",
   setPaymentSelection = () => undefined,
+  allowDeposit = true,
+  onDemoCardReady = () => undefined,
+  collectReceipt = true,
 }: {
   method: string;
   setMethod: (v: string) => void;
@@ -229,10 +467,26 @@ export function PaymentChoice({
   fullTotal?: number;
   paymentSelection?: "full" | "deposit";
   setPaymentSelection?: (value: "full" | "deposit") => void;
+  allowDeposit?: boolean;
+  onDemoCardReady?: (ready: boolean) => void;
+  collectReceipt?: boolean;
 }) {
   const c = useColors(),
     s = useSalon();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(true),
+    [demoNumber, setDemoNumber] = useState(""),
+    [demoExpiry, setDemoExpiry] = useState(""),
+    [demoCvc, setDemoCvc] = useState("");
+  const demoDigits = demoNumber.replace(/\D/g, "");
+  const demoDeclined = demoDigits === "4000000000000002";
+  const demoReady =
+    demoDigits === "4242424242424242" &&
+    /^\d{2}\/\d{2}$/.test(demoExpiry) &&
+    /^\d{3,4}$/.test(demoCvc);
+  useEffect(
+    () => onDemoCardReady(method === "card" && demoReady),
+    [demoReady, method, onDemoCardReady],
+  );
   const details = [
     ["Bank", s.settings?.bank_name || "First Citizens Bank"],
     ["Account Name", s.settings?.bank_account_name || "LADY J SALON AND DAY SPA"],
@@ -246,30 +500,36 @@ export function PaymentChoice({
         {
           id: "bank",
           icon: "Landmark" as const,
-          title: "Bank transfer",
+          title: "Bank Wire Transfer",
           desc: "Recommended · Pending owner verification",
         },
         {
           id: "card",
           icon: "CreditCard" as const,
-          title: "Credit / debit card",
-          desc: "Card processing is not currently available",
+          title: "Demo Credit Card",
+          desc: s.testMode
+            ? "Test payment only · No real charge"
+            : "Available in Development Test Mode only",
         },
       ].map((v) => (
         <Pressable
           accessibilityRole="radio"
           accessibilityState={{
             checked: method === v.id,
-            disabled: v.id === "card",
+            disabled: v.id === "card" && !s.testMode,
           }}
           key={v.id}
-          disabled={v.id === "card"}
+          disabled={v.id === "card" && !s.testMode}
           onPress={() => setMethod(v.id)}
           style={{
             paddingHorizontal: 12,
             paddingVertical: 12,
             backgroundColor:
-              v.id === "card" ? c.muted : method === v.id ? c.brandAccentSurface : c.card,
+              v.id === "card" && !s.testMode
+                ? c.muted
+                : method === v.id
+                  ? c.brandAccentSurface
+                  : c.card,
             borderWidth: method === v.id ? 2 : 1,
             borderColor: method === v.id ? c.primary : c.border,
             borderRadius: 12,
@@ -321,13 +581,14 @@ export function PaymentChoice({
           </Pressable>
           {expanded && (
             <View style={{ gap: 10 }}>
-              {deposit != null && fullTotal != null && (
+              {deposit != null && fullTotal != null && allowDeposit && (
                 <View style={{ gap: 10 }}>
                   {[
                     {
                       id: "full" as const,
                       title: "Bank Transfer — Pay in Full (100%)",
-                      headline: "Complete your payment today for a seamless, fully paid salon experience.",
+                      headline:
+                        "Complete your payment today for a seamless, fully paid salon experience.",
                       body: "No remaining balance at your appointment.",
                       amount: fullTotal,
                     },
@@ -416,45 +677,122 @@ export function PaymentChoice({
                     onChangeText={setReference}
                     placeholder="Enter the bank reference"
                   />
-                  <Field
-                    label="Payment Date"
-                    value={paymentDate}
-                    onChangeText={setPaymentDate}
-                    placeholder="YYYY-MM-DD"
-                  />
-                  <Txt bold>Upload Proof of Payment</Txt>
-                  <Txt size={12} color={c.mutedForeground}>
-                    Upload your bank transfer proof here.
-                  </Txt>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                    <Action
-                      label="Take Photo"
-                      secondary
-                      icon="Camera"
-                      onPress={() => chooseReceipt("camera")}
-                    />
-                    <Action
-                      label={receipt ? "Change Photo" : "Photo Library"}
-                      secondary
-                      icon="Upload"
-                      onPress={() => chooseReceipt("library")}
-                    />
-                  </View>
-                  {!!receipt && (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <Image
-                        source={{ uri: receipt.uri }}
-                        accessibilityLabel="Selected payment proof preview"
-                        style={{ width: 44, height: 44, borderRadius: 8, backgroundColor: c.muted }}
+                  {collectReceipt && (
+                    <>
+                      <Field
+                        label="Payment Date"
+                        value={paymentDate}
+                        onChangeText={setPaymentDate}
+                        placeholder="YYYY-MM-DD"
                       />
-                      <Txt size={13} color={c.success} style={{ flex: 1 }}>
-                        Selected: {receipt.fileName || "Payment receipt image"}
+                      <Txt bold>Upload Proof of Payment</Txt>
+                      <Txt size={12} color={c.mutedForeground}>
+                        Upload your bank transfer proof here.
                       </Txt>
-                    </View>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                        <Action
+                          label="Take Photo"
+                          secondary
+                          icon="Camera"
+                          onPress={() => chooseReceipt("camera")}
+                        />
+                        <Action
+                          label={receipt ? "Change Photo" : "Photo Library"}
+                          secondary
+                          icon="Upload"
+                          onPress={() => chooseReceipt("library")}
+                        />
+                      </View>
+                      {!!receipt && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                          <Image
+                            source={{ uri: receipt.uri }}
+                            accessibilityLabel="Selected payment proof preview"
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: 8,
+                              backgroundColor: c.muted,
+                            }}
+                          />
+                          <Txt size={13} color={c.success} style={{ flex: 1 }}>
+                            Selected: {receipt.fileName || "Payment receipt image"}
+                          </Txt>
+                        </View>
+                      )}
+                    </>
                   )}
                 </>
               )}
             </View>
+          )}
+        </Card>
+      )}
+      {method === "card" && s.testMode && (
+        <Card style={{ gap: 12, borderColor: c.brandAccent }}>
+          <View style={{ gap: 3 }}>
+            <Tag>Demo payment · No real transaction</Tag>
+            <Txt bold size={17}>
+              Test card details
+            </Txt>
+            <Txt size={12} color={c.mutedForeground}>
+              These values stay on this screen and are never saved. Use 4242 4242 4242 4242 for
+              success or 4000 0000 0000 0002 to simulate a decline.
+            </Txt>
+          </View>
+          {deposit != null && fullTotal != null && allowDeposit && (
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {(
+                [
+                  ["full", `Pay 100% · TTD ${money(fullTotal)}`],
+                  ["deposit", `Pay 50% · TTD ${money(deposit)}`],
+                ] as const
+              ).map(([id, label]) => (
+                <Chip
+                  key={id}
+                  label={label}
+                  selected={paymentSelection === id}
+                  onPress={() => setPaymentSelection(id)}
+                />
+              ))}
+            </View>
+          )}
+          {!allowDeposit && fullTotal != null && (
+            <Txt bold color={c.brandAccent}>
+              Full payment required · TTD {money(fullTotal)}
+            </Txt>
+          )}
+          <Field
+            label="Demo Card Number"
+            value={demoNumber}
+            onChangeText={setDemoNumber}
+            keyboardType="numeric"
+            placeholder="4242 4242 4242 4242"
+          />
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Field
+                label="Expiry"
+                value={demoExpiry}
+                onChangeText={setDemoExpiry}
+                placeholder="12/30"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Field
+                label="Demo CVC"
+                value={demoCvc}
+                onChangeText={setDemoCvc}
+                keyboardType="numeric"
+                placeholder="123"
+              />
+            </View>
+          </View>
+          {demoDeclined && <ErrorBox message="Demo decline simulated. Try the 4242 test number." />}
+          {demoReady && (
+            <Txt bold color={c.success}>
+              Demo card is ready for a simulated payment.
+            </Txt>
           )}
         </Card>
       )}
@@ -486,6 +824,7 @@ export default function BookingScreen() {
     [slotLoading, setSlotLoading] = useState(false),
     [error, setError] = useState(""),
     [method, setMethod] = useState("bank"),
+    [demoCardReady, setDemoCardReady] = useState(false),
     [paymentSelection, setPaymentSelection] = useState<"full" | "deposit">("full"),
     [reference, setReference] = useState(""),
     [vipReason, setVipReason] = useState(""),
@@ -592,6 +931,9 @@ export default function BookingScreen() {
             paymentDate > todayKey() ||
             !receipt)))) ||
     (!s.session && !s.testMode && (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()));
+  const finalSubmitDisabled =
+    submitDisabled ||
+    (s.testMode && !requiresApproval && !noPaymentRequired && method === "card" && !demoCardReady);
   const slotGeneration = useRef(0);
   const changeDate = useCallback(
     (nextDate: string) => {
@@ -658,6 +1000,15 @@ export default function BookingScreen() {
   }, [refreshSlots]);
   useForegroundRefresh(refreshSlots, step === 2 && s.authReady);
   useCalendarRealtime(refreshSlots, step === 2 && s.authReady);
+
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_400Regular,
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   async function choosePhoto() {
     try {
       const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
@@ -714,6 +1065,10 @@ export default function BookingScreen() {
     setError("");
     if (!policy || !time || !agreementReady || !pricing.ready) return;
     if (s.testMode) {
+      if (!requiresApproval && !noPaymentRequired && method === "card" && !demoCardReady) {
+        setError("Enter the successful demo card details before continuing.");
+        return;
+      }
       setDone("demo");
       setCelebrationRevision(1);
       return;
@@ -827,105 +1182,36 @@ export default function BookingScreen() {
       ? !selected.length || selected.length > 10
       : step === 2
         ? !time || slotLoading
-        : submitDisabled;
+        : finalSubmitDisabled;
   const barLabel =
     step === 1
-      ? "Next"
+      ? "Next Step"
       : step === 2
         ? noPaymentRequired
           ? "Confirm"
           : "Payment"
         : "Confirm My Appointment →";
   const bookingBar = (
-    <View
-      accessibilityLabel="Booking totals and navigation"
-      style={{
-        flexShrink: 0,
-        borderTopWidth: 1,
-        borderColor: c.border,
-        backgroundColor: c.background,
-        paddingHorizontal: width > 700 ? 24 : 8,
-        paddingVertical: 8,
+    <BookingSummaryBar
+      selected={selected}
+      duration={duration}
+      total={total}
+      totalLabel={customApproval ? "Custom price" : undefined}
+      updating={pricing.busy}
+      step={step}
+      nextLabel={barLabel}
+      nextDisabled={barDisabled}
+      width={width}
+      onBack={() => {
+        if (step <= 1) return;
+        setStep(step - 1);
+        setError("");
       }}
-    >
-      <View
-        style={{
-          width: "100%",
-          maxWidth: 760,
-          alignSelf: "center",
-          minHeight: 58,
-          borderRadius: 14,
-          backgroundColor: c.brandAccentFill,
-          paddingHorizontal: width < 390 ? 8 : 10,
-          paddingVertical: 8,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: width < 390 ? 6 : 10,
-        }}
-      >
-        {step > 1 && (
-          <Action
-            label="Back"
-            secondary
-            contentColor="#FFFFFF"
-            onPress={() => {
-              setStep(step - 1);
-              setError("");
-            }}
-            style={{
-              minHeight: 40,
-              paddingHorizontal: width < 390 ? 8 : 10,
-              paddingVertical: 7,
-              backgroundColor: "transparent",
-              borderColor: "rgba(255,255,255,0.58)",
-            }}
-          />
-        )}
-        <View style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Txt size={11} color="#FFFFFF" numberOfLines={1}>
-              {selected.length} service{selected.length === 1 ? "" : "s"}
-            </Txt>
-          </View>
-          <View style={{ width: 1, height: 26, backgroundColor: "rgba(255,255,255,0.36)" }} />
-          <View style={{ alignItems: "flex-end", minWidth: 0 }}>
-            <Txt
-              size={width < 390 ? 12 : 14}
-              bold
-              color="#FFFFFF"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.76}
-            >
-              {pricing.busy ? "Updating…" : customApproval ? "Custom price" : money(total)}
-            </Txt>
-            <Txt size={10} color="#FFFFFF" numberOfLines={1}>
-              {formatDuration(duration)}{customApproval ? "+" : ""}
-            </Txt>
-          </View>
-        </View>
-        {step < 3 && (
-          <Action
-            label={barLabel}
-            icon="ArrowRight"
-            contentColor="#FFFFFF"
-            iconColor="#FFFFFF"
-            disabled={barDisabled}
-            onPress={() => {
-              if (step === 1) setStep(2);
-              else setStep(3);
-            }}
-            style={{
-              minHeight: 40,
-              paddingHorizontal: width < 390 ? 8 : 10,
-              paddingVertical: 7,
-              backgroundColor: "transparent",
-              borderColor: "rgba(255,255,255,0.76)",
-            }}
-          />
-        )}
-      </View>
-    </View>
+      onNext={() => {
+        if (step === 1) setStep(2);
+        else if (step === 2) setStep(3);
+      }}
+    />
   );
   if (done)
     return (
@@ -1006,15 +1292,15 @@ export default function BookingScreen() {
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.72}
-            style={{ width: "100%", textAlign: "center" }}
+            style={{
+              width: "100%",
+              textAlign: "center",
+              fontFamily: "PlayfairDisplay_400Regular",
+            }}
           >
             Book Your Moment!
           </Txt>
-          <Txt
-            size={14}
-            color={c.mutedForeground}
-            style={{ width: "100%", textAlign: "center" }}
-          >
+          <Txt size={14} color={c.mutedForeground} style={{ width: "100%", textAlign: "center" }}>
             {`Step ${step} of 3 — ${["Choose Your Service", "Choose Your Date & Time", "Payment"][step - 1]}`}
           </Txt>
         </View>
@@ -1088,35 +1374,60 @@ export default function BookingScreen() {
                     .includes(query.toLowerCase()),
               )
               .map((v) => (
-                <Pressable
+                <View
                   key={v.id}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: s.selected.includes(v.id) }}
-                  onPress={() =>
-                    s.setSelected((old) =>
-                      old.includes(v.id) ? old.filter((id) => id !== v.id) : [...old, v.id],
-                    )
-                  }
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 16,
-                    padding: 15,
+                    height: 82,
+                    overflow: "hidden",
                     borderWidth: 1,
                     borderColor: s.selected.includes(v.id) ? c.primary : c.border,
-                    borderRadius: 14,
+                    borderRadius: 12,
                     marginBottom: 12,
                     backgroundColor: c.card,
                   }}
                 >
-                  <Photo name={v.image} style={{ width: 72, height: 82, borderRadius: 10 }} />
-                  <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
-                    <ButtonLabel size={20}>{v.name}</ButtonLabel>
-                    <Txt size={12} color={c.mutedForeground}>{v.description}</Txt>
-                    <Txt size={13}>{serviceDurationLabel(v)} · {servicePriceLabel(v)}</Txt>
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: s.selected.includes(v.id) }}
+                    onPress={() =>
+                      s.setSelected((old) =>
+                        old.includes(v.id) ? old.filter((id) => id !== v.id) : [...old, v.id],
+                      )
+                    }
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      minWidth: 0,
+                      height: 82,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 10,
+                      paddingRight: 42,
+                      opacity: pressed ? 0.86 : 1,
+                    })}
+                  >
+                    <Photo name={v.image} style={{ width: 72, height: 82, borderRadius: 10 }} />
+                    <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                      <Txt bold size={16} numberOfLines={1} ellipsizeMode="tail">
+                        {v.name}
+                      </Txt>
+                      <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
+                        {v.description}
+                      </Txt>
+                      <Txt size={12} numberOfLines={1}>
+                        {serviceDurationLabel(v)} · {servicePriceLabel(v)}
+                      </Txt>
+                    </View>
+                    <Icon
+                      name={s.selected.includes(v.id) ? "CircleCheck" : "CirclePlus"}
+                      size={22}
+                      color={s.selected.includes(v.id) ? c.brandAccent : c.mutedForeground}
+                      style={{ position: "absolute", right: 8, top: 7 }}
+                    />
+                  </Pressable>
+                  <View style={{ position: "absolute", right: 4, bottom: 4 }}>
+                    <FavoriteButton compact kind="service" itemId={v.id} />
                   </View>
-                  <Icon name={s.selected.includes(v.id) ? "CircleCheck" : "CirclePlus"} size={24} color={s.selected.includes(v.id) ? c.brandAccent : c.mutedForeground} />
-                </Pressable>
+                </View>
               ))}
           </View>
           <View style={{ width: width > 900 ? 315 : "100%", gap: 20, alignItems: "center" }}>
@@ -1517,7 +1828,7 @@ export default function BookingScreen() {
               >
                 <Photo name={service.image} style={{ width: 48, height: 48, borderRadius: 10 }} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Txt size={15} bold>
+                  <Txt size={15} bold numberOfLines={1} ellipsizeMode="tail">
                     {service.name}
                   </Txt>
                   <Txt size={12} color={c.mutedForeground}>
@@ -1749,15 +2060,7 @@ export default function BookingScreen() {
                 </Txt>
               </View>
             </View>
-            {s.testMode ? (
-              <View style={{ gap: 6 }}>
-                <Txt bold>Demo booking — no payment details needed.</Txt>
-                <Txt size={13} color={c.mutedForeground}>
-                  This step previews the customer experience without collecting or saving payment
-                  information.
-                </Txt>
-              </View>
-            ) : requiresApproval ? (
+            {requiresApproval ? (
               <View style={{ gap: 6 }}>
                 <Txt bold color={c.vipText}>
                   {customApproval
@@ -1787,6 +2090,7 @@ export default function BookingScreen() {
                 setPaymentDate={setPaymentDate}
                 receipt={receipt}
                 chooseReceipt={(source) => void chooseReceipt(source)}
+                onDemoCardReady={setDemoCardReady}
               />
             )}
           </Card>
@@ -1805,7 +2109,7 @@ export default function BookingScreen() {
               [
                 "Selected Payment",
                 s.testMode
-                  ? money(0)
+                  ? money(requiresApproval || noPaymentRequired ? 0 : paymentDue)
                   : money(requiresApproval || noPaymentRequired ? 0 : paymentDue),
               ],
               ...(creditCovered > 0 ? [["Gift & Referral Value", `−${money(creditCovered)}`]] : []),
@@ -1818,7 +2122,9 @@ export default function BookingScreen() {
               [
                 "Selected Method",
                 s.testMode
-                  ? "Demo simulation"
+                  ? method === "card"
+                    ? "Demo Credit Card"
+                    : "Bank Wire Transfer (Demo)"
                   : requiresApproval
                     ? customApproval
                       ? "After custom price approval"
@@ -1832,7 +2138,9 @@ export default function BookingScreen() {
               [
                 "Payment Status",
                 s.testMode
-                  ? "No payment created"
+                  ? method === "card"
+                    ? "Test payment only"
+                    : "Demo · Not submitted"
                   : requiresApproval
                     ? customApproval
                       ? "Pending Custom Price"

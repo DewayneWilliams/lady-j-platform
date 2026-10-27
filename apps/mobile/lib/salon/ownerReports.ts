@@ -10,6 +10,7 @@ export const ownerReports = [
   "Appointments",
   "Clients",
   "Services Performance",
+  "Product Orders",
   "Inventory",
   "Expenses & Profit",
   "Staff Performance",
@@ -81,10 +82,17 @@ export function buildOwnerReport(
   // Payments are recorded as individual receipts. This retains each portion of a mixed payment
   // instead of labelling the entire booking with one method or counting it twice.
   const receiptMethods = new Map<string, number>();
-  lines.filter((line) => line.type === "Receipt").forEach((line) => {
-    const label = line.method === "bank" ? "Bank Transfer" : line.method === "cash" ? "Cash Received" : line.method;
-    receiptMethods.set(label, (receiptMethods.get(label) || 0) + line.cents);
-  });
+  lines
+    .filter((line) => line.type === "Receipt")
+    .forEach((line) => {
+      const label =
+        line.method === "bank"
+          ? "Bank Transfer"
+          : line.method === "cash"
+            ? "Cash Received"
+            : line.method;
+      receiptMethods.set(label, (receiptMethods.get(label) || 0) + line.cents);
+    });
   const doc: ReportDocument = {
     title: kind,
     businessName,
@@ -285,6 +293,58 @@ export function buildOwnerReport(
         g.booked / 100,
         g.cash / 100,
       ]);
+  } else if (kind === "Product Orders") {
+    const orders = records.purchases.filter(
+      (purchase) => purchase.kind === "product" && within(salonDate(purchase.created_at)),
+    );
+    const verified = orders.filter(
+      (order) =>
+        order.payment_status === "verified" ||
+        ["paid", "processing", "ready", "fulfilled"].includes(order.status),
+    );
+    doc.summary = [
+      { label: "Orders", value: orders.length },
+      {
+        label: "Awaiting Verification",
+        value: orders.filter(
+          (order) => (order.payment_status || "awaiting_verification") === "awaiting_verification",
+        ).length,
+      },
+      {
+        label: "Verified Order Value",
+        value: money(sum(verified.map((order) => cents(order.total))) / 100),
+      },
+      {
+        label: "Fulfilled",
+        value: orders.filter((order) => (order.fulfillment_status || order.status) === "fulfilled")
+          .length,
+      },
+    ];
+    doc.notes.push(
+      "Order submission is separate from payment verification. Only owner-verified orders are included in verified value.",
+    );
+    doc.headers = [
+      "Order Number",
+      "Date",
+      "Customer",
+      "Products",
+      "Payment",
+      "Fulfillment",
+      "Method",
+      "Total TTD",
+    ];
+    doc.rows = orders.map((order) => [
+      order.order_number || order.id,
+      salonDate(order.created_at),
+      order.contact_name || name(order.customer_id),
+      order.items.map((item) => `${item.name} x ${item.quantity}`).join("; "),
+      order.payment_status || order.status,
+      order.fulfillment_status || order.status,
+      order.payment_method === "bank" || !order.payment_method
+        ? "Bank Wire Transfer"
+        : order.payment_method,
+      Number(order.total),
+    ]);
   } else if (kind === "Inventory") {
     const products = records.products;
     doc.summary = [

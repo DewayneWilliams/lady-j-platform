@@ -114,6 +114,7 @@ export function ButtonLabel({
         ...style,
         justifyContent: "space-around",
         flexDirection: "column",
+        fontSize: 12,
       }}
     >
       {children}
@@ -450,7 +451,14 @@ export function Photo({ name, style }: { name: string; style?: ImageStyle }) {
     <Image
       source={catalogPhotoSource(name)}
       resizeMode="cover"
-      style={[{ width: "100%", height: 220 }, style]}
+      style={[
+        { width: "100%", height: 220 },
+        style,
+        {
+          paddingTop: 4,
+          paddingBottom: 4,
+        },
+      ]}
     />
   );
 }

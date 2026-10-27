@@ -92,6 +92,7 @@ export type Appointment = {
 };
 export type Purchase = {
   id: string;
+  order_number?: string;
   kind: string;
   customer_id: string;
   items: {
@@ -107,6 +108,12 @@ export type Purchase = {
   delivery_fee?: number;
   total: number;
   status: string;
+  payment_status?: string;
+  fulfillment_status?: string;
+  payment_method?: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
   fulfillment: string;
   delivery_address?: string;
   created_at: string;

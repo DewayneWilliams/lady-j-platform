@@ -2,13 +2,15 @@ import React, { useRef, useState } from "react";
 import { View, PanResponder } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { SignatureStroke } from "@/lib/salon/agreementPolicy";
-import { Txt, LinkText, useColors } from "./ui";
+import { Action, useColors } from "./ui";
 export default function SignaturePad({
   onChange,
+  onSigningChange,
   disabled = false,
   height = 100,
 }: {
   onChange: (strokes: SignatureStroke[]) => void;
+  onSigningChange?: (signing: boolean) => void;
   disabled?: boolean;
   height?: number;
 }) {
@@ -17,15 +19,21 @@ export default function SignaturePad({
   const lines = useRef<SignatureStroke[]>([]),
     width = useRef(320),
     callback = useRef(onChange),
+    signingCallback = useRef(onSigningChange),
     locked = useRef(disabled);
   callback.current = onChange;
+  signingCallback.current = onSigningChange;
   locked.current = disabled;
   const responder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => !locked.current,
       onMoveShouldSetPanResponder: () => !locked.current,
+      onStartShouldSetPanResponderCapture: () => !locked.current,
+      onMoveShouldSetPanResponderCapture: () => !locked.current,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (e) => {
+        signingCallback.current?.(true);
         const p = {
           x: Math.max(0, Math.min(320, (e.nativeEvent.locationX * 320) / width.current)),
           y: Math.max(0, Math.min(160, (e.nativeEvent.locationY * 160) / height)),
@@ -45,10 +53,15 @@ export default function SignaturePad({
         lines.current = [...lines.current.slice(0, -1), [...last, p]];
         setStrokes(lines.current);
       },
-      onPanResponderRelease: () =>
-        callback.current(lines.current.map((line) => line.map((p) => ({ ...p })))),
-      onPanResponderTerminate: () =>
-        callback.current(lines.current.map((line) => line.map((p) => ({ ...p })))),
+      onPanResponderRelease: () => {
+        signingCallback.current?.(false);
+        callback.current(lines.current.map((line) => line.map((p) => ({ ...p }))));
+      },
+      onPanResponderTerminate: () => {
+        signingCallback.current?.(false);
+        callback.current(lines.current.map((line) => line.map((p) => ({ ...p }))));
+      },
+      onPanResponderReject: () => signingCallback.current?.(false),
     }),
   ).current;
   return (
@@ -66,6 +79,7 @@ export default function SignaturePad({
           borderColor: c.border,
           backgroundColor: "#FFFFFF",
           overflow: "hidden",
+          touchAction: "none",
         }}
       >
         <Svg
@@ -88,16 +102,18 @@ export default function SignaturePad({
           ))}
         </Svg>
       </View>
-      <LinkText
+      <Action
+        label="Clear Signature"
+        secondary
+        disabled={disabled || strokes.length === 0}
         onPress={() => {
           if (disabled) return;
           lines.current = [];
           setStrokes([]);
           onChange([]);
         }}
-      >
-        Clear signature
-      </LinkText>
+        style={{ alignSelf: "flex-start", minHeight: 38 }}
+      />
     </View>
   );
 }

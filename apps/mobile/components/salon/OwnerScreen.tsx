@@ -63,10 +63,15 @@ import {
   timeLabel,
 } from "@/lib/salon/types";
 import { demoClients, demoAppointments, demoTransactions } from "@/lib/salon/demo";
-import { createOwnerDemoCommerce } from "@/lib/salon/ownerDemo";
+import {
+  createOwnerDemoCommerce,
+  createOwnerDemoWaitlist,
+  ownerDemoDiscounts,
+  ownerDemoPromotions,
+} from "@/lib/salon/ownerDemo";
 import { fonts, fieldLabel } from "@/lib/salon/design";
 import { useNav } from "./Shell";
-import { Card, ButtonLabel, useColors, shared, ErrorBox, Photo } from "./ui";
+import { Card, ButtonLabel, useColors, shared, ErrorBox, Photo, Txt } from "./ui";
 import { whatsappSupportUrl } from "@/lib/salon/whatsapp";
 import CatalogPhotoEditor from "./owner/CatalogPhotoEditor";
 import SpecialsPanel from "./owner/SpecialsPanel";
@@ -98,7 +103,6 @@ import BackbarPanel from "./owner/BackbarPanel";
 import VendorSpendingPanel from "./owner/VendorSpendingPanel";
 import { OwnerText as OT, OwnerButton as OA } from "./owner/OwnerUI";
 import { ProfilePhotoEditor } from "./ProfilePhoto";
-import ServiceCard from "./ServiceCard";
 
 type Row = Record<string, unknown>;
 type Editor = {
@@ -332,10 +336,37 @@ export default function OwnerScreen() {
         const demoWorkshops = s.session
           ? s.workshops
           : s.workshops.map((v) => ({ ...v, price: 650 }));
+        const demoServices = s.session ? s.services : s.services.map((v) => ({ ...v, price: 350 }));
         const commerce = createOwnerDemoCommerce(demoProducts, demoWorkshops);
         setTransactions([...demoTransactions, ...commerce.transactions]);
         setPurchases(commerce.purchases);
-        setServices(s.session ? s.services : s.services.map((v) => ({ ...v, price: 350 })));
+        setServices(demoServices);
+        setWaiting(createOwnerDemoWaitlist(demoServices));
+        setDemoDiscounts(ownerDemoDiscounts);
+        setDemoPromotions(ownerDemoPromotions as unknown as Row[]);
+        setAttendance(
+          commerce.purchases
+            .filter((purchase) => purchase.kind === "workshop" && purchase.status !== "pending")
+            .map((purchase, index) => ({
+              id: `demo-attendance-${index + 1}`,
+              purchase_id: purchase.id,
+              customer_id: purchase.customer_id,
+              attended: index % 2 === 0,
+              certificate_ready: index === 0,
+            })),
+        );
+        setDemoResources(
+          Object.fromEntries(
+            demoWorkshops.slice(0, 5).map((workshop, index) => [
+              workshop.id,
+              {
+                workshop_id: workshop.id,
+                title: `${workshop.name} Demo Workbook`,
+                resource_url: `https://example.invalid/demo-workbook-${index + 1}`,
+              },
+            ]),
+          ),
+        );
         const cream = demoProducts.find((product) => /anti.?ag(?:e|ing)/i.test(product.name));
         setProducts(
           cream
@@ -1234,9 +1265,7 @@ export default function OwnerScreen() {
         await load();
       }
       s.notify(
-        approve
-          ? "VIP request approved. Payment remains outstanding."
-          : "VIP request declined.",
+        approve ? "VIP request approved. Payment remains outstanding." : "VIP request declined.",
       );
     } catch (reason) {
       setError(
@@ -1682,12 +1711,6 @@ export default function OwnerScreen() {
           error={error}
           onRefresh={refreshWorkspace}
           renderAppointment={renderAppointment}
-          demo={demo}
-          onClearDemo={() => {
-            setAppointments((current) => current.filter((item) => !item.id.startsWith("demo-")));
-            setTransactions((current) => current.filter((item) => !item.id.startsWith("demo-")));
-            s.notify("Demo calendar data cleared. Real bookings were not changed.");
-          }}
         />
       ) : tab === "Clients" ? (
         loading ? (
@@ -1739,10 +1762,27 @@ export default function OwnerScreen() {
               tab !== "Calendar" &&
               !(
                 tab === "Business" &&
-                ["Overview", "Revenue", "Reports", "Settings"].includes(section)
+                [
+                  "Overview",
+                  "Revenue",
+                  "Reports",
+                  "Settings",
+                  "VendorManagement",
+                  "Consultations",
+                  "Balances",
+                  "Expenses",
+                  "Waitlist",
+                  "Specials",
+                  "Backbar",
+                  "Royalty",
+                  "GiftsReferrals",
+                  "Agreements",
+                  "Discounts",
+                  "Automation",
+                ].includes(section)
               ) && (
                 <View style={{ marginBottom: 26 }}>
-                  <OT size={32} bold>
+                  <OT size={32} bold centered>
                     {tab === "Today"
                       ? "A beautiful day ahead."
                       : tab === "Calendar"
@@ -1755,13 +1795,9 @@ export default function OwnerScreen() {
                               ? "Your business, beautifully organised."
                               : section}
                   </OT>
-                  <OT muted>
-                    {tab === "Today"
-                      ? `${dateLabel(new Date().toISOString())} · America/Port_of_Spain`
-                      : tab === "Maria"
-                        ? "Your private English–Spanish assistant."
-                        : "A little Lady J, for your everyday!"}
-                  </OT>
+                  {tab === "Maria" && (
+                    <OT muted centered>Your private English–Spanish assistant.</OT>
+                  )}
                 </View>
               )}
             {!!error && !editor && !calendarForm && (
@@ -1773,7 +1809,7 @@ export default function OwnerScreen() {
               <>
                 {tab === "Business" && (
                   <>
-                    {section !== "Overview" && (
+                    {section !== "Overview" && section !== "VendorManagement" && (
                       <View style={{ marginBottom: 24, alignItems: "center" }}>
                         <OA
                           label="Back to Business"
@@ -1800,17 +1836,32 @@ export default function OwnerScreen() {
                       <ConsultationRequestsPanel
                         services={services}
                         appointments={appointments}
+                        demo={demo}
                         focusId={routeParams.consultation}
                         onChanged={() => load(true)}
                       />
                     )}
                     {section === "Approvals" && (
                       <View style={{ gap: 18 }}>
-                        <OT size={24} bold>VIP Appointments</OT>
-                        {appointments.filter((a) => a.is_vip && a.approval_status === "pending").map(renderAppointment)}
-                        {!appointments.some((a) => a.is_vip && a.approval_status === "pending") && <OT muted>No VIP approvals waiting.</OT>}
-                        <OT size={24} bold>Consultation Requests</OT>
-                        <ConsultationRequestsPanel services={services} appointments={appointments} focusId={routeParams.consultation} onChanged={() => load(true)} />
+                        <OT size={24} bold>
+                          VIP Appointments
+                        </OT>
+                        {appointments
+                          .filter((a) => a.is_vip && a.approval_status === "pending")
+                          .map(renderAppointment)}
+                        {!appointments.some((a) => a.is_vip && a.approval_status === "pending") && (
+                          <OT muted>No VIP approvals waiting.</OT>
+                        )}
+                        <OT size={24} bold>
+                          Consultation Requests
+                        </OT>
+                        <ConsultationRequestsPanel
+                          services={services}
+                          appointments={appointments}
+                          demo={demo}
+                          focusId={routeParams.consultation}
+                          onChanged={() => load(true)}
+                        />
                       </View>
                     )}
                     {section === "Expenses" && (
@@ -1892,7 +1943,7 @@ export default function OwnerScreen() {
                       />
                     )}
                     {section === "VendorManagement" && (
-                      <VendorSpendingPanel onBack={() => setSection("Overview")} />
+                      <VendorSpendingPanel demo={demo} onBack={() => setSection("Overview")} />
                     )}
                     {section === "Overview" && (
                       <View style={{ gap: 10 }}>
@@ -1910,7 +1961,9 @@ export default function OwnerScreen() {
                         <BusinessOverview
                           onOpen={setSection}
                           onMedia={() => setMediaContext({ mode: "gallery" })}
-                          urgentApproval={appointments.some((a) => a.is_vip && a.approval_status === "pending")}
+                          urgentApproval={appointments.some(
+                            (a) => a.is_vip && a.approval_status === "pending",
+                          )}
                         />
                       </View>
                     )}
@@ -1982,101 +2035,151 @@ export default function OwnerScreen() {
                         </View>
                         {catalogItems
                           .slice(currentCatalogPage * 12, currentCatalogPage * 12 + 12)
-                          .map((v) => (
-                            section === "Services" ? (
-                            <View key={v.id} style={{ gap: 6, marginBottom: 12 }}>
-                              <ServiceCard service={v as Service} />
-                              <View style={{ alignItems: "flex-end" }}>
-                                <OA label="Edit Details" compact secondary onPress={() => openEditor("lj_services", v as unknown as Row)} />
-                              </View>
-                            </View>
-                            ) : (
-                            <Card key={v.id} style={{ marginBottom: 16, gap: 14 }}>
-                              <View style={{ flexDirection: "row", gap: 18, alignItems: "center" }}>
+                          .map((v) =>
+                            section === "Services" || section === "Products" ? (
+                              <Card
+                                key={v.id}
+                                style={{
+                                  minHeight: section === "Services" ? 88 : 90,
+                                  marginBottom: 10,
+                                  padding: 0,
+                                  overflow: "hidden",
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  gap: 10,
+                                }}
+                              >
                                 <Photo
                                   name={v.image}
-                                  style={{ width: 80, height: 90, borderRadius: 10 }}
+                                  style={{
+                                    width: section === "Services" ? 88 : 80,
+                                    height: section === "Services" ? 88 : 90,
+                                    borderRadius: 10,
+                                  }}
                                 />
-                                <View style={{ flex: 1 }}>
-                                  <OT size={23} bold>
+                                <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                                  <Txt bold size={16} numberOfLines={1} ellipsizeMode="tail">
                                     {String(v.name)}
-                                  </OT>
-                                  <OT muted>
-                                    {"duration" in v
-                                      ? servicePriceLabel(v as Service)
-                                      : money(v.price)}{" "}
-                                    ·
-                                    {"stock" in v
-                                      ? `${v.stock} in stock`
-                                      : "duration" in v
-                                        ? serviceDurationLabel(v as Service)
-                                        : ""}
-                                    {"is_add_on" in v && v.is_add_on
-                                      ? " · Add-on"
-                                      : "bookable" in v && v.bookable === false
-                                        ? " · Not bookable"
-                                        : !v.active
-                                          ? " · Archived"
-                                          : ""}
-                                  </OT>
+                                  </Txt>
+                                  {section === "Services" && (
+                                    <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
+                                      {String(v.description)}
+                                    </Txt>
+                                  )}
+                                  <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
+                                    {section === "Services"
+                                      ? serviceDurationLabel(v as Service) +
+                                        " · " +
+                                        servicePriceLabel(v as Service)
+                                      : money(v.price) +
+                                        " · " +
+                                        ("stock" in v ? v.stock : 0) +
+                                        " in stock"}
+                                  </Txt>
                                 </View>
-                              </View>
-                              <View style={[shared.row, { flexWrap: "wrap" }]}>
-                                <OA
-                                  label="Edit Details"
-                                  secondary
-                                  onPress={() =>
-                                    openEditor(
-                                      section === "Services"
-                                        ? "lj_services"
-                                        : section === "Products"
-                                          ? "lj_products"
-                                          : "lj_workshops",
-                                      v as unknown as Row,
-                                    )
-                                  }
-                                />
-                                {section === "Workshops" && (
-                                  <>
-                                    <OA
-                                      label="Resources"
-                                      secondary
-                                      onPress={() => {
-                                        if (demo)
-                                          openEditor(
-                                            "lj_workshop_resources",
-                                            demoResources[v.id] || { workshop_id: v.id },
-                                          );
-                                        else
-                                          void db()
-                                            .from("lj_workshop_resources")
-                                            .select("*")
-                                            .eq("workshop_id", v.id)
-                                            .maybeSingle()
-                                            .then((r) => {
-                                              if (r.error) setError(r.error.message);
-                                              else
-                                                openEditor(
-                                                  "lj_workshop_resources",
-                                                  r.data || { workshop_id: v.id },
-                                                );
-                                            });
-                                      }}
-                                    />
-                                    <OA
-                                      label="Enrollment"
-                                      secondary
-                                      onPress={() => {
-                                        setSection("Enrollment");
-                                        setEnrollmentWorkshopId(v.id);
-                                      }}
-                                    />
-                                  </>
-                                )}
-                              </View>
-                            </Card>
-                            )
-                          ))}
+                                <View style={{ paddingRight: 8 }}>
+                                  <OA
+                                    label="Edit Details"
+                                    compact
+                                    secondary
+                                    onPress={() =>
+                                      openEditor(
+                                        section === "Services" ? "lj_services" : "lj_products",
+                                        v as unknown as Row,
+                                      )
+                                    }
+                                  />
+                                </View>
+                              </Card>
+                            ) : (
+                              <Card key={v.id} style={{ marginBottom: 16, gap: 14 }}>
+                                <View
+                                  style={{ flexDirection: "row", gap: 18, alignItems: "center" }}
+                                >
+                                  <Photo
+                                    name={v.image}
+                                    style={{ width: 80, height: 90, borderRadius: 10 }}
+                                  />
+                                  <View style={{ flex: 1 }}>
+                                    <OT size={23} bold>
+                                      {String(v.name)}
+                                    </OT>
+                                    <OT muted>
+                                      {"duration" in v
+                                        ? servicePriceLabel(v as Service)
+                                        : money(v.price)}{" "}
+                                      ·
+                                      {"stock" in v
+                                        ? `${v.stock} in stock`
+                                        : "duration" in v
+                                          ? serviceDurationLabel(v as Service)
+                                          : ""}
+                                      {"is_add_on" in v && v.is_add_on
+                                        ? " · Add-on"
+                                        : "bookable" in v && v.bookable === false
+                                          ? " · Not bookable"
+                                          : !v.active
+                                            ? " · Archived"
+                                            : ""}
+                                    </OT>
+                                  </View>
+                                </View>
+                                <View style={[shared.row, { flexWrap: "wrap" }]}>
+                                  <OA
+                                    label="Edit Details"
+                                    secondary
+                                    onPress={() =>
+                                      openEditor(
+                                        section === "Services"
+                                          ? "lj_services"
+                                          : section === "Products"
+                                            ? "lj_products"
+                                            : "lj_workshops",
+                                        v as unknown as Row,
+                                      )
+                                    }
+                                  />
+                                  {section === "Workshops" && (
+                                    <>
+                                      <OA
+                                        label="Resources"
+                                        secondary
+                                        onPress={() => {
+                                          if (demo)
+                                            openEditor(
+                                              "lj_workshop_resources",
+                                              demoResources[v.id] || { workshop_id: v.id },
+                                            );
+                                          else
+                                            void db()
+                                              .from("lj_workshop_resources")
+                                              .select("*")
+                                              .eq("workshop_id", v.id)
+                                              .maybeSingle()
+                                              .then((r) => {
+                                                if (r.error) setError(r.error.message);
+                                                else
+                                                  openEditor(
+                                                    "lj_workshop_resources",
+                                                    r.data || { workshop_id: v.id },
+                                                  );
+                                              });
+                                        }}
+                                      />
+                                      <OA
+                                        label="Enrollment"
+                                        secondary
+                                        onPress={() => {
+                                          setSection("Enrollment");
+                                          setEnrollmentWorkshopId(v.id);
+                                        }}
+                                      />
+                                    </>
+                                  )}
+                                </View>
+                              </Card>
+                            ),
+                          )}
                         {catalogPages > 1 && (
                           <View
                             style={{
@@ -2192,6 +2295,9 @@ export default function OwnerScreen() {
                           .map((p) => (
                             <Card key={p.id} style={{ marginBottom: 16, gap: 14 }}>
                               <OT bold size={22}>
+                                {p.order_number || `Order ${p.id.slice(0, 8).toUpperCase()}`}
+                              </OT>
+                              <OT bold size={18}>
                                 {(Array.isArray(p.items) ? p.items : [])
                                   .map(
                                     (v) =>
@@ -2200,9 +2306,19 @@ export default function OwnerScreen() {
                                   .join(", ")}
                               </OT>
                               <OT>
-                                {nameFor(p.customer_id)} · {money(p.total)} · {p.fulfillment}
+                                {p.contact_name || nameFor(p.customer_id)} · {money(p.total)} ·{" "}
+                                {p.fulfillment}
                               </OT>
-                              <OT muted>{p.status}</OT>
+                              {!!p.contact_email && (
+                                <OT muted>
+                                  {p.contact_email} · {p.contact_phone || "No phone supplied"}
+                                </OT>
+                              )}
+                              <OT muted>
+                                Payment: {(p.payment_status || p.status).replaceAll("_", " ")} ·
+                                Fulfillment:{" "}
+                                {(p.fulfillment_status || p.status).replaceAll("_", " ")}
+                              </OT>
                               {canDiscount("purchase", p.id, p.status) && (
                                 <OA
                                   label="Apply Discount"
@@ -2215,44 +2331,56 @@ export default function OwnerScreen() {
                                 <OT>Discount applied: {money(p.discount_total!)}</OT>
                               )}
                               {!!p.delivery_address && <OT>Delivery: {p.delivery_address}</OT>}
-                              {["paid", "processing", "ready"].includes(p.status) && (
-                                <OA
-                                  label={
-                                    p.status === "paid"
-                                      ? "Start processing"
-                                      : p.status === "processing"
-                                        ? "Mark ready"
-                                        : "Mark fulfilled"
-                                  }
-                                  onPress={() =>
-                                    setConfirm({
-                                      text: "Update this order’s fulfillment status?",
-                                      run: async () => {
-                                        const status =
-                                          p.status === "paid"
-                                            ? "processing"
-                                            : p.status === "processing"
-                                              ? "ready"
-                                              : "fulfilled";
-                                        if (demo)
-                                          setPurchases((old) =>
-                                            old.map((v) => (v.id === p.id ? { ...v, status } : v)),
-                                          );
-                                        else {
-                                          check(
-                                            await db()
-                                              .from("lj_purchases")
-                                              .update({ status })
-                                              .eq("id", p.id),
-                                          );
-                                          await load();
-                                        }
-                                        s.notify("Order status updated.");
-                                      },
-                                    })
-                                  }
-                                />
-                              )}
+                              {(p.payment_status === "verified" ||
+                                ["paid", "processing", "ready"].includes(p.status)) &&
+                                ["pending", "processing", "ready"].includes(
+                                  p.fulfillment_status ||
+                                    (p.status === "paid" ? "pending" : p.status),
+                                ) && (
+                                  <OA
+                                    label={
+                                      (p.fulfillment_status ||
+                                        (p.status === "paid" ? "pending" : p.status)) === "pending"
+                                        ? "Start processing"
+                                        : (p.fulfillment_status || p.status) === "processing"
+                                          ? "Mark ready"
+                                          : "Mark fulfilled"
+                                    }
+                                    onPress={() =>
+                                      setConfirm({
+                                        text: "Update this order’s fulfillment status?",
+                                        run: async () => {
+                                          const status =
+                                            (p.fulfillment_status ||
+                                              (p.status === "paid" ? "pending" : p.status)) ===
+                                            "pending"
+                                              ? "processing"
+                                              : (p.fulfillment_status || p.status) === "processing"
+                                                ? "ready"
+                                                : "fulfilled";
+                                          if (demo)
+                                            setPurchases((old) =>
+                                              old.map((v) =>
+                                                v.id === p.id
+                                                  ? { ...v, status, fulfillment_status: status }
+                                                  : v,
+                                              ),
+                                            );
+                                          else {
+                                            check(
+                                              await db()
+                                                .from("lj_purchases")
+                                                .update({ status, fulfillment_status: status })
+                                                .eq("id", p.id),
+                                            );
+                                            await load();
+                                          }
+                                          s.notify("Order status updated.");
+                                        },
+                                      })
+                                    }
+                                  />
+                                )}
                             </Card>
                           ))
                       ) : (
@@ -3414,6 +3542,7 @@ export default function OwnerScreen() {
                         <ConsultationRequestsPanel
                           services={services}
                           appointments={appointments}
+                          demo={demo}
                           clientId={selectedClient.id}
                           onChanged={() => load(true)}
                         />

@@ -1,3 +1,8 @@
+import {
+  useFonts,
+  NotoSerifGeorgian_400Regular,
+  PlayfairDisplay_400Regular,
+} from "@expo-google-fonts/dev";
 import CatalogGallery from "./CatalogGallery";
 import React from "react";
 import { View, Linking, Pressable, useWindowDimensions } from "react-native";
@@ -39,10 +44,20 @@ export default function InfoScreen({ page }: { page: string }) {
     go = useNav(),
     c = useColors(),
     { width } = useWindowDimensions();
+
+  const [fontsLoaded] = useFonts({
+    NotoSerifGeorgian_400Regular,
+    PlayfairDisplay_400Regular,
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   const socialColumns = width >= 980 ? 4 : width >= 540 ? 2 : 1;
   if (page === "gallery")
     return (
-      <Shell>
+      <Shell className={"text-base"}>
         <Heading sub="A glimpse into the care, details and moments we love.">
           The Lady J edit
         </Heading>
@@ -60,7 +75,15 @@ export default function InfoScreen({ page }: { page: string }) {
     return (
       <Shell footer>
         <View style={{ alignItems: "center", marginBottom: 30 }}>
-          <Txt serif size={40} style={{ textAlign: "center" }}>
+          <Txt
+            serif
+            size={40}
+            style={{
+              textAlign: "center",
+              fontSize: 20,
+              fontFamily: "PlayfairDisplay_400Regular",
+            }}
+          >
             Let’s connect
           </Txt>
           <Txt
@@ -68,7 +91,7 @@ export default function InfoScreen({ page }: { page: string }) {
             style={{
               textAlign: "center",
               marginTop: 8,
-              fontSize: 14,
+              fontSize: 12,
             }}
           >
             We’re here to help you plan your next moment of care.
@@ -92,9 +115,23 @@ export default function InfoScreen({ page }: { page: string }) {
           </View>
           <View
             accessibilityLabel="Lady J contact information"
-            style={{ flex: 0.9, gap: 16, justifyContent: "center", paddingVertical: 24 }}
+            style={{
+              flex: 0.9,
+              gap: 16,
+              justifyContent: "center",
+              paddingVertical: 24,
+              paddingBottom: 0,
+              paddingTop: 6,
+            }}
           >
-            <Txt serif size={30}>
+            <Txt
+              serif
+              size={30}
+              className={"text-sm md:w-80 md:h-5 md:text-left md:font-light md:text-sm"}
+              style={{
+                fontFamily: "NotoSerifGeorgian_400Regular",
+              }}
+            >
               Lady J Salon & Day Spa
             </Txt>
             <View style={{ gap: 3 }}>
@@ -133,13 +170,19 @@ export default function InfoScreen({ page }: { page: string }) {
             alignSelf: "center",
             borderTopWidth: 1,
             borderColor: c.border,
-            marginTop: 32,
-            paddingTop: 26,
             alignItems: "center",
             gap: 16,
           }}
         >
-          <Txt serif size={40} style={{ textAlign: "center" }}>
+          <Txt
+            serif
+            size={40}
+            style={{
+              textAlign: "center",
+              fontSize: 20,
+              fontFamily: "PlayfairDisplay_400Regular",
+            }}
+          >
             Connect With Us
           </Txt>
           <View
@@ -207,11 +250,7 @@ export default function InfoScreen({ page }: { page: string }) {
               );
             })}
           </View>
-          {!socialPlatforms.every((platform) => platform.url) && (
-            <Txt size={12} color={c.mutedForeground} style={{ textAlign: "center" }}>
-              Verified social profile links are awaiting configuration.
-            </Txt>
-          )}
+          {!socialPlatforms.every((platform) => platform.url) && null}
         </View>
       </Shell>
     );

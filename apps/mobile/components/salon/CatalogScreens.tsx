@@ -8,7 +8,18 @@ import { money, dateLabel, timeLabel, servicePriceLabel } from "@/lib/salon/type
 import { serviceDurationLabel } from "@/lib/salon/duration";
 import { salonIdentity } from "@/lib/salon/identity";
 import Shell, { useNav } from "./Shell";
-import { Txt, Action, Heading, Tag, LinkText, Card, Empty, useColors, ButtonLabel, Photo } from "./ui";
+import {
+  Txt,
+  Action,
+  Heading,
+  Tag,
+  LinkText,
+  Card,
+  Empty,
+  useColors,
+  ButtonLabel,
+  Photo,
+} from "./ui";
 import { fonts } from "@/lib/salon/design";
 import FavoriteButton from "./FavoriteButton";
 export function Search({
@@ -128,32 +139,52 @@ export function ServicesScreen() {
       </View>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
         {filtered.slice(currentPage * 12, currentPage * 12 + 12).map((v) => (
-          <Pressable
+          <View
             key={v.id}
-            accessibilityRole="button"
-            onPress={() => go("booking", { id: v.id })}
             style={{
               flexDirection: "row",
               alignItems: "center",
-              gap: 16,
-              padding: 15,
+              height: 82,
+              overflow: "hidden",
               borderWidth: 1,
               borderColor: c.border,
-              borderRadius: 14,
+              borderRadius: 12,
               backgroundColor: c.card,
               width: desktop ? "48%" : "100%",
               flexGrow: 1,
               maxWidth: desktop ? "50%" : undefined,
             }}
           >
-            <Photo name={v.image} style={{ width: 72, height: 82, borderRadius: 10 }} />
-            <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
-              <ButtonLabel size={20}>{v.name}</ButtonLabel>
-              <Txt size={12} color={c.mutedForeground} numberOfLines={2}>{v.description}</Txt>
-              <Txt size={13}>{serviceDurationLabel(v)} · {servicePriceLabel(v)}</Txt>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => go("booking", { id: v.id })}
+              style={({ pressed }) => ({
+                flex: 1,
+                minWidth: 0,
+                height: 82,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                opacity: pressed ? 0.86 : 1,
+              })}
+            >
+              <Photo name={v.image} style={{ width: 72, height: 82, borderRadius: 10 }} />
+              <View style={{ flex: 1, minWidth: 0, gap: 1, paddingRight: 38 }}>
+                <Txt bold size={16} numberOfLines={1} ellipsizeMode="tail">
+                  {v.name}
+                </Txt>
+                <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
+                  {v.description}
+                </Txt>
+                <Txt size={12} numberOfLines={1}>
+                  {serviceDurationLabel(v)} · {servicePriceLabel(v)}
+                </Txt>
+              </View>
+            </Pressable>
+            <View style={{ position: "absolute", right: 4, bottom: 4 }}>
+              <FavoriteButton compact kind="service" itemId={v.id} />
             </View>
-            <FavoriteButton kind="service" itemId={v.id} />
-          </Pressable>
+          </View>
         ))}
       </View>
       {!filtered.length && (

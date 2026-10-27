@@ -882,12 +882,12 @@ export default function ConsultationScreen() {
             label="Send My Consultation Request"
             busy={busy}
             onPress={() => void submit()}
-            contentColor="#FFFFFF"
+            contentColor={c.consultationForeground}
             style={{
               alignSelf: "stretch",
               minHeight: 62,
-              backgroundColor: "#2563EB",
-              borderColor: "#2563EB",
+              backgroundColor: c.consultationFill,
+              borderColor: c.consultationFill,
             }}
           />
           <Txt bold style={{ textAlign: "center" }}>

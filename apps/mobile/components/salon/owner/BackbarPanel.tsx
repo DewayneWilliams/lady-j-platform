@@ -25,7 +25,16 @@ type Item = {
   photo_path: string | null;
   notes: string;
 };
-type Form = Omit<Item, "id" | "photo_path"> & { id?: string; photo_path?: string | null; vendor_name?: string; purchase_date?: string; unit_cost?: number; payment_method?: string; payment_status?: "paid" | "outstanding"; receipt_path?: string };
+type Form = Omit<Item, "id" | "photo_path"> & {
+  id?: string;
+  photo_path?: string | null;
+  vendor_name?: string;
+  purchase_date?: string;
+  unit_cost?: number;
+  payment_method?: string;
+  payment_status?: "paid" | "outstanding";
+  receipt_path?: string;
+};
 const empty: Form = {
   name: "",
   brand: "",
@@ -100,7 +109,49 @@ export default function BackbarPanel({
           (name, i) => ({ id: name, name, sort_order: i }),
         ),
       );
-      setItems([]);
+      setItems(
+        [
+          ["Professional Color Tubes", "Wella", "Hair", 18, 6],
+          ["Keratin Treatment", "Keratin Complex", "Hair", 4, 2],
+          ["Hydrating Facial Mask", "Dermalogica", "Facials", 9, 3],
+          ["Body Treatment Oil", "Osea", "Skin", 7, 2],
+          ["Gel Base Coat", "OPI", "Nails", 5, 2],
+          ["Lash Adhesive", "Duo", "Lashes", 3, 2],
+          ["Brow Tint", "RefectoCil", "Brows", 6, 2],
+          ["Wax Beads", "Cirepil", "Waxing", 12, 4],
+        ].map(([name, brand, category, quantity, threshold], index) => ({
+          id: `demo-backbar-${index + 1}`,
+          name: String(name),
+          brand: String(brand),
+          size_label: index % 2 ? "500 ml" : "Professional size",
+          category_id: String(category),
+          tracking_method: "applications" as const,
+          quantity: Number(quantity),
+          applications_remaining: Number(quantity) * 5,
+          applications_per_container: 30,
+          low_stock_threshold: Number(threshold),
+          expires_on: null,
+          replacement_interval_days: null,
+          photo_path: null,
+          notes: "Development Test Mode sample stock.",
+        })),
+      );
+      setVendors(
+        [
+          "Peter's Professional Hair Supply",
+          "Andrew's Beauty Essentials",
+          "James' Salon Equipment",
+          "John's Luxury Haircare",
+          "Philip's Nail Collection",
+          "Bartholomew's Skincare Supply",
+          "Matthew's Beauty Wholesale",
+          "Thomas' Barber Supplies",
+          "James Alphaeus Cosmetics",
+          "Thaddaeus Spa Essentials",
+          "Simon's Professional Products",
+          "Judas Iscariot Beauty Distribution",
+        ].map((name, index) => ({ id: `demo-vendor-${index + 1}`, name })),
+      );
       return;
     }
     try {
@@ -178,7 +229,15 @@ export default function BackbarPanel({
         setPhoto(null);
         return;
       }
-      const { vendor_name, purchase_date, unit_cost, payment_method, payment_status, receipt_path, ...itemForm } = form;
+      const {
+        vendor_name,
+        purchase_date,
+        unit_cost,
+        payment_method,
+        payment_status,
+        receipt_path,
+        ...itemForm
+      } = form;
       const payload = {
         ...itemForm,
         name: form.name.trim(),
@@ -205,22 +264,28 @@ export default function BackbarPanel({
         const vendorName = form.vendor_name.trim();
         let vendor = vendors.find((value) => value.name.toLowerCase() === vendorName.toLowerCase());
         if (!vendor) {
-          vendor = check(await db().from("lj_vendors").insert({ name: vendorName }).select("id,name").single()) as { id: string; name: string };
+          vendor = check(
+            await db().from("lj_vendors").insert({ name: vendorName }).select("id,name").single(),
+          ) as { id: string; name: string };
         }
-        check(await db().from("lj_vendor_purchases").insert({
-          vendor_id: vendor.id,
-          inventory_kind: "backbar",
-          backbar_item_id: saved.id,
-          item_name: saved.name,
-          brand: saved.brand,
-          quantity: Math.max(1, Number(saved.quantity || 1)),
-          unit_cost: Number(form.unit_cost || 0),
-          purchase_date: form.purchase_date || new Date().toISOString().slice(0, 10),
-          payment_method: form.payment_method || "cash",
-          payment_status: form.payment_status || "paid",
-          receipt_path: form.receipt_path?.trim() || null,
-          created_by: (await db().auth.getUser()).data.user?.id || null,
-        }));
+        check(
+          await db()
+            .from("lj_vendor_purchases")
+            .insert({
+              vendor_id: vendor.id,
+              inventory_kind: "backbar",
+              backbar_item_id: saved.id,
+              item_name: saved.name,
+              brand: saved.brand,
+              quantity: Math.max(1, Number(saved.quantity || 1)),
+              unit_cost: Number(form.unit_cost || 0),
+              purchase_date: form.purchase_date || new Date().toISOString().slice(0, 10),
+              payment_method: form.payment_method || "cash",
+              payment_status: form.payment_status || "paid",
+              receipt_path: form.receipt_path?.trim() || null,
+              created_by: (await db().auth.getUser()).data.user?.id || null,
+            }),
+        );
       }
       if (photo?.base64) {
         const bytes = Uint8Array.from(atob(photo.base64), (x) => x.charCodeAt(0));
@@ -528,19 +593,63 @@ export default function BackbarPanel({
           {photo && <Image source={{ uri: photo.uri }} style={{ height: 150, borderRadius: 12 }} />}
           {field("Product name", "name")}
           <View style={{ gap: 5 }}>
-            <OwnerText size={15} bold>Vendor</OwnerText>
-            <TextInput value={form.vendor_name || ""} onChangeText={(vendor_name) => setForm((x) => x ? { ...x, vendor_name } : x)} placeholder="Search or add vendor" placeholderTextColor={c.mutedForeground} style={{ minHeight: 46, borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 12, color: c.foreground, backgroundColor: c.background }} />
-            {!!vendors.length && <OwnerText muted size={13}>{vendors.slice(0, 4).map((v) => v.name).join(" · ")}</OwnerText>}
+            <OwnerText size={15} bold>
+              Vendor
+            </OwnerText>
+            <TextInput
+              value={form.vendor_name || ""}
+              onChangeText={(vendor_name) => setForm((x) => (x ? { ...x, vendor_name } : x))}
+              placeholder="Search or add vendor"
+              placeholderTextColor={c.mutedForeground}
+              style={{
+                minHeight: 46,
+                borderWidth: 1,
+                borderColor: c.border,
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                color: c.foreground,
+                backgroundColor: c.background,
+              }}
+            />
+            {!!vendors.length && (
+              <OwnerText muted size={13}>
+                {vendors
+                  .slice(0, 4)
+                  .map((v) => v.name)
+                  .join(" · ")}
+              </OwnerText>
+            )}
           </View>
           {field("Brand", "brand")}
           <View style={{ flexDirection: "row", gap: 8 }}>
             <View style={{ flex: 1 }}>{field("Purchase date", "purchase_date")}</View>
             <View style={{ flex: 1 }}>{field("Unit cost", "unit_cost", "numeric")}</View>
           </View>
-          <OwnerText muted size={13}>Total purchase cost: {`${Number(form.quantity || 1) * Number(form.unit_cost || 0)}`}</OwnerText>
+          <OwnerText muted size={13}>
+            Total purchase cost: {`${Number(form.quantity || 1) * Number(form.unit_cost || 0)}`}
+          </OwnerText>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-            {["cash", "bank", "card", "credit", "other"].map((payment_method) => <OwnerButton key={payment_method} label={payment_method} compact secondary={form.payment_method !== payment_method} onPress={() => setForm((x) => x ? { ...x, payment_method } : x)} />)}
-            <OwnerButton label={form.payment_status === "paid" ? "Paid" : "Outstanding"} compact secondary onPress={() => setForm((x) => x ? { ...x, payment_status: x.payment_status === "paid" ? "outstanding" : "paid" } : x)} />
+            {["cash", "bank", "card", "credit", "other"].map((payment_method) => (
+              <OwnerButton
+                key={payment_method}
+                label={payment_method}
+                compact
+                secondary={form.payment_method !== payment_method}
+                onPress={() => setForm((x) => (x ? { ...x, payment_method } : x))}
+              />
+            ))}
+            <OwnerButton
+              label={form.payment_status === "paid" ? "Paid" : "Outstanding"}
+              compact
+              secondary
+              onPress={() =>
+                setForm((x) =>
+                  x
+                    ? { ...x, payment_status: x.payment_status === "paid" ? "outstanding" : "paid" }
+                    : x,
+                )
+              }
+            />
           </View>
           {field("Receipt link (optional)", "receipt_path")}
           {field("Container size", "size_label")}

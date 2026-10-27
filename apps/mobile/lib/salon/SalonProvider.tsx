@@ -299,14 +299,32 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       const existing = favorites.find(
         (favorite) => favorite.kind === kind && favorite.item_id === itemId,
       );
-      if (existing) check(await db().from("lj_favorites").delete().eq("id", existing.id));
-      else
-        check(
-          await db()
-            .from("lj_favorites")
-            .insert({ customer_id: customerId, kind, item_id: itemId }),
-        );
-      await refreshPrivate();
+      setFavorites((current) =>
+        existing
+          ? current.filter((favorite) => favorite.id !== existing.id)
+          : [
+              {
+                id: `optimistic-${kind}-${itemId}`,
+                kind,
+                item_id: itemId,
+                created_at: new Date().toISOString(),
+              },
+              ...current,
+            ],
+      );
+      try {
+        if (existing) check(await db().from("lj_favorites").delete().eq("id", existing.id));
+        else
+          check(
+            await db()
+              .from("lj_favorites")
+              .insert({ customer_id: customerId, kind, item_id: itemId }),
+          );
+        await refreshPrivate();
+      } catch (reason) {
+        setFavorites(favorites);
+        throw reason;
+      }
     },
     [customerId, favorites, refreshPrivate, testMode],
   );

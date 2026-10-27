@@ -9,9 +9,11 @@ import { useColors } from "./ui";
 export default function FavoriteButton({
   kind,
   itemId,
+  compact = false,
 }: {
   kind: Favorite["kind"];
   itemId: string;
+  compact?: boolean;
 }) {
   const s = useSalon();
   const go = useNav();
@@ -25,7 +27,8 @@ export default function FavoriteButton({
       accessibilityLabel={saved ? "Remove from favorites" : "Save to favorites"}
       accessibilityState={{ selected: saved }}
       hitSlop={8}
-      onPress={() => {
+      onPress={(event) => {
+        event.stopPropagation();
         if (!s.session && !s.testMode) {
           go("login", {
             next:
@@ -44,9 +47,9 @@ export default function FavoriteButton({
           );
       }}
       style={({ pressed }) => ({
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: compact ? 32 : 44,
+        height: compact ? 32 : 44,
+        borderRadius: compact ? 16 : 22,
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: c.card,
@@ -56,8 +59,8 @@ export default function FavoriteButton({
       })}
     >
       <Icon
-        name={saved ? "Heart" : "Heart"}
-        size={22}
+        name="Heart"
+        size={compact ? 18 : 22}
         color={saved ? c.brandAccent : c.mutedForeground}
         fill={saved ? c.brandAccent : "transparent"}
       />

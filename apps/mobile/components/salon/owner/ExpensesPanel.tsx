@@ -28,8 +28,23 @@ export default function ExpensesPanel({
   purchases: Purchase[];
 }) {
   const today = salonDate(new Date().toISOString());
+  const demoExpenses: Expense[] = [
+    ["Supplies", "Esther event styling supplies", 780, "DEMO-ESTHER"],
+    ["Equipment", "Solomon workstation maintenance", 450, "DEMO-SOLOMON"],
+    ["Utilities", "Noah water service", 325, "DEMO-NOAH"],
+    ["Staff", "Ruth training session", 600, "DEMO-RUTH"],
+    ["Rent", "Bethany studio allocation", 2400, "DEMO-BETHANY"],
+    ["Other", "David music licensing sample", 175, "DEMO-DAVID"],
+  ].map(([expenseCategory, expenseDescription, expenseAmount, expenseReference], index) => ({
+    id: `demo-expense-${index + 1}`,
+    spent_on: `${today.slice(0, 8)}${String(Math.max(1, Number(today.slice(8, 10)) - index)).padStart(2, "0")}`,
+    category: String(expenseCategory),
+    description: String(expenseDescription),
+    amount: Number(expenseAmount),
+    reference: String(expenseReference),
+  }));
   const [month, setMonth] = useState(today.slice(0, 7)),
-    [expenses, setExpenses] = useState<Expense[]>([]),
+    [expenses, setExpenses] = useState<Expense[]>(demo ? demoExpenses : []),
     [date, setDate] = useState(today),
     [category, setCategory] = useState("Supplies"),
     [description, setDescription] = useState(""),

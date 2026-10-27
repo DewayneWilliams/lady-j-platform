@@ -3,26 +3,56 @@ import { addCalendarDays } from "./calendarActivity";
 import { demoContactPhotoPath } from "./demoProfilePhotos";
 // All names, health notes, appointments and prices below are fictional demo scenarios.
 const people = [
-  ["Geralt", "of Rivia"],
-  ["Yennefer", "of Vengerberg"],
-  ["Cirilla", "Fiona"],
-  ["Jaskier", "Pankratz"],
-  ["Triss", "Merigold"],
-  ["Tissaia", "de Vries"],
-  ["Fringilla", "Vigo"],
-  ["Cahir", "Mawr Dyffryn"],
-  ["Queen", "Calanthe"],
-  ["Istredd", "of Aedd Gynvael"],
-  ["Vilgefortz", "of Roggeveen"],
-  ["Mousesack", "of Cintra"],
-  ["Renfri", "of Creyden"],
-  ["Stregobor", "of Kovir"],
-  ["Dara", "of Cintra"],
-  ["Emhyr", "var Emreis"],
-  ["Philippa", "Eilhart"],
-  ["Dijkstra", "of Redania"],
-  ["Nenneke", "of Ellander"],
-  ["Vesemir", "of Kaer Morhen"],
+  ["Jesus", "Christ"],
+  ["Mary", "Magdalene"],
+  ["Mary", "of Nazareth"],
+  ["Joseph", "of Nazareth"],
+  ["Peter", "Simon"],
+  ["Paul", "of Tarsus"],
+  ["Moses", "Levite"],
+  ["Abraham", "Patriarch"],
+  ["Sarah", "Matriarch"],
+  ["Isaac", "of Canaan"],
+  ["Jacob", "Israel"],
+  ["Joseph", "of Egypt"],
+  ["David", "of Bethlehem"],
+  ["Solomon", "of Jerusalem"],
+  ["Noah", "of the Ark"],
+  ["Adam", "of Eden"],
+  ["Eve", "of Eden"],
+  ["Daniel", "of Judah"],
+  ["Esther", "of Susa"],
+  ["Ruth", "of Moab"],
+  ["Samuel", "of Ramah"],
+  ["Elijah", "the Tishbite"],
+  ["Elisha", "the Prophet"],
+  ["Isaiah", "the Prophet"],
+  ["Jeremiah", "the Prophet"],
+  ["Ezekiel", "the Prophet"],
+  ["Joshua", "son of Nun"],
+  ["Gideon", "of Manasseh"],
+  ["Samson", "of Dan"],
+  ["Deborah", "of Ephraim"],
+  ["Hannah", "of Ramah"],
+  ["Naomi", "of Bethlehem"],
+  ["Job", "of Uz"],
+  ["Jonah", "son of Amittai"],
+  ["Aaron", "the Levite"],
+  ["Miriam", "the Prophetess"],
+  ["Caleb", "son of Jephunneh"],
+  ["Nehemiah", "of Jerusalem"],
+  ["Ezra", "the Scribe"],
+  ["Mordecai", "of Susa"],
+  ["Lazarus", "of Bethany"],
+  ["Martha", "of Bethany"],
+  ["John", "the Baptist"],
+  ["Luke", "the Evangelist"],
+  ["Mark", "the Evangelist"],
+  ["Matthew", "the Apostle"],
+  ["Barnabas", "of Cyprus"],
+  ["Timothy", "of Lystra"],
+  ["Priscilla", "of Corinth"],
+  ["Aquila", "of Corinth"],
 ];
 const treatments = [
   ["Silk press", 90, 350],
@@ -77,21 +107,25 @@ const today = new Intl.DateTimeFormat("en-CA", {
 const demoDates = Array.from({ length: 14 }, (_, index) => addCalendarDays(today, index));
 const regularTimes = ["10:00", "11:45", "14:00", "16:15"];
 const vipTimes = ["07:00", "10:00", "14:00", "18:30"];
-const contactPhotoIndexes = [1, 0, 2, 3, 10, 15, 7, 4, 12, 13, 6, 9, 5, 1, 4, 11, 8, 6, 15, 6];
+const contactPhotoIndexes = people.map((_, index) => index % 16);
 export const demoClients: Client[] = people.map(([first_name, last_name], i) => ({
   id: "demo-client-" + i,
   first_name,
   last_name,
   full_name: first_name + " " + last_name,
-  email: first_name.toLowerCase() + "@example.invalid",
+  email:
+    `${first_name}.${last_name}`
+      .toLowerCase()
+      .replace(/[^a-z]+/g, ".")
+      .replace(/^\.|\.$/g, "") + "@demo.invalid",
   phone: "+1 868 555 " + String(100 + i).padStart(4, "0"),
   birthday:
-    (i === 2 ? new Date().getUTCFullYear() - 15 : 1975 + i) +
+    (i === 20 ? new Date().getUTCFullYear() - 15 : 1955 + i) +
     "-" +
     String((i % 12) + 1).padStart(2, "0") +
     "-15",
-  is_minor: i === 2,
-  guardian_name: i === 2 ? "Geralt of Rivia" : "",
+  is_minor: i === 20,
+  guardian_name: i === 20 ? "Hannah of Ramah" : "",
   medical_conditions: conditions[i % conditions.length],
   health_safety_notes: conditions[i % conditions.length],
   client_accommodations:
@@ -100,19 +134,22 @@ export const demoClients: Client[] = people.map(([first_name, last_name], i) => 
       : "Allow a brief stretch break during longer services.",
   preferences: "Prefers a calm appointment and clear aftercare guidance.",
   sensitivities: conditions[i % conditions.length],
-  private_notes: "Confirm aftercare preferences.",
+  private_notes: "Fictional Bible-name demo contact. Confirm aftercare preferences.",
   photo_consent: false,
   client_photo_path: demoContactPhotoPath(contactPhotoIndexes[i]),
   profile_photo_updated_at: "demo",
 }));
-const historyClients = [...demoClients]
-  .sort((a, b) => a.full_name.localeCompare(b.full_name, "en", { sensitivity: "base" }))
-  .slice(0, 2);
+const historyClients = [...demoClients].sort((a, b) =>
+  a.full_name.localeCompare(b.full_name, "en", { sensitivity: "base" }),
+);
 const demoCompletedHistory: Appointment[] = historyClients.flatMap((client, clientIndex) =>
   [
-    [12 + clientIndex * 3, "Silk press and trim", 90, 420],
-    [38 + clientIndex * 4, "Hydrating facial", 60, 450],
-  ].map(([daysAgo, name, duration, total], visitIndex) => {
+    [12 + (clientIndex % 45), treatments[clientIndex % treatments.length]],
+    ...(clientIndex < 12
+      ? [[48 + clientIndex * 2, treatments[(clientIndex + 7) % treatments.length]]]
+      : []),
+  ].map(([daysAgo, treatment], visitIndex) => {
+    const [name, duration, total] = treatment as [string, number, number];
     const startsAt = new Date(Date.now() - Number(daysAgo) * 86400000);
     startsAt.setUTCHours(14 + visitIndex * 2, 0, 0, 0);
     return {
