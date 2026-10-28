@@ -170,13 +170,24 @@ export function ServicesScreen() {
             >
               <Photo name={v.image} style={{ width: 72, height: 82, borderRadius: 10 }} />
               <View style={{ flex: 1, minWidth: 0, gap: 1, paddingRight: 38 }}>
-                <Txt bold size={16} numberOfLines={1} ellipsizeMode="tail">
+                <Txt
+                  bold
+                  size={16}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  maxFontSizeMultiplier={1}
+                >
                   {v.name}
                 </Txt>
-                <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
+                <Txt
+                  size={12}
+                  color={c.mutedForeground}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1}
+                >
                   {v.description}
                 </Txt>
-                <Txt size={12} numberOfLines={1}>
+                <Txt size={12} numberOfLines={1} maxFontSizeMultiplier={1}>
                   {serviceDurationLabel(v)} · {servicePriceLabel(v)}
                 </Txt>
               </View>

@@ -165,6 +165,7 @@ export default function BusinessSettings({
       vip_before_start: String(settings?.vip_before_start || "06:00").slice(0, 5),
       vip_after_end: String(settings?.vip_after_end || "19:45").slice(0, 5),
       cleanup_buffer_minutes: String(settings?.cleanup_buffer_minutes ?? 0),
+      payment_hold_minutes: String(settings?.payment_hold_minutes ?? 30),
       max_daily_bookings_per_client: String(settings?.max_daily_bookings_per_client ?? 1),
       bank_name: settings?.bank_name || "",
       bank_account_name: settings?.bank_account_name || "",
@@ -313,11 +314,13 @@ export default function BusinessSettings({
               setBusy(true);
               setError("");
               const cleanup = Number(form.cleanup_buffer_minutes),
+                paymentHold = Number(form.payment_hold_minutes),
                 limit = Number(form.max_daily_bookings_per_client);
               void persist(
                 {
                   ...form,
                   cleanup_buffer_minutes: cleanup,
+                  payment_hold_minutes: paymentHold,
                   max_daily_bookings_per_client: limit,
                   loyalty_welcome_credit: Number(form.loyalty_welcome_credit),
                   loyalty_birthday_credit: Number(form.loyalty_birthday_credit),
@@ -389,6 +392,14 @@ export default function BusinessSettings({
               }
             />
             <Field
+              label="Payment Verification Hold (Minutes)"
+              value={form.payment_hold_minutes}
+              keyboardType="numeric"
+              onChangeText={(payment_hold_minutes) =>
+                setForm({ ...form, payment_hold_minutes })
+              }
+            />
+            <Field
               label="Appointments Per Client Per Day (0 = Unlimited)"
               value={form.max_daily_bookings_per_client}
               keyboardType="numeric"
@@ -410,6 +421,10 @@ export default function BusinessSettings({
         ) : (
           <>
             <ReadValue label="Cleanup Buffer" value={`${form.cleanup_buffer_minutes} minutes`} />
+            <ReadValue
+              label="Payment Verification Hold"
+              value={`${form.payment_hold_minutes} minutes`}
+            />
             <ReadValue
               label="VIP Window"
               value={`${form.vip_before_start}–${form.vip_after_end}`}

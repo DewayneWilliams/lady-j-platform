@@ -3,7 +3,7 @@ import { Image, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { useSalon } from "@/lib/salon/SalonProvider";
-import { Appointment } from "@/lib/salon/types";
+import { Appointment, Transaction } from "@/lib/salon/types";
 import { db, check } from "@/lib/salon/client";
 import { validReportDate } from "@/lib/salon/revenueReport";
 import { money } from "@/lib/salon/types";
@@ -117,6 +117,93 @@ export default function VipPaymentPanel({ appointment }: { appointment: Appointm
         )}
       </Card>
       <Action label="Submit Proof for Verification" busy={busy} onPress={() => void submit()} style={{ alignSelf: "stretch" }} />
+    </View>
+  );
+}
+
+export function PaymentProofCorrection({ transaction }: { transaction: Transaction }) {
+  const s = useSalon();
+  const c = useColors();
+  const [reference, setReference] = useState(transaction.reference || "");
+  const [paymentDate, setPaymentDate] = useState(transaction.payment_date || todayKey());
+  const [receipt, setReceipt] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function choose() {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) throw new Error("Photo library permission is required.");
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.85,
+        base64: true,
+      });
+      if (result.canceled) return;
+      let asset = result.assets?.[0];
+      if (!asset) return;
+      if (/hei[cf]/i.test(asset.mimeType || asset.fileName || "")) {
+        const converted = await manipulateAsync(asset.uri, [], {
+          compress: 0.85,
+          format: SaveFormat.JPEG,
+          base64: true,
+        });
+        asset = {
+          ...asset,
+          uri: converted.uri,
+          base64: converted.base64 || null,
+          mimeType: "image/jpeg",
+          fileName: (asset.fileName || "payment-proof").replace(/\.hei[cf]$/i, ".jpg"),
+        };
+      }
+      if (asset.fileSize && asset.fileSize > 8 * 1024 * 1024)
+        throw new Error("Choose a proof image smaller than 8 MB.");
+      setReceipt(asset);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to choose proof of payment.");
+    }
+  }
+
+  async function submit() {
+    setError("");
+    if (!s.session || !receipt || reference.trim().length < 3 || !validReportDate(paymentDate) || paymentDate > todayKey()) {
+      setError("Add a valid transaction reference, payment date and replacement proof.");
+      return;
+    }
+    setBusy(true);
+    const mime = receipt.mimeType || "image/jpeg";
+    const extension = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
+    const path = `${s.session.user.id}/corrections/${transaction.id}/${Date.now()}.${extension}`;
+    try {
+      check(await db().storage.from("lj-payment-receipts").upload(path, await bytes(receipt), { contentType: mime }));
+      check(await db().rpc("lj_replace_payment_proof", {
+        p_id: transaction.id,
+        p_reference: reference.trim(),
+        p_payment_date: paymentDate,
+        p_receipt_path: path,
+        p_receipt_filename: receipt.fileName || "Replacement payment proof",
+        p_receipt_mime: mime,
+      }));
+      await s.refreshPrivate();
+      s.notify("Payment Proof Received ✓ — Awaiting Verification.");
+    } catch (reason) {
+      await db().storage.from("lj-payment-receipts").remove([path]).catch(() => undefined);
+      setError(reason instanceof Error ? reason.message : "Unable to submit replacement proof.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <View style={{ marginTop: 12, gap: 10 }}>
+      {!!error && <ErrorBox message={error} />}
+      <Txt size={13} color={c.mutedForeground}>
+        Upload a corrected bank-transfer proof. It will remain Pending Verification until Lady J confirms the funds.
+      </Txt>
+      <Field label="Transaction Reference Number" value={reference} onChangeText={setReference} />
+      <Field label="Payment Date" value={paymentDate} onChangeText={setPaymentDate} placeholder="YYYY-MM-DD" />
+      <Action label={receipt ? "Change Replacement Proof" : "Upload Replacement Proof"} secondary icon="Upload" onPress={() => void choose()} />
+      <Action label="Submit Replacement Proof" busy={busy} disabled={!receipt} onPress={() => void submit()} />
     </View>
   );
 }

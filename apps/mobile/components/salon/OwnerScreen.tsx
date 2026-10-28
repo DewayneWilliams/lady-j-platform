@@ -2411,7 +2411,7 @@ export default function OwnerScreen() {
                             </OT>
                             {!!t.receipt_path && (
                               <OA
-                                label="View Original Receipt"
+                                label="View Proof"
                                 icon="ReceiptText"
                                 secondary
                                 onPress={() =>
@@ -2426,7 +2426,7 @@ export default function OwnerScreen() {
                             {t.status === "pending" && (
                               <View style={{ gap: 10 }}>
                                 <OA
-                                  label="Verify Bank Payment"
+                                  label="Confirm Payment"
                                   icon="ShieldCheck"
                                   onPress={() =>
                                     setConfirm({
@@ -2444,7 +2444,7 @@ export default function OwnerScreen() {
                                       multiline
                                     />
                                     <OA
-                                      label={busy ? "Rejecting" : "Reject Transfer"}
+                                      label={busy ? "Requesting" : "Request Correction"}
                                       secondary
                                       disabled={busy || rejectionReason.trim().length < 3}
                                       onPress={() =>

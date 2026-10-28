@@ -88,6 +88,7 @@ export function ButtonLabel({
   style,
   onTextLayout,
   singleLine = false,
+  maxFontSizeMultiplier,
 }: {
   children: React.ReactNode;
   size?: number;
@@ -95,6 +96,7 @@ export function ButtonLabel({
   style?: TextStyle;
   onTextLayout?: TextProps["onTextLayout"];
   singleLine?: boolean;
+  maxFontSizeMultiplier?: number;
 }) {
   const { theme } = useTheme();
   return (
@@ -107,6 +109,7 @@ export function ButtonLabel({
       ellipsizeMode={singleLine ? "clip" : undefined}
       adjustsFontSizeToFit={singleLine}
       minimumFontScale={singleLine ? 0.72 : undefined}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={{
         fontFamily: theme.typography.button?.fontFamily || fonts.action,
         lineHeight: size * 1.25,

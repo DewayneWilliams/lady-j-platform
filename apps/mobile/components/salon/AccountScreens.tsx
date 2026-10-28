@@ -23,7 +23,7 @@ import ServiceCard from "./ServiceCard";
 import ProductCard from "./ProductCard";
 import { demoTestClientPhotoPath } from "@/lib/salon/demoProfilePhotos";
 import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreference";
-import VipPaymentPanel from "./VipPaymentPanel";
+import VipPaymentPanel, { PaymentProofCorrection } from "./VipPaymentPanel";
 import LoyaltyHeader, { LoyaltyHistory } from "./LoyaltyHeader";
 import LoyaltyActions from "./LoyaltyActions";
 import GiftsReferrals from "./GiftsReferrals";
@@ -1368,6 +1368,7 @@ export function RecordsScreen({ page }: { page: string }) {
                         )}
                       </View>
                     )}
+                    {payment?.status === "rejected" && <PaymentProofCorrection transaction={payment} />}
                     {(a.is_vip || a.custom_approval) &&
                       a.approval_status === "approved" &&
                       !payment && <VipPaymentPanel appointment={a} />}

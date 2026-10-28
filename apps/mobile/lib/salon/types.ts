@@ -194,6 +194,7 @@ export type Settings = {
   loyalty_birthday_gift_enabled?: boolean;
   loyalty_birthday_gift_note?: string;
   cleanup_buffer_minutes?: number;
+  payment_hold_minutes?: number;
   opens_at?: string;
   closes_at?: string;
   vip_before_start?: string;

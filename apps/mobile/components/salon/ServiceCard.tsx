@@ -78,17 +78,34 @@ export default function ServiceCard({
             paddingRight: showFavorite ? 38 : 10,
           }}
         >
-          <Txt bold size={16} numberOfLines={1} ellipsizeMode="tail">
+          <Txt
+            bold
+            size={16}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            maxFontSizeMultiplier={1}
+          >
             {service.name}
           </Txt>
-          <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
+          <Txt
+            size={12}
+            color={c.mutedForeground}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1}
+          >
             {description}
           </Txt>
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-            <Txt size={12} color={c.mutedForeground} numberOfLines={1} style={{ flex: 1 }}>
+            <Txt
+              size={12}
+              color={c.mutedForeground}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1}
+              style={{ flex: 1 }}
+            >
               {serviceDurationLabel(service)}
             </Txt>
-            <Txt size={12} bold numberOfLines={1}>
+            <Txt size={12} bold numberOfLines={1} maxFontSizeMultiplier={1}>
               {servicePriceLabel(service)}
             </Txt>
           </View>

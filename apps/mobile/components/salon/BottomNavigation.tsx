@@ -27,6 +27,7 @@ export function useGoldTabOptions(): BottomTabNavigationOptions {
     headerShown: false,
     tabBarHideOnKeyboard: true,
     tabBarLabelPosition: "below-icon",
+    tabBarAllowFontScaling: false,
     tabBarActiveTintColor: c.headerInk,
     tabBarInactiveTintColor: c.headerInk,
     tabBarStyle: {
@@ -71,10 +72,16 @@ export function goldTabItem(item: NavigationItem): BottomTabNavigationOptions {
         size={12}
         color={color}
         bold
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.72}
+        maxFontSizeMultiplier={1}
         style={{
           textAlign: "center",
           width: "100%",
-          minWidth: item.label.length * 8,
+          minWidth: 0,
+          maxWidth: "100%",
+          flexShrink: 1,
           letterSpacing: -0.8,
           marginTop: 3,
         }}

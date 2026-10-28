@@ -76,6 +76,7 @@ export function Brand({
         size={
           compact ? Number.parseFloat(theme.typography.headerBrand?.fontSize || "24") : undefined
         }
+        maxFontSizeMultiplier={1}
         color={onGold ? c.headerInk : c.brandAccent}
         style={{
           fontFamily: theme.typography.headerBrand?.fontFamily,
@@ -91,6 +92,7 @@ export function Brand({
             ? theme.typography.headerCaption?.fontSize
             : theme.typography.caption?.fontSize) || "14",
         )}
+        maxFontSizeMultiplier={1}
         color={onGold ? c.headerInk : c.mutedForeground}
         style={{ letterSpacing: 0.1, marginTop: 2 }}
       >
@@ -197,7 +199,12 @@ function HeaderActionButton({
         }}
       >
         <SubtleShimmer interval={alternate ? 8000 : 6500} travelDistance={280} />
-        <ButtonLabel size={compact ? 11 : 20} color={alternate ? "#FFFFFF" : c.primaryForeground}>
+        <ButtonLabel
+          singleLine
+          maxFontSizeMultiplier={1}
+          size={compact ? 11 : 20}
+          color={alternate ? "#FFFFFF" : c.primaryForeground}
+        >
           {label}
         </ButtonLabel>
       </Button>
@@ -210,6 +217,7 @@ export default function Shell({
   wide = false,
   footer = false,
   scrollRevision,
+  scrollToEndRevision,
   bottomBar,
   headerAction,
   contentTopPadding,
@@ -219,6 +227,7 @@ export default function Shell({
   wide?: boolean;
   footer?: boolean;
   scrollRevision?: string | number;
+  scrollToEndRevision?: string | number;
   bottomBar?: React.ReactNode;
   headerAction?: { label: string; onPress: () => void };
   contentTopPadding?: number;
@@ -232,6 +241,9 @@ export default function Shell({
   useEffect(() => {
     if (scrollRevision !== undefined) scroll.current?.scrollTo({ y: 0, animated: false });
   }, [scrollRevision]);
+  useEffect(() => {
+    if (scrollToEndRevision !== undefined) scroll.current?.scrollToEnd({ animated: true });
+  }, [scrollToEndRevision]);
   const navigationSpacing = useBottomNavigationSpacing();
   const [refreshing, setRefreshing] = useState(false);
   const reload = async () => {

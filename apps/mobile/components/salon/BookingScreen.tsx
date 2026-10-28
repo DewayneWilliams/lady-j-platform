@@ -126,13 +126,20 @@ function BookingSummaryBar({
     value: string,
     key: string,
   ) => (
-    <View key={key} style={{ flexDirection: "row", alignItems: "center", gap: 5, minWidth: 0 }}>
+    <View key={key} style={{ flexDirection: "row", alignItems: "center", gap: 5, minWidth: 0, flexShrink: 1 }}>
       <Icon name={icon} size={15} color={c.brandAccent} />
       <View style={{ minWidth: 0 }}>
-        <Txt size={10} color={c.mutedForeground} numberOfLines={1}>
+        <Txt size={10} color={c.mutedForeground} numberOfLines={1} maxFontSizeMultiplier={1}>
           {label}
         </Txt>
-        <Txt size={13} bold numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>
+        <Txt
+          size={13}
+          bold
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.78}
+          maxFontSizeMultiplier={1}
+        >
           {value}
         </Txt>
       </View>
@@ -235,10 +242,10 @@ function BookingSummaryBar({
               )}
             </View>
             <View style={{ minWidth: 0, flexShrink: 1 }}>
-              <Txt size={10} color={c.mutedForeground} numberOfLines={1}>
+              <Txt size={10} color={c.mutedForeground} numberOfLines={1} maxFontSizeMultiplier={1}>
                 Your selection
               </Txt>
-              <Txt size={13} bold numberOfLines={1}>
+              <Txt size={13} bold numberOfLines={1} maxFontSizeMultiplier={1}>
                 {selected.length} service{selected.length === 1 ? "" : "s"}
               </Txt>
             </View>
@@ -269,7 +276,7 @@ function BookingSummaryBar({
               })}
             >
               <Icon name="ArrowLeft" size={15} color={c.foreground} />
-              <Txt size={13} bold>Back</Txt>
+              <Txt size={13} bold numberOfLines={1} maxFontSizeMultiplier={1}>Back</Txt>
             </Pressable>
             {step < 3 && (
               <Pressable
@@ -292,7 +299,15 @@ function BookingSummaryBar({
                   opacity: nextDisabled ? 0.45 : pressed ? 0.86 : 1,
                 })}
               >
-                <Txt size={13} bold color={c.primaryForeground} numberOfLines={1}>
+                <Txt
+                  size={13}
+                  bold
+                  color={c.primaryForeground}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.78}
+                  maxFontSizeMultiplier={1}
+                >
                   {nextLabel}
                 </Txt>
                 <Icon name="ArrowRight" size={16} color={c.primaryForeground} />
@@ -334,10 +349,9 @@ function TimeSlotButton({
   const vipCard = showVipIcon;
   const regularBackground = theme.name === "light" ? "#FFFFFF" : "#151515";
   const regularInk = theme.name === "light" ? "#000000" : "#FFFFFF";
-  const vipInk = c.vipForeground || c.foreground;
+  const vipInk = theme.name === "light" ? "#000000" : c.vipForeground || c.foreground;
   const motion = useRef(new Animated.Value(0)).current;
   const hovered = useRef(false);
-  const [hoverShadow, setHoverShadow] = useState(false);
   const animateTo = useCallback(
     (value: number, duration = 180) => {
       if (disabled || reducedMotion !== false) return;
@@ -350,7 +364,6 @@ function TimeSlotButton({
     },
     [disabled, motion, reducedMotion],
   );
-  const activeShadow = !disabled && hoverShadow;
   return (
     <Animated.View
       style={{
@@ -371,19 +384,6 @@ function TimeSlotButton({
                 },
               ]
             : undefined,
-        ...(Platform.OS === "web"
-          ? ({
-              boxShadow: activeShadow
-                ? "0 8px 18px rgba(36, 24, 15, 0.16)"
-                : "0 2px 7px rgba(36, 24, 15, 0.08)",
-            } as object)
-          : {
-              shadowColor: "#24180F",
-              shadowOpacity: activeShadow ? 0.18 : 0.08,
-              shadowRadius: activeShadow ? 8 : 4,
-              shadowOffset: { width: 0, height: activeShadow ? 4 : 2 },
-              elevation: activeShadow ? 4 : 1,
-            }),
       }}
     >
       <Pressable
@@ -395,20 +395,18 @@ function TimeSlotButton({
         onPress={onPress}
         onHoverIn={() => {
           hovered.current = true;
-          setHoverShadow(true);
           animateTo(1);
         }}
         onHoverOut={() => {
           hovered.current = false;
-          setHoverShadow(false);
           animateTo(0);
         }}
         onPressIn={() => animateTo(-1, 100)}
         onPressOut={() => animateTo(hovered.current ? 1 : 0, 180)}
         style={{
-          height: 56,
+          height: 46,
           paddingHorizontal: 2,
-          paddingVertical: 4,
+          paddingVertical: 3,
           borderRadius: 14,
           alignItems: "center",
           justifyContent: "center",
@@ -418,22 +416,24 @@ function TimeSlotButton({
           opacity: 1,
         }}
       >
-        <Txt
-          size={12}
-          bold
-          color={vipCard ? vipInk : regularInk}
-          style={{ textAlign: "center", lineHeight: 16 }}
-        >
-          {label}
-        </Txt>
-        {showVipIcon && (
-          <View style={{ alignItems: "center", marginTop: 2 }}>
-            <Icon name="Crown" size={12} color={vipInk} />
-            <Txt size={9} bold color={vipInk} style={{ textAlign: "center", lineHeight: 11 }}>
-              VIP
-            </Txt>
-          </View>
-        )}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3 }}>
+          <Txt
+            size={12}
+            bold
+            color={vipCard ? vipInk : regularInk}
+            style={{ textAlign: "center", lineHeight: 16 }}
+          >
+            {label}
+          </Txt>
+          {showVipIcon && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+              <Icon name="Crown" size={12} color={vipInk} />
+              <Txt size={9} bold color={vipInk} style={{ lineHeight: 11 }}>
+                VIP
+              </Txt>
+            </View>
+          )}
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -835,6 +835,7 @@ export default function BookingScreen() {
     [receipt, setReceipt] = useState<ImagePicker.ImagePickerAsset | null>(null),
     [policy, setPolicy] = useState(false),
     [agreementId, setAgreementId] = useState(""),
+    [agreementSubmittedRevision, setAgreementSubmittedRevision] = useState(0),
     [busy, setBusy] = useState(false),
     [done, setDone] = useState(""),
     [celebrationRevision, setCelebrationRevision] = useState(0),
@@ -851,6 +852,7 @@ export default function BookingScreen() {
   const handleAgreementReady = useCallback((id: string) => {
     setAgreementId(id);
     setPolicy(Boolean(id));
+    if (id) setAgreementSubmittedRevision(Date.now());
   }, []);
   const selected = s.services.filter((v) => s.selected.includes(v.id));
   const pricing = useDiscountQuote(
@@ -1213,6 +1215,29 @@ export default function BookingScreen() {
       }}
     />
   );
+  const agreementSection =
+    s.testMode ? (
+      <>
+        <Tag>Development Test Mode · Local agreement only</Tag>
+        <ServiceAgreement
+          services={selected.map((v) => v.id)}
+          onReady={handleAgreementReady}
+          guest
+          guestName={guestName || "Demo Client"}
+          onGuestReady={setGuestAgreement}
+        />
+      </>
+    ) : s.session ||
+      (noPaymentRequired && guestName.trim() && guestEmail.trim() && guestPhone.trim()) ? (
+      <ServiceAgreement
+        services={selected.map((v) => v.id)}
+        onReady={handleAgreementReady}
+        noPaymentRequired={noPaymentRequired}
+        guest={!s.session}
+        guestName={guestName}
+        onGuestReady={setGuestAgreement}
+      />
+    ) : null;
   if (done)
     return (
       <Shell>
@@ -1278,7 +1303,12 @@ export default function BookingScreen() {
       </Shell>
     );
   return (
-    <Shell footer={false} bottomBar={bookingBar} scrollRevision={step}>
+    <Shell
+      footer={false}
+      bottomBar={bookingBar}
+      scrollRevision={step}
+      scrollToEndRevision={agreementSubmittedRevision || undefined}
+    >
       <View
         accessibilityLiveRegion="polite"
         accessibilityRole="progressbar"
@@ -1407,13 +1437,24 @@ export default function BookingScreen() {
                   >
                     <Photo name={v.image} style={{ width: 72, height: 82, borderRadius: 10 }} />
                     <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-                      <Txt bold size={16} numberOfLines={1} ellipsizeMode="tail">
+                      <Txt
+                        bold
+                        size={16}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        maxFontSizeMultiplier={1}
+                      >
                         {v.name}
                       </Txt>
-                      <Txt size={12} color={c.mutedForeground} numberOfLines={1}>
+                      <Txt
+                        size={12}
+                        color={c.mutedForeground}
+                        numberOfLines={1}
+                        maxFontSizeMultiplier={1}
+                      >
                         {v.description}
                       </Txt>
-                      <Txt size={12} numberOfLines={1}>
+                      <Txt size={12} numberOfLines={1} maxFontSizeMultiplier={1}>
                         {serviceDurationLabel(v)} · {servicePriceLabel(v)}
                       </Txt>
                     </View>
@@ -1493,7 +1534,7 @@ export default function BookingScreen() {
               color={c.mutedForeground}
               style={{ marginVertical: 6, textAlign: "center" }}
             >
-              {dateLabel(`${date}T12:00:00Z`)} · {formatDuration(duration)}
+              {dateLabel(`${date}T12:00:00Z`)}
             </Txt>
             {slotLoading ? (
               <ActivityIndicator color={c.brandAccent} style={{ margin: 35 }} />
@@ -1597,7 +1638,7 @@ export default function BookingScreen() {
                     <Txt size={13} color={c.mutedForeground} style={{ lineHeight: 20 }}>
                       Closed Days (Sunday & Monday): Approved appointments have a 30% VIP surcharge.
                     </Txt>
-                    <Txt size={13} bold color={c.vipText}>
+                    <Txt size={13} bold color={c.vipText} style={{ textAlign: "center" }}>
                       All VIP appointments require approval.
                     </Txt>
                   </Card>
@@ -1927,6 +1968,25 @@ export default function BookingScreen() {
               </Txt>
             </Card>
           )}
+          <View style={{ gap: 8 }}>
+            <Txt size={20} bold>
+              Service Agreement
+            </Txt>
+            {agreementSection}
+            {agreementReady && (
+              <Txt bold color={c.success}>
+                Agreement Submitted ✓
+              </Txt>
+            )}
+          </View>
+          {!agreementReady ? (
+            <Card style={{ padding: 16 }}>
+              <Txt size={13} color={c.mutedForeground}>
+                Submit your signed agreement to continue securely to payment.
+              </Txt>
+            </Card>
+          ) : (
+            <View style={{ gap: 14 }}>
           {s.session && !requiresApproval && !noPaymentRequired && (
             <>
               <Card style={{ padding: 18, gap: 12, borderColor: c.goldBorder }}>
@@ -2181,28 +2241,8 @@ export default function BookingScreen() {
               </View>
             ))}
           </Card>
-          {s.testMode ? (
-            <>
-              <Tag>Development Test Mode · Local agreement only</Tag>
-              <ServiceAgreement
-                services={selected.map((v) => v.id)}
-                onReady={handleAgreementReady}
-                guest
-                guestName={guestName || "Demo Client"}
-                onGuestReady={setGuestAgreement}
-              />
-            </>
-          ) : s.session ||
-            (noPaymentRequired && guestName.trim() && guestEmail.trim() && guestPhone.trim()) ? (
-            <ServiceAgreement
-              services={selected.map((v) => v.id)}
-              onReady={handleAgreementReady}
-              noPaymentRequired={noPaymentRequired}
-              guest={!s.session}
-              guestName={guestName}
-              onGuestReady={setGuestAgreement}
-            />
-          ) : null}
+            </View>
+          )}
           {!!error && <ErrorBox message={error} />}
           <Action
             label={

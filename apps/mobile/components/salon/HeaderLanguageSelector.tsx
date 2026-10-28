@@ -49,7 +49,7 @@ export default function HeaderLanguageSelector({ compact }: { compact: boolean }
           gap: 3,
         }}
       >
-        <ButtonLabel size={compact ? 13 : 18} color={c.headerInk}>
+        <ButtonLabel singleLine maxFontSizeMultiplier={1} size={compact ? 13 : 18} color={c.headerInk}>
           {compact ? clientLanguage.toUpperCase() : selected.nativeName}
         </ButtonLabel>
         <Icon name="ChevronDown" size={12} color={c.headerInk} />

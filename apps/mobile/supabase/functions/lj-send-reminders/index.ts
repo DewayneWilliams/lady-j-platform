@@ -38,6 +38,9 @@ const subjects: Record<string, string> = {
   order_fulfilled: "Your order is complete",
   order_cancelled: "Your request has been cancelled",
   payment_receipt: "Your Lady J payment receipt",
+  payment_proof_received: "Payment proof received",
+  payment_correction_requested: "Payment proof needs a correction",
+  payment_hold_expired: "Your appointment hold has expired",
   birthday_7_day: "Your Special Birthday Surprise is almost here",
   birthday_greeting: "Happy Birthday from Lady J",
   vip_approved: "Your VIP Access request was approved",
@@ -187,6 +190,10 @@ Deno.serve(async (req: Request) => {
           const expected =
             job.event === "request_received" || job.event === "deposit_reminder"
               ? "pending"
+              : job.event === "payment_proof_received" || job.event === "payment_correction_requested"
+                ? "pending"
+                : job.event === "payment_hold_expired"
+                  ? "cancelled"
               : job.event === "vip_approved"
                 ? "pending"
                 : job.event === "vip_declined"
@@ -349,6 +356,15 @@ Deno.serve(async (req: Request) => {
                   : "Recorded by the salon") +
                 ".\n"
               : "";
+          const paymentUpdate =
+            job.event === "payment_proof_received"
+              ? "\nPayment Proof Received — Awaiting Verification. Your appointment remains reserved while Lady J verifies the transfer.\n"
+              : job.event === "payment_correction_requested"
+                ? "\nPlease resubmit your payment proof in your Lady J account. " +
+                  (job.payload?.reason ? "Correction note: " + String(job.payload.reason) + ".\n" : "\n")
+                : job.event === "payment_hold_expired"
+                  ? "\nYour payment verification hold expired before funds could be verified. The time is available again; please choose a new appointment time.\n"
+                  : "";
           let birthdayBenefit = "";
           if (job.event === "birthday_greeting") {
             const entitlement = await admin
@@ -411,6 +427,7 @@ Deno.serve(async (req: Request) => {
               thanks +
               cancellation +
               receipt +
+              paymentUpdate +
               birthday +
               vip +
               royalty +
