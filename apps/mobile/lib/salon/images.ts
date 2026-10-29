@@ -38,3 +38,7 @@ export const photos: Record<string, ImageSourcePropType> = {
   salon: require("@/assets/salon/salon.jpg"),
   contactReception: require("@/assets/salon/contact-reception.jpg"),
 };
+
+export function reportCatalogImageFailure(name: string, error: string) {
+  console.warn("[Lady J catalog image]", name, error);
+}

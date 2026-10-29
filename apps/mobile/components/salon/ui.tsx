@@ -14,7 +14,7 @@ import {
 import { useTheme } from "@/theming/ThemeProvider";
 import Icon, { IconName } from "@/lib/icons/LucideIcon";
 import { fonts, fieldLabel } from "@/lib/salon/design";
-import { catalogPhotoSource } from "@/lib/salon/images";
+import { catalogPhotoSource, reportCatalogImageFailure } from "@/lib/salon/images";
 export function useColors() {
   return useTheme().theme.colors;
 }
@@ -453,6 +453,7 @@ export function Photo({ name, style }: { name: string; style?: ImageStyle }) {
   return (
     <Image
       source={catalogPhotoSource(name)}
+      onError={(event) => reportCatalogImageFailure(name, event.nativeEvent.error)}
       resizeMode="cover"
       style={[
         { width: "100%", height: 220 },

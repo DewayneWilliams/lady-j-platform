@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, ActivityIndicator, Platform } from "react-native";
+import { View, ActivityIndicator, Platform, StyleSheet } from "react-native";
 import { Stack, useGlobalSearchParams, useRouter } from "expo-router";
 import { maybeCompleteAuthSession } from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -43,11 +43,9 @@ export default function AuthCallback() {
       });
   }, [params.code, params.error, params.error_description, router]);
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.background }}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: c.background }]}>
       <Stack.Screen options={{ title: "Secure sign-in" }} />
-      <View
-        style={{ flex: 1, padding: 28, justifyContent: "center", alignItems: "center", gap: 22 }}
-      >
+      <View style={styles.content}>
         {waiting && <ActivityIndicator color={c.primary} />}
         <Txt size={24} bold>
           {waiting
@@ -56,7 +54,7 @@ export default function AuthCallback() {
               ? "Sign-in could not be completed"
               : "Return to your sign-in window"}
         </Txt>
-        <Txt style={{ textAlign: "center" }}>
+        <Txt style={styles.message}>
           {error ||
             "Your account is opened only after the sign-in response is verified. If the original window was closed, please start again."}
         </Txt>
@@ -64,10 +62,23 @@ export default function AuthCallback() {
           <Action
             label="Back to sign-in"
             onPress={() => router.replace("/login")}
-            style={{ alignSelf: "center" }}
+            style={styles.action}
           />
         )}
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  content: {
+    flex: 1,
+    padding: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 22,
+  },
+  message: { textAlign: "center" },
+  action: { alignSelf: "center" },
+});

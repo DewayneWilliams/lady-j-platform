@@ -11,3 +11,5 @@ Lady J exposes predictable, accessible workflows for assistive and agentic navig
 - Login-free Test Mode is DEVELOPMENT-only, labeled, and in-memory. It does not grant a Supabase session, owner role or write permission.
 
 Agents must confirm destructive actions, preserve the displayed user/record context, surface server errors, and never claim completion until the server response succeeds.
+
+Maria (live Owner mode) follows these rules through `maria-agent`: allowlisted typed tools only, no model-produced SQL, hash-bound single-use confirmation for every change, owner re-check on every request, and read-back verification before she reports completion. See `docs/INTEGRATIONS.md`.

@@ -1,4 +1,3 @@
-import { PlayfairDisplay_400Regular, useFonts } from "@expo-google-fonts/dev";
 import CalendarPicker from "./CalendarPicker";
 export { default as CalendarPicker } from "./CalendarPicker";
 import { useCalendarRealtime } from "@/lib/salon/useCalendarRealtime";
@@ -33,9 +32,11 @@ import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import PromoCode from "./PromoCode";
 import { useDiscountQuote } from "@/lib/salon/discounts";
+import { rewardExpiration, rewardName, rewardValue } from "@/lib/salon/loyalty";
 import { db, check, asRows } from "@/lib/salon/client";
 import { money, dateLabel, timeLabel, servicePriceLabel, type Service } from "@/lib/salon/types";
-import { catalogPhotoSource } from "@/lib/salon/images";
+import { catalogPhotoSource, reportCatalogImageFailure } from "@/lib/salon/images";
+import { addRequestedService } from "@/lib/salon/shoppingBag";
 import Shell, { useNav } from "./Shell";
 import { Search } from "./CatalogScreens";
 import FavoriteButton from "./FavoriteButton";
@@ -196,6 +197,7 @@ function BookingSummaryBar({
                 <Image
                   key={service.id}
                   source={catalogPhotoSource(service.image)}
+                  onError={(event) => reportCatalogImageFailure(service.image, event.nativeEvent.error)}
                   resizeMode="cover"
                   style={{
                     width: 36,
@@ -847,13 +849,23 @@ export default function BookingScreen() {
     [gifts, setGifts] = useState(emptyGiftsReferrals),
     [giftCode, setGiftCode] = useState(""),
     [giftAmount, setGiftAmount] = useState("0"),
-    [referralAmount, setReferralAmount] = useState("0");
+    [referralAmount, setReferralAmount] = useState("0"),
+    [selectedRoyaltyId, setSelectedRoyaltyId] = useState("");
   const bookingRequestKey = useRef(requestUuid());
   const handleAgreementReady = useCallback((id: string) => {
     setAgreementId(id);
     setPolicy(Boolean(id));
     if (id) setAgreementSubmittedRevision(Date.now());
   }, []);
+  const appliedServiceRequest = useRef<string | null>(null);
+  useEffect(() => {
+    if (!s.bagReady || typeof requestedServiceId !== "string" ||
+      appliedServiceRequest.current === requestedServiceId) return;
+    const service = s.services.find((item) => item.id === requestedServiceId);
+    if (!service || service.bookable === false) return;
+    appliedServiceRequest.current = requestedServiceId;
+    s.setSelected((current) => addRequestedService(current, service.id));
+  }, [requestedServiceId, s.bagReady, s.services, s.setSelected]);
   const selected = s.services.filter((v) => s.selected.includes(v.id));
   const pricing = useDiscountQuote(
     "service",
@@ -865,10 +877,36 @@ export default function BookingScreen() {
     duration = selected.reduce((n, v) => n + v.duration, 0),
     selectedSlot = slots.find((slot) => slot.starts_at === time),
     vipPercentage = selectedSlot?.is_vip ? selectedSlot.vip_percentage || 0 : 0,
-    vipPremium = Math.round(serviceSubtotal * vipPercentage) / 100,
-    total = serviceSubtotal + vipPremium,
-    deposit = Math.round(total * 50) / 100;
+    vipPremium = Math.round(serviceSubtotal * vipPercentage) / 100;
   const isVip = !!selectedSlot?.is_vip;
+  const customApproval = selected.some((service) => service.requires_owner_approval);
+  const requiresApproval =
+    customApproval || (!!selectedSlot && isVip && vipRequiresApproval(selectedSlot.starts_at));
+  const selectedRoyaltyReward = s.rewards.entitlements.find(
+    (reward) => reward.id === selectedRoyaltyId && reward.status === "available",
+  );
+  const hasPromotionalDiscount =
+    Number(pricing.quote?.discount_total || 0) > 0 || Boolean(pricing.code);
+  const royaltyMinimumMet =
+    !selectedRoyaltyReward ||
+    selectedRoyaltyReward.kind === "milestone" ||
+    serviceSubtotal >= 250;
+  const rewardSavings =
+    selectedRoyaltyReward && !requiresApproval && !hasPromotionalDiscount && royaltyMinimumMet
+      ? Math.min(
+          serviceSubtotal,
+          selectedRoyaltyReward.kind === "milestone"
+            ? Math.min(
+                Number(selectedRoyaltyReward.max_savings || 0),
+                Math.round(
+                  serviceSubtotal * Number(selectedRoyaltyReward.percentage || 0),
+                ) / 100,
+              )
+            : Number(selectedRoyaltyReward.amount || 0),
+        )
+      : 0;
+  const total = Math.max(0, serviceSubtotal - rewardSavings) + vipPremium,
+    deposit = Math.round(total * 50) / 100;
   const selectedWeekday = new Date(`${date}T12:00:00Z`).getUTCDay();
   const selectedClosedDay = selectedWeekday === 0 || selectedWeekday === 1;
   const displayedSlots = useMemo(() => {
@@ -898,9 +936,6 @@ export default function BookingScreen() {
       return { minute, vip, percentage, available, disabled: !available };
     });
   }, [date, slots]);
-  const customApproval = selected.some((service) => service.requires_owner_approval);
-  const requiresApproval =
-    customApproval || (!!selectedSlot && isVip && vipRequiresApproval(selectedSlot.starts_at));
   const selectedPaymentAmount = paymentSelection === "full" ? total : deposit;
   const giftAvailable = Math.max(
     0,
@@ -920,6 +955,7 @@ export default function BookingScreen() {
     !agreementReady ||
     !policy ||
     !pricing.ready ||
+    (!!selectedRoyaltyId && rewardSavings <= 0 && !requiresApproval) ||
     (requiresApproval && !customApproval && vipReason.trim().length < 8) ||
     (requiresApproval && !s.session && !s.testMode) ||
     (!requiresApproval &&
@@ -1002,14 +1038,6 @@ export default function BookingScreen() {
   }, [refreshSlots]);
   useForegroundRefresh(refreshSlots, step === 2 && s.authReady);
   useCalendarRealtime(refreshSlots, step === 2 && s.authReady);
-
-  const [fontsLoaded] = useFonts({
-    PlayfairDisplay_400Regular,
-  });
-
-  if (!fontsLoaded) {
-    return null;
-  }
 
   async function choosePhoto() {
     try {
@@ -1131,7 +1159,7 @@ export default function BookingScreen() {
         );
       } else if (s.session) {
         id = check(
-          await db().rpc("lj_book_checkout_v2", {
+          await db().rpc("lj_book_checkout_v3", {
             p_services: selected.map((v) => v.id),
             p_start: time,
             p_reference: reference,
@@ -1144,6 +1172,7 @@ export default function BookingScreen() {
             p_receipt_mime: receipt?.mimeType || (receipt ? "image/jpeg" : null),
             p_request_key: bookingRequestKey.current,
             p_payment_selection: paymentSelection,
+            p_entitlement: rewardSavings > 0 ? selectedRoyaltyId : null,
           }),
         );
       } else {
@@ -1991,6 +2020,87 @@ export default function BookingScreen() {
             <>
               <Card style={{ padding: 18, gap: 12, borderColor: c.goldBorder }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Icon name="Crown" size={22} color={c.tertiary} />
+                  <View style={{ flex: 1 }}>
+                    <Txt size={20} bold>
+                      Apply a Royalty Reward
+                    </Txt>
+                    <Txt size={13} color={c.mutedForeground}>
+                      One reward per appointment. Your savings are confirmed before payment.
+                    </Txt>
+                  </View>
+                </View>
+                {!s.rewards.entitlements.some((reward) => reward.status === "available") && (
+                  <Txt color={c.mutedForeground}>
+                    Your next Royalty milestone is waiting to be unlocked.
+                  </Txt>
+                )}
+                {s.rewards.entitlements
+                  .filter((reward) => reward.status === "available")
+                  .map((reward) => {
+                    const needsMinimum = reward.kind !== "milestone" && serviceSubtotal < 250;
+                    const selectedReward = selectedRoyaltyId === reward.id;
+                    return (
+                      <View key={reward.id} style={{ gap: 5 }}>
+                        <Chip
+                          label={`${rewardName(reward)} · ${rewardValue(reward)}`}
+                          selected={selectedReward}
+                          onPress={() => {
+                            if (selectedReward) {
+                              setSelectedRoyaltyId("");
+                              return;
+                            }
+                            if (hasPromotionalDiscount || needsMinimum) return;
+                            setSelectedRoyaltyId(reward.id);
+                          }}
+                        />
+                        <Txt size={12} color={c.mutedForeground}>
+                          {reward.max_savings
+                            ? `Maximum savings ${money(reward.max_savings)}`
+                            : reward.kind === "welcome"
+                              ? "First eligible service appointment of TT$250 or more"
+                              : "Eligible birthday service appointment of TT$250 or more"}
+                          {reward.expires_at
+                            ? ` · Expires ${dateLabel(rewardExpiration(reward) || reward.expires_at)}`
+                            : ""}
+                        </Txt>
+                        {needsMinimum && (
+                          <Txt size={12} color={c.brandAccent}>
+                            Add eligible services to reach the TT$250 minimum.
+                          </Txt>
+                        )}
+                      </View>
+                    );
+                  })}
+                {hasPromotionalDiscount && (
+                  <Txt size={12} color={c.brandAccent}>
+                    Remove the promotional discount before selecting a Royalty reward. Rewards do
+                    not stack with promotions.
+                  </Txt>
+                )}
+                {!!selectedRoyaltyReward && rewardSavings > 0 && (
+                  <View
+                    style={{
+                      padding: 12,
+                      borderRadius: 12,
+                      backgroundColor: c.goldSurface,
+                      borderWidth: 1,
+                      borderColor: c.goldBorder,
+                      gap: 3,
+                    }}
+                  >
+                    <Txt bold>{rewardName(selectedRoyaltyReward)} Is Ready!</Txt>
+                    <Txt color={c.success} bold>
+                      You save {money(rewardSavings)} on eligible service charges.
+                    </Txt>
+                    <Txt size={12} color={c.mutedForeground}>
+                      VIP surcharges, products, and gift cards are excluded.
+                    </Txt>
+                  </View>
+                )}
+              </Card>
+              <Card style={{ padding: 18, gap: 12, borderColor: c.goldBorder }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <Icon name="Gift" size={22} color={c.tertiary} />
                   <Txt size={20} bold>
                     Have a Gift Card?
@@ -2164,6 +2274,9 @@ export default function BookingScreen() {
             {s.session && !noPaymentRequired && <PromoCode pricing={pricing} />}
             {[
               ["Service Subtotal", money(serviceSubtotal)],
+              ...(rewardSavings > 0
+                ? [["Royalty Reward", `−${money(rewardSavings)}`]]
+                : []),
               ...(isVip ? [[`VIP Access (+${vipPercentage}%)`, money(vipPremium)]] : []),
               ["Total Price", money(total)],
               [

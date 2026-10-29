@@ -3,6 +3,7 @@ import { openAuthSessionAsync } from "expo-web-browser";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { sessionStorage } from "./sessionStorage";
+import { devOwnerCredentials } from "./testMode";
 export type SocialProvider = "google" | "facebook" | "apple";
 export type AuthProviders = Record<SocialProvider, boolean>;
 export async function availableAuthProviders(): Promise<AuthProviders> {
@@ -48,6 +49,7 @@ export function authDestination(next?: string) {
     gift = search.get("gift");
   if (id && id.length < 100) params.id = id;
   if (kind === "product" || kind === "workshop") params.kind = kind;
+  if (page === "checkout" && search.get("source") === "bag") params.source = "bag";
   if (page === "account" && referral && /^[A-Z0-9-]{4,40}$/i.test(referral)) params.ref = referral;
   if (page === "account" && gift && /^LJ-[A-Z0-9-]{6,40}$/i.test(gift)) params.gift = gift;
   return { page, params };
@@ -131,5 +133,14 @@ export async function socialSignIn(provider: SocialProvider, marketing: boolean)
         .select("id")
         .single(),
     );
+  return data.session;
+}
+
+/** Development builds only: signs in the separate Development Test Owner account. */
+export async function signInDevelopmentOwner() {
+  const credentials = devOwnerCredentials();
+  if (!credentials) throw new Error("Development owner testing is not enabled in this build.");
+  const data = check(await db().auth.signInWithPassword(credentials));
+  if (!data.session) throw new Error("The Development Test Owner could not be signed in.");
   return data.session;
 }

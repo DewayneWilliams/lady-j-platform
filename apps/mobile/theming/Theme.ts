@@ -53,6 +53,10 @@ export interface Theme {
     calendarDotBorder?: string;
     goldSurface?: string;
     goldBorder?: string;
+    bagPaymentGoldBase?: string;
+    bagPaymentGoldHighlight?: string;
+    bagPaymentGoldEdge?: string;
+    bagPaymentGoldInk?: string;
     tertiary?: string;
     tertiaryForeground?: string;
     muted?: string;

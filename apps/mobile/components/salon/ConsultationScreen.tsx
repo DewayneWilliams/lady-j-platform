@@ -781,7 +781,7 @@ export default function ConsultationScreen() {
               values={allergyStatus ? [allergyStatus] : []}
               onChange={([value]) => setAllergyStatus(value)}
             />
-            {allergyStatus && allergyStatus !== "No" && (
+            {!!allergyStatus && allergyStatus !== "No" && (
               <Notes
                 label="Allergy or health details"
                 value={allergyDetails}

@@ -49,13 +49,11 @@ module.exports = {
   "expo-image",
   "expo-secure-store",
   "expo-notifications",
+  "@livekit/react-native-expo-plugin",
   [
-  "expo-speech-recognition",
+  "@config-plugins/react-native-webrtc",
   {
-    microphonePermission: "Maria uses the microphone only during an active conversation.",
-    speechRecognitionPermission:
-    "Maria converts your speech to text during an active conversation.",
-    androidSpeechServicePackages: ["com.google.android.googlequicksearchbox"]
+    microphonePermission: "Maria uses the microphone only during an active conversation."
   }],
 
 
@@ -65,6 +63,7 @@ module.exports = {
 
 
   }]],
+
 
 
 

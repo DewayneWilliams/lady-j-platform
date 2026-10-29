@@ -5,8 +5,11 @@ import { orderServicesByCategory } from "./categories";
 import type { Session } from "@supabase/supabase-js";
 import type { ClientLanguage } from "./clientLanguage";
 import { supabase, db, check, asRows } from "./client";
-import { developmentTestMode } from "./testMode";
+import { developmentTestMode, devOwnerAutoSignIn, isDevOwnerEmail } from "./testMode";
+import { signInDevelopmentOwner } from "./auth";
 import { sessionStorage } from "./sessionStorage";
+import { productRows, serviceRows } from "./catalogData";
+import { readShoppingBag, restoreBagIds } from "./shoppingBag";
 import {
   Service,
   Product,
@@ -43,6 +46,7 @@ interface SalonState {
   rewards: RewardSummary;
   favorites: Favorite[];
   toggleFavorite: (kind: Favorite["kind"], itemId: string) => Promise<void>;
+  bagReady: boolean;
   cart: Record<string, number>;
   setCart: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   selected: string[];
@@ -52,6 +56,9 @@ interface SalonState {
   demoOwner: boolean;
   setDemoOwner: (v: boolean) => void;
   testMode: boolean;
+  /** Signed in as the Development-only test owner account. */
+  devOwner: boolean;
+  signInDevOwner: () => Promise<void>;
   exitTestMode: () => void;
   refresh: () => Promise<void>;
   refreshPrivate: () => Promise<void>;
@@ -59,6 +66,9 @@ interface SalonState {
   notify: (message: string) => void;
 }
 const Context = createContext<SalonState | null>(null);
+// Automatic Development Test Owner sign-in happens once per app launch, so signing out
+// stays signed out until the app is reopened.
+let devOwnerAutoAttempted = false;
 export function SalonProvider({ children }: { children: React.ReactNode }) {
   const [services, setServices] = useState<Service[]>([]),
     [homeSpecials, setHomeSpecials] = useState<Service[]>([]),
@@ -98,23 +108,11 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
       .getItem("lady-j-shopping-bag-v1")
       .then((raw) => {
         if (!active || !raw) return;
-        const saved = JSON.parse(raw) as {
-          products?: Record<string, number>;
-          services?: string[];
-          workshops?: string[];
-        };
-        if (saved.products && typeof saved.products === "object") {
-          const products = Object.fromEntries(
-            Object.entries(saved.products).filter(
-              ([id, quantity]) => Boolean(id) && Number.isInteger(quantity) && quantity > 0,
-            ),
-          );
-          setCart(products);
-        }
-        if (Array.isArray(saved.services))
-          setSelected([...new Set(saved.services.filter(Boolean))].slice(0, 10));
-        if (Array.isArray(saved.workshops))
-          setWorkshopCart([...new Set(saved.workshops.filter(Boolean))]);
+        const saved = readShoppingBag(raw);
+        // SecureStore is asynchronous. Keep selections made while it was reading.
+        setCart((current) => ({ ...saved.products, ...current }));
+        setSelected((current) => restoreBagIds(saved.services, current));
+        setWorkshopCart((current) => restoreBagIds(saved.workshops, current));
       })
       .catch(() => undefined)
       .finally(() => {
@@ -144,7 +142,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
     setError("");
     try {
       const client = db();
-      const results = await Promise.all([
+      const results = await Promise.allSettled([
         client.from("lj_public_services").select("*").order("catalog_sort_order"),
         client
           .from(signedIn ? "lj_products" : "lj_public_products")
@@ -164,25 +162,37 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         client.from("lj_public_home_specials").select("*").order("name").limit(2),
       ]);
       if (generation !== catalogGeneration.current) return;
-      setServices(orderServicesByCategory(asRows<Service>(check(results[0]), "Services")));
-      setProducts(asRows<Product>(check(results[1]), "Products"));
-      setWorkshops(asRows<Workshop>(check(results[2]), "Workshops"));
-      const settingsValue = check(results[3]);
-      if (!settingsValue || typeof settingsValue !== "object")
-        throw new Error("Settings returned an invalid response.");
-      const currentSettings = settingsValue as Settings;
-      setSettings(
-        signedIn ? currentSettings : { ...currentSettings, bank_instructions: "", delivery_fee: 0 },
-      );
-      setPromotions(asRows<Promotion>(check(results[4]), "Promotions"));
-      setHomeSpecials(asRows<Service>(check(results[5]), "Home specials"));
+      const failures: string[] = [];
+      const accept = (index: number, apply: (value: unknown) => void) => {
+        try {
+          const result = results[index];
+          if (result.status === "rejected") throw result.reason;
+          apply(check(result.value));
+        } catch (reason) {
+          failures.push(reason instanceof Error ? reason.message : "Unable to load catalog information.");
+        }
+      };
+      accept(0, (value) => setServices(orderServicesByCategory(serviceRows(value))));
+      accept(1, (value) => setProducts(productRows(value)));
+      accept(2, (value) => setWorkshops(asRows<Workshop>(value, "Workshops")));
+      accept(3, (value) => {
+        if (!value || typeof value !== "object") throw new Error("Settings returned an invalid response.");
+        const currentSettings = value as Settings;
+        setSettings(signedIn ? currentSettings : { ...currentSettings, bank_instructions: "", delivery_fee: 0 });
+      });
+      accept(4, (value) => setPromotions(asRows<Promotion>(value, "Promotions")));
+      accept(5, (value) => setHomeSpecials(serviceRows(value)));
+      if (failures.length) throw new Error(failures.join(" "));
     } catch (e) {
-      if (generation === catalogGeneration.current)
-        setError(e instanceof Error ? e.message : "Unable to connect. Please try again.");
+      if (generation === catalogGeneration.current) {
+        const message = e instanceof Error ? e.message : "Unable to connect. Please try again.";
+        setError(message);
+        console.warn("[Lady J catalog]", message);
+      }
     } finally {
       if (generation === catalogGeneration.current) setLoading(false);
     }
-  }, [signedIn]);
+  }, [signedIn, customerId]);
   const refreshPrivate = useCallback(async () => {
     const generation = ++privateGeneration.current;
     if (!customerId) {
@@ -246,7 +256,21 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
     }
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === "INITIAL_SESSION" && !s && devOwnerAutoSignIn && !devOwnerAutoAttempted) {
+        devOwnerAutoAttempted = true;
+        // Deferred: Supabase must not be called from inside its own auth callback.
+        setTimeout(() => {
+          signInDevelopmentOwner().catch((e) => {
+            setNotice(
+              `Development Test Owner sign-in failed: ${e instanceof Error ? e.message : "unknown error"}`,
+            );
+            setAuthReady(true);
+          });
+        }, 0);
+        // Keep the app in its loading state until the test owner session arrives.
+        return;
+      }
       const nextIdentity = s?.user.id ?? null;
       const changed = identity.current !== nextIdentity;
       if (changed) {
@@ -262,7 +286,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         setDemoOwner(developmentTestMode);
         setOwner(false);
         setAuthReady(!s);
-        setServices([]);
+        // Services always come from the public view; retain them across auth changes.
         setProducts([]);
         setWorkshops([]);
         setSettings(null);
@@ -421,6 +445,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         rewards: testMode && !session ? emptyRewardSummary : rewards,
         favorites,
         toggleFavorite,
+        bagReady,
         cart,
         setCart,
         selected,
@@ -430,6 +455,10 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         demoOwner,
         setDemoOwner,
         testMode,
+        devOwner: isDevOwnerEmail(session?.user.email),
+        signInDevOwner: async () => {
+          await signInDevelopmentOwner();
+        },
         exitTestMode: () => {
           setTestMode(false);
           setDemoOwner(false);

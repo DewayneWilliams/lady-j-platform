@@ -369,21 +369,33 @@ Deno.serve(async (req: Request) => {
           if (job.event === "birthday_greeting") {
             const entitlement = await admin
               .from("lj_reward_entitlements")
-              .select("amount")
+              .select("amount,expires_at")
               .eq("customer_id", job.customer_id)
               .eq("kind", "birthday")
               .eq("status", "available")
               .order("created_at", { ascending: false })
               .limit(1)
               .maybeSingle();
-            if (!entitlement.error && entitlement.data)
-              birthdayBenefit = ` Your eligible TT$${Number(entitlement.data.amount).toFixed(2)} Birthday Surprise is ready in your account.`;
+            if (!entitlement.error && entitlement.data) {
+              const useBy = entitlement.data.expires_at
+                ? new Date(new Date(entitlement.data.expires_at).getTime() - 1).toLocaleDateString(
+                    "en-TT",
+                    {
+                      timeZone: "America/Port_of_Spain",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    },
+                  )
+                : "seven days after your birthday";
+              birthdayBenefit = ` Your eligible TT$${Number(entitlement.data.amount).toFixed(2)} Birthday Surprise is ready in your account through ${useBy}.`;
+            }
           }
           const birthday =
             job.event === "birthday_7_day"
-              ? `\n${String(job.payload?.first_name || "Beautiful")}, your birthday is one week away. Your Special Birthday Surprise will appear in your Lady J account when eligible.\n`
+              ? `\n${String(job.payload?.first_name || "Beautiful")}, your birthday is one week away. Your Special Birthday Surprise is our way of celebrating you and the trust you place in Lady J. Your TT$50 benefit will appear in your account when eligible.\n`
               : job.event === "birthday_greeting"
-                ? `\nHappy Birthday, ${String(job.payload?.first_name || "Beautiful")}! Wishing you a radiant day from Lady J.${birthdayBenefit}\n`
+                ? `\nHappy Birthday, ${String(job.payload?.first_name || "Beautiful")}! Today is an opportunity for Lady J to celebrate you. May your day feel as special, radiant, and appreciated as you deserve.${birthdayBenefit}\n`
                 : "";
           const vip =
             job.event === "vip_approved"
@@ -395,7 +407,7 @@ Deno.serve(async (req: Request) => {
             job.event === "royalty_welcome"
               ? "\nWelcome to 👑 Lady J Royalty Program. Every visit brings you closer to Royalty. Your membership and rewards wallet are ready in your account.\n"
               : job.event === "royalty_level_up"
-                ? `\nCongratulations—you have reached ${String(job.payload?.level_name || "a new Royalty level")}. Your new digital membership card is waiting in your account.\n`
+                ? `\nCongratulations—you have reached ${String(job.payload?.level_name || "a new Royalty level")}. Your loyalty is never taken for granted, and this milestone deserves recognition. Your new Royalty reward and digital membership card are waiting in your account.\n`
                 : job.event === "royalty_anniversary"
                   ? "\nHappy Royalty anniversary. A new year of qualifying visits has begun, while your lifetime visits, achievements and rewards remain safely preserved.\n"
                   : "";

@@ -302,6 +302,7 @@ export default function ConsultationRequestsPanel({
           const isOpen = expanded === request.id;
           return (
             <Card
+              key={request.id}
               style={{ gap: 14, borderColor: request.status === "new" ? c.brandAccent : c.border }}
             >
               <Pressable

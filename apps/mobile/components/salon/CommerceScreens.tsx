@@ -1,5 +1,7 @@
 import React, { useRef, useState } from "react";
 import { View, useWindowDimensions } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import BagPaymentButton, { BagCardNotice, BAG_CARD_UNAVAILABLE_MESSAGE } from "./BagPaymentButton";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import PromoCode from "./PromoCode";
@@ -117,12 +119,10 @@ export function BagScreen() {
                       Remove
                     </LinkText>
                   </View>
-                  <Action
-                    label="Register"
-                    gold
-                    onPress={() => go("checkout", { kind: "workshop", id: workshop.id })}
-                    style={{ alignSelf: "stretch" }}
+                  <BagPaymentButton
+                    onPress={() => go("checkout", { kind: "workshop", id: workshop.id, source: "bag" })}
                   />
+                  <BagCardNotice />
                 </View>
               ))}
             </Card>
@@ -177,12 +177,10 @@ export function BagScreen() {
               Pickup is complimentary. Any delivery fee is shown before you submit your order.
             </Txt>
             {!!items.length && (
-              <Action
-                label="Proceed to Checkout"
-                icon="ArrowRight"
-                onPress={() => go("checkout", { kind: "product" })}
-                style={{ alignSelf: "stretch" }}
-              />
+              <>
+                <BagPaymentButton arrow onPress={() => go("checkout", { kind: "product", source: "bag" })} />
+                <BagCardNotice />
+              </>
             )}
           </Card>
         </View>
@@ -191,6 +189,8 @@ export function BagScreen() {
   );
 }
 export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
+  const { source } = useLocalSearchParams<{ source?: string }>();
+  const bagCheckout = kind !== "workshop" || source === "bag";
   const s = useSalon(),
     go = useNav(),
     c = useColors(),
@@ -236,6 +236,11 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
     total = subtotal + delivery;
   async function submit() {
     setError("");
+    // No processor is configured. Never fall through to bank orders or demo success.
+    if (bagCheckout) {
+      setError(BAG_CARD_UNAVAILABLE_MESSAGE);
+      return;
+    }
     if (!accepted || (s.session && !pricing.ready)) return;
     if (!isWorkshop && fulfillment === "delivery" && address.trim().length < 10) {
       setError("Please enter your complete delivery address.");
@@ -373,7 +378,9 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
             {!s.session && !s.testMode && (
               <Card style={{ gap: 14 }}>
                 <Txt>
-                  Sign in to submit a bank transfer request and track it in your private account.
+                  {bagCheckout
+                    ? "Sign in to review your bag and track purchases in your private account."
+                    : "Sign in to submit a bank transfer request and track it in your private account."}
                 </Txt>
                 <Action
                   label="Sign in"
@@ -430,6 +437,12 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
               />
             </Card>
             {s.session && <PromoCode pricing={pricing} />}
+            {bagCheckout ? (
+              <Card style={{ gap: 12 }}>
+                <Txt bold size={17}>Credit Card · Debit Card</Txt>
+                <Txt color={c.mutedForeground}>{BAG_CARD_UNAVAILABLE_MESSAGE}</Txt>
+              </Card>
+            ) : (
             <PaymentChoice
               method={method}
               setMethod={setMethod}
@@ -441,12 +454,19 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
               collectReceipt={false}
               onDemoCardReady={setDemoCardReady}
             />
+            )}
             <Check
               checked={accepted}
               onPress={() => setAccepted(!accepted)}
               label="I accept the purchase terms."
             />
             <LinkText onPress={() => go("terms")}>Read purchase terms</LinkText>
+            {bagCheckout ? (
+              <>
+                <BagPaymentButton disabled onPress={() => void submit()} />
+                <BagCardNotice />
+              </>
+            ) : (
             <Action
               busy={busy}
               disabled={
@@ -463,6 +483,7 @@ export function CheckoutScreen({ kind, id }: { kind: string; id?: string }) {
               onPress={() => void submit()}
               style={{ alignSelf: "stretch" }}
             />
+            )}
           </View>
           <Card
             style={{

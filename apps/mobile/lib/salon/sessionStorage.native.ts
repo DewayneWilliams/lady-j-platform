@@ -26,7 +26,7 @@ async function removeChunks(key: string, old: Manifest | null) {
       ),
     );
 }
-export const sessionStorage = {
+const storage = {
   async getItem(key: string) {
     const saved = await manifest(key);
     if (!saved) return null;
@@ -64,4 +64,23 @@ export const sessionStorage = {
     await SecureStore.deleteItemAsync(key, options);
     await removeChunks(key, old);
   },
+};
+
+// SecureStore writes the chunks and their manifest in separate asynchronous calls.
+// Serialize operations per key so a slower old write cannot replace a newer bag
+// (or restore a session after sign-out). Different keys remain independent.
+const pending = new Map<string, Promise<unknown>>();
+function inOrder<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  const result = (pending.get(key) ?? Promise.resolve()).then(operation);
+  const settled = result.then(() => undefined, () => undefined);
+  pending.set(key, settled);
+  void settled.then(() => {
+    if (pending.get(key) === settled) pending.delete(key);
+  });
+  return result;
+}
+export const sessionStorage = {
+  getItem: (key: string) => inOrder(key, () => storage.getItem(key)),
+  setItem: (key: string, value: string) => inOrder(key, () => storage.setItem(key, value)),
+  removeItem: (key: string) => inOrder(key, () => storage.removeItem(key)),
 };

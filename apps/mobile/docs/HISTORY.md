@@ -70,4 +70,9 @@ Owner catalog tools support public photo galleries, combined service specials wi
   Royalty is visit-only; protected client care notes replace the combined medical/service field, and demo contact history remains local-only.
 - Booking time cards use start-time-only VIP presentation with 56pt high-contrast regular and shared gold VIP surfaces across light and dark themes.
 - Product checkout retains bank transfer as the live method while adding idempotent numbered orders with independent payment and fulfillment states; demo cards remain local, labeled simulations.
+- Royalty milestones now grant prospective, capped 30-day service rewards through the existing pre-payment flow, with richer appreciation messaging and the exact two-message TT$50 birthday experience.
 - Development Test Mode uses 50 fictional Bible-name contacts and populated owner workflows, including the 12 disciples-inspired vendor companies, without entering live client or financial records.
+
+- Preserve the approved visuals while bundling the existing booking font, validating catalog responses, consuming linked service IDs and serializing native storage; previously hidden UI remains subject to design approval.
+- Maria is live for the verified Owner: ElevenLabs voice plus confirmation-gated tools over existing RPCs; no extra test owner because lj_owners is single-owner.
+- Development testing uses a separate auto-signed-in Development Test Owner granted through `lj_test_owner_access` (empty in Production) instead of loosening the single-owner `lj_owners` table.

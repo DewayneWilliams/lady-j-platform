@@ -1,4 +1,3 @@
-import { useFonts, PlayfairDisplay_700Bold } from "@expo-google-fonts/dev";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
@@ -15,7 +14,14 @@ import Icon from "@/lib/icons/LucideIcon";
 import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreference";
 import { check, db } from "@/lib/salon/client";
 import { dateLabel } from "@/lib/salon/types";
-import { royaltyLevel, royaltyLevels, RewardSummary } from "@/lib/salon/loyalty";
+import {
+  rewardName,
+  rewardExpiration,
+  rewardValue,
+  royaltyLevel,
+  royaltyLevels,
+  RewardSummary,
+} from "@/lib/salon/loyalty";
 import { Action, ErrorBox, Txt, useColors } from "./ui";
 import SubtleShimmer from "./SubtleShimmer";
 
@@ -137,7 +143,7 @@ function RoyaltyJourneyCard({
       <Pressable
         accessible
         accessibilityRole="button"
-        accessibilityLabel={`${item.name}, ${item.visits} qualifying visits, ${current ? "current level" : achieved ? "achieved" : "upcoming"}`}
+        accessibilityLabel={`${item.name}, ${item.visits} qualifying visits, ${item.reward}, ${current ? "current level" : achieved ? "achieved" : "upcoming"}`}
         onPress={onPress}
         onPressIn={() => {
           setLifted(true);
@@ -159,9 +165,9 @@ function RoyaltyJourneyCard({
         }}
         style={{
           width,
-          height: 62,
+          height: 52,
           paddingHorizontal: 12,
-          paddingVertical: 7,
+          paddingVertical: 6,
           borderRadius: 14,
           justifyContent: "center",
           borderWidth: current ? 2 : 1,
@@ -175,26 +181,41 @@ function RoyaltyJourneyCard({
           shadowOpacity: lifted ? 0.12 : 0,
           shadowRadius: 10,
           shadowOffset: { width: 0, height: 4 },
-          paddingTop: 0,
-          paddingBottom: 0
         }}
       >
         {current && <SubtleShimmer interval={14000} travelDistance={width + 60} />}
-        <Txt size={22}>{item.icon}</Txt>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Txt size={15} bold color={current ? c.headerInk : c.foreground}>
-            {item.name}
-          </Txt>
-          <Txt size={11} color={current ? c.headerInk : c.mutedForeground}>
-            {item.visits === 0 ? "Your starting level" : `${item.visits} visits`}
-          </Txt>
+        <Txt size={20}>{item.icon}</Txt>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Txt
+              size={14}
+              bold
+              color={current ? c.headerInk : c.foreground}
+              numberOfLines={1}
+              style={{ flex: 1 }}
+            >
+              {item.name}
+            </Txt>
+            {current && (
+              <Txt size={9} bold color={c.headerInk}>
+                CURRENT
+              </Txt>
+            )}
+            {achieved && <Icon name="CircleCheck" size={15} color={c.tertiary} />}
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Txt
+              size={11}
+              color={current ? c.headerInk : c.mutedForeground}
+              style={{ flex: 1 }}
+            >
+              {item.visits === 0 ? "First Visit" : `${item.visits} visits`}
+            </Txt>
+            <Txt size={11} bold color={current ? c.headerInk : c.brandAccent}>
+              {item.reward}
+            </Txt>
+          </View>
         </View>
-        {achieved && <Icon name="CircleCheck" size={18} color={c.tertiary} />}
-        {current && (
-          <Txt size={10} bold color={c.headerInk}>
-            CURRENT
-          </Txt>
-        )}
       </Pressable>
     </Animated.View>
   );
@@ -282,14 +303,6 @@ export default function LoyaltyHeader({
     return () => clearTimeout(timer);
   }, [cardWidth, journeyWidth, reduced, royalty.level]);
 
-  const [fontsLoaded] = useFonts({
-    PlayfairDisplay_700Bold
-  });
-
-  if (!fontsLoaded) {
-    return null;
-  }
-
   const scrollTo = (index: number) => {
     const nextIndex = Math.max(0, Math.min(royaltyLevels.length - 1, index));
     setJourneyIndex(nextIndex);
@@ -301,18 +314,11 @@ export default function LoyaltyHeader({
   if (!rewards.enabled) return null;
   return (
     <View style={{ gap: compact ? 0 : 5, paddingBottom: compact ? 0 : 4 }}>
-      <Txt size={18} bold style={{
-        textAlign: "center",
-        fontSize: 14,
-        fontFamily: "PlayfairDisplay_700Bold"
-      }}>
-        Royalty Program
-      </Txt>
       <View
         onLayout={(event) => setJourneyWidth(event.nativeEvent.layout.width)}
         style={{
           width: "100%",
-          height: compact ? 62 : 70,
+          height: compact ? 52 : 60,
           justifyContent: "center",
         }}
       >
@@ -371,6 +377,40 @@ export default function LoyaltyHeader({
           compact={compact}
         />
       </View>
+      {!compact && (
+        <View style={{ gap: 7, paddingHorizontal: 4, paddingTop: 3 }}>
+          <View
+            style={{
+              height: 7,
+              borderRadius: 999,
+              overflow: "hidden",
+              backgroundColor: c.border,
+            }}
+          >
+            <Animated.View
+              style={{
+                width: progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0%", "100%"],
+                }),
+                height: "100%",
+                borderRadius: 999,
+                backgroundColor: c.brandAccent,
+              }}
+            />
+          </View>
+          <Txt size={13} bold style={{ textAlign: "center" }}>
+            {next
+              ? `Just ${remaining} More Visit${remaining === 1 ? "" : "s"} Until ${next.name}!`
+              : "Welcome to the Royal Circle!"}
+          </Txt>
+          <Txt size={12} color={c.mutedForeground} style={{ textAlign: "center" }}>
+            {royalty.annual_visits} qualifying visit{royalty.annual_visits === 1 ? "" : "s"} this
+            Royalty year
+            {next ? ` · Next reward: ${next.reward}` : " · Our highest appreciation"}
+          </Txt>
+        </View>
+      )}
       <Modal
         visible={celebrating && !!rewards.pending_level}
         transparent
@@ -404,7 +444,7 @@ export default function LoyaltyHeader({
                 Congratulations, {firstName || rewards.first_name || "Royal Guest"}!
               </Txt>
               <Txt color={c.mutedForeground} style={{ textAlign: "center" }}>
-                You have reached a new Lady J Royalty level.
+                Your loyalty is never taken for granted. This milestone deserves recognition.
               </Txt>
             </View>
             <View
@@ -423,7 +463,7 @@ export default function LoyaltyHeader({
                 {royaltyLevel(rewards.pending_level?.level || 1).name}
               </Txt>
               <Txt size={13} color={c.headerInk} style={{ textAlign: "center" }}>
-                👑 Lady J Royalty Program
+                {royaltyLevel(rewards.pending_level?.level || 1).reward} · 👑 Lady J Royalty Program
               </Txt>
             </View>
             {!!celebrationError && <ErrorBox message={celebrationError} />}
@@ -480,10 +520,23 @@ export function LoyaltyHistory({ rewards }: { rewards: RewardSummary }) {
             detail: "Completed and fully paid",
             date: `${item.visit_date}T12:00:00Z`,
           })),
+        ...(rewards.entitlements || []).map((item) => ({
+          id: `reward-${item.id}`,
+          title: `${rewardName(item)} · ${rewardValue(item)}`,
+          detail:
+            item.status === "redeemed"
+              ? `Redeemed${item.redeemed_amount ? ` · Saved TT$${Number(item.redeemed_amount).toFixed(2)}` : ""}`
+              : item.status === "expired"
+                ? "Expired"
+                : item.expires_at
+                  ? `Available through ${dateLabel(rewardExpiration(item) || item.expires_at)}`
+                  : "Available",
+          date: item.redeemed_at || item.unlocked_at || new Date().toISOString(),
+        })),
       ]
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 20),
-    [rewards.level_history, rewards.visit_history],
+    [rewards.entitlements, rewards.level_history, rewards.visit_history],
   );
   if (!rewards.enabled) return null;
   return (

@@ -26,6 +26,7 @@ import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreferen
 import VipPaymentPanel, { PaymentProofCorrection } from "./VipPaymentPanel";
 import LoyaltyHeader, { LoyaltyHistory } from "./LoyaltyHeader";
 import LoyaltyActions from "./LoyaltyActions";
+import { rewardExpiration, royaltyLevelDetails } from "@/lib/salon/loyalty";
 import GiftsReferrals from "./GiftsReferrals";
 import {
   Txt,
@@ -641,7 +642,7 @@ export function AccountScreen() {
     ["Wallet", "Orders & Payments", "Purchases, deposits, credits and balances", "payments"],
     ["Heart", "Favorites", "Saved services, products and workshops", "favorites"],
     ["Images", "Photos & Videos", "Privately share your beauty inspiration", "my-media"],
-    ["Crown", "Royalty Rewards", "History, benefits and reward redemption", "royalty-rewards"],
+    ["Crown", "Royalty Program", "Levels, benefits and reward redemption", "royalty-rewards"],
     [
       "GraduationCap",
       "Beauty Academy",
@@ -803,6 +804,11 @@ export function AccountScreen() {
 export function RoyaltyRewardsScreen() {
   const s = useSalon();
   const c = useColors();
+  const firstName =
+    s.profile?.first_name || s.profile?.full_name?.split(" ")[0] || s.rewards.first_name || "Royal Guest";
+  const birthdayReward = s.rewards.entitlements.find(
+    (entry) => entry.kind === "birthday" && entry.status === "available",
+  );
   return (
     <Shell footer={false} contentTopPadding={12}>
       <View style={{ width: "100%", maxWidth: 720, alignSelf: "center", gap: 14 }}>
@@ -824,13 +830,127 @@ export function RoyaltyRewardsScreen() {
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Txt size={26} bold>
-              Royalty Rewards
+              Welcome to the Lady J Royalty Program
             </Txt>
             <Txt size={13} color={c.mutedForeground}>
-              Your Royalty history, benefits and available rewards.
+              Every Visit Brings You Closer to Royalty.
             </Txt>
           </View>
         </View>
+        <LoyaltyHeader rewards={s.rewards} firstName={firstName} onChanged={s.refreshPrivate} />
+        <Card style={{ gap: 9, borderColor: c.goldBorder }}>
+          <Txt serif size={23}>
+            Your loyalty means more than another appointment.
+          </Txt>
+          <Txt color={c.mutedForeground}>
+            Every visit represents the trust you place in us, and we believe that trust deserves to
+            be celebrated.
+          </Txt>
+          <Txt color={c.mutedForeground}>
+            That’s why we created the Lady J Royalty Program—a complimentary experience designed to
+            recognize your loyalty, celebrate your milestones, and reward you with exclusive savings
+            of up to 50%.
+          </Txt>
+          <Txt bold>
+            Because at Lady J, you’re not simply another appointment. You’re part of something
+            special.
+          </Txt>
+        </Card>
+        <Card style={{ gap: 8, backgroundColor: c.goldSurface, borderColor: c.goldBorder }}>
+          <Txt serif size={23}>
+            Your Royalty. Your Rewards. Our Appreciation.
+          </Txt>
+          <Txt>
+            Membership is complimentary. There are no membership fees, no complicated points to
+            collect, and no loyalty cards to carry.
+          </Txt>
+          <Txt>
+            Simply enjoy your favorite services while we automatically recognize every qualifying
+            visit. The more you visit, the more Royalty you unlock.
+          </Txt>
+        </Card>
+        <View style={{ gap: 10 }}>
+          {royaltyLevelDetails.map((item) => {
+            const highest = item.level === 7;
+            return (
+              <Card
+                key={item.level}
+                style={{
+                  gap: 7,
+                  borderColor: c.goldBorder,
+                  ...(highest ? { backgroundColor: c.goldSurface } : {}),
+                }}
+              >
+                <Txt serif size={20}>
+                  {item.title}
+                </Txt>
+                <Txt color={c.mutedForeground}>{item.message}</Txt>
+                <Txt bold color={c.brandAccent}>
+                  {item.rewardLabel}
+                </Txt>
+                <Txt size={13}>{item.eligibility}</Txt>
+                {item.level > 1 && (
+                  <Txt size={12} color={c.mutedForeground}>
+                    One-time milestone reward · Valid for 30 days · Eligible service charges only
+                  </Txt>
+                )}
+              </Card>
+            );
+          })}
+        </View>
+        <Card style={{ gap: 8, backgroundColor: c.goldSurface, borderColor: c.goldBorder }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+            <Icon name="Gift" size={22} color={c.brandAccent} />
+            <Txt serif size={23}>
+              Your Birthday. Our Celebration.
+            </Txt>
+          </View>
+          <Txt>
+            Your birthday is more than another date on the calendar. It’s an opportunity for us to
+            celebrate YOU.
+          </Txt>
+          <Txt>
+            As part of the Lady J Royalty experience, eligible clients receive a special birthday
+            gift—our way of adding a little extra beauty to your special day.
+          </Txt>
+          <Txt bold color={c.brandAccent}>
+            Your Birthday Gift: TT$50 OFF
+          </Txt>
+          <Txt size={13}>
+            Available from 7 days before through 7 days after your birthday · One reward per eligible
+            client per year · Cannot be combined with other promotional discounts · Automatically
+            tracked in your account.
+          </Txt>
+          {!!birthdayReward?.expires_at && (
+            <Txt bold>
+              Use by {dateLabel(rewardExpiration(birthdayReward) || birthdayReward.expires_at)}
+            </Txt>
+          )}
+          <Txt size={12} color={c.mutedForeground}>
+            With your communication consent, Lady J sends exactly two birthday messages: one personal
+            reminder seven days before and one premium greeting on your birthday.
+          </Txt>
+        </Card>
+        <Card style={{ gap: 7 }}>
+          <Txt serif size={21}>
+            Every Visit Matters
+          </Txt>
+          <Txt color={c.mutedForeground}>
+            A qualifying visit is a completed, fully paid service appointment. Multiple services on
+            the same Trinidad and Tobago calendar day count as one visit. Your personal 12-month
+            Royalty year protects your active status from downgrades, while lifetime history and
+            achievements remain preserved.
+          </Txt>
+          <Txt size={13}>
+            One reward may be used per appointment. Milestone rewards do not combine with birthday,
+            welcome, or promotional discounts and do not apply to retail products, gift cards, or VIP
+            surcharges. Your exact savings are shown before payment.
+          </Txt>
+          <Txt bold>
+            Your loyalty is never taken for granted. Every visit matters. Every milestone deserves
+            recognition. And the more you trust Lady J, the more we celebrate you.
+          </Txt>
+        </Card>
         <LoyaltyHistory rewards={s.rewards} />
         <LoyaltyActions
           rewards={s.rewards}

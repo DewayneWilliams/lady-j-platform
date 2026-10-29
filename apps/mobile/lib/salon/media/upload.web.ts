@@ -11,6 +11,7 @@ export async function uploadFile(
 ) {
   if (signal.aborted) throw new Error("Upload cancelled.");
   const blob = await fetch(uri).then((response) => response.blob()); // Local picker/cache URI only.
+  if (signal.aborted) throw new Error("Upload cancelled.");
   const parsed = new URL(url);
   const marker = "/storage/v1/object/";
   const objectIndex = parsed.pathname.indexOf(marker);
@@ -39,11 +40,13 @@ export async function uploadFile(
       },
       onProgress: (uploaded, total) => total > 0 && progress(uploaded / total),
       onSuccess: () => {
+        if (settled) return;
         settled = true;
         signal.removeEventListener("abort", abort);
         resolve();
       },
       onError: (reason) => {
+        if (settled) return;
         settled = true;
         signal.removeEventListener("abort", abort);
         reject(
@@ -56,16 +59,29 @@ export async function uploadFile(
       },
     });
     const abort = () => {
-      if (!settled) void upload.abort(false);
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener("abort", abort);
+      // tus abort deliberately skips onError. Settle our caller so its busy state clears.
+      // Keep the remote upload and fingerprint available for the existing retry flow.
+      void upload.abort(false).catch(() => undefined);
+      reject(new Error("Upload paused. Retry to resume it."));
     };
     signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) {
+      abort();
+      return;
+    }
     void upload
       .findPreviousUploads()
       .then((previous) => {
+        if (settled || signal.aborted) return;
         if (previous.length) upload.resumeFromPreviousUpload(previous[0]);
         upload.start();
       })
       .catch((reason) => {
+        if (settled) return;
+        settled = true;
         signal.removeEventListener("abort", abort);
         reject(reason);
       });

@@ -57,11 +57,12 @@ const titles: Record<string, string> = {
   workshop: "Workshop Details",
 };
 export default function Page() {
-  const { page, id, kind, next } = useLocalSearchParams<{
+  const { page, id, kind, next, source } = useLocalSearchParams<{
     page: string;
     id?: string;
     kind?: string;
     next?: string;
+    source?: string;
   }>();
   const go = useNav();
   const s = useSalon();
@@ -170,6 +171,7 @@ export default function Page() {
     const query = new URLSearchParams();
     if (id) query.set("id", id);
     if (kind) query.set("kind", kind);
+    if (source === "bag") query.set("source", "bag");
     content = <AccountGate next={page + (query.toString() ? "?" + query.toString() : "")} />;
   }
   return (

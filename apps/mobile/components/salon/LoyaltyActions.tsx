@@ -1,9 +1,14 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { check, db } from "@/lib/salon/client";
-import { RewardSummary } from "@/lib/salon/loyalty";
-import { Appointment, money } from "@/lib/salon/types";
-import { Action, ErrorBox, Txt, useColors } from "./ui";
+import {
+  rewardExpiration,
+  rewardName,
+  rewardValue,
+  RewardSummary,
+} from "@/lib/salon/loyalty";
+import { Appointment, dateLabel, money } from "@/lib/salon/types";
+import { Action, Card, ErrorBox, Txt, useColors } from "./ui";
 
 export default function LoyaltyActions({
   rewards,
@@ -53,33 +58,62 @@ export default function LoyaltyActions({
           {!appointment && (
             <Txt color={c.mutedForeground}>Book an appointment before applying a privilege.</Txt>
           )}
-          {rewards.entitlements
-            .filter((item) => item.status === "available")
-            .map((item) => (
-              <Action
-                key={item.id}
-                label={`${item.kind === "welcome" ? "Welcome Gift" : "Birthday Privilege"} · ${money(item.amount)} off`}
-                secondary
-                disabled={busy || !appointment}
-                onPress={() => {
-                  if (!appointment) return;
-                  setBusy(true);
-                  setError("");
-                  void Promise.resolve(
-                    db().rpc("lj_redeem_privilege", {
-                      p_entitlement: item.id,
-                      p_appointment: appointment.id,
-                    }),
-                  )
-                    .then(check)
-                    .then(onChanged)
-                    .catch((e: unknown) =>
-                      setError(e instanceof Error ? e.message : "Unable to apply this privilege."),
+          {!rewards.entitlements.length && (
+            <Txt color={c.mutedForeground}>
+              Your next Royalty milestone is waiting to be unlocked.
+            </Txt>
+          )}
+          {rewards.entitlements.map((item) => (
+            <Card key={item.id} style={{ padding: 13, gap: 5, borderColor: c.goldBorder }}>
+              <Txt bold>{rewardName(item)}</Txt>
+              <Txt color={c.brandAccent} bold>
+                {rewardValue(item)}
+                {item.max_savings ? ` · Save up to ${money(item.max_savings)}` : ""}
+              </Txt>
+              <Txt size={12} color={c.mutedForeground}>
+                {item.kind === "milestone"
+                  ? "Eligible service charges only · VIP surcharges excluded"
+                  : item.kind === "welcome"
+                    ? "First eligible service appointment of TT$250 or more"
+                    : "Eligible service appointment · Annual birthday benefit"}
+              </Txt>
+              <Txt size={12}>
+                {item.status === "available"
+                  ? item.expires_at
+                    ? `Available · Expires ${dateLabel(rewardExpiration(item) || item.expires_at)}`
+                    : "Available"
+                  : item.status === "redeemed"
+                    ? `Redeemed${item.redeemed_amount ? ` · You saved ${money(item.redeemed_amount)}` : ""}`
+                    : "Expired"}
+              </Txt>
+              {item.status === "available" && (
+                <Action
+                  label={`Apply ${rewardValue(item)}`}
+                  secondary
+                  disabled={busy || !appointment}
+                  onPress={() => {
+                    if (!appointment) return;
+                    setBusy(true);
+                    setError("");
+                    void Promise.resolve(
+                      db().rpc("lj_redeem_privilege", {
+                        p_entitlement: item.id,
+                        p_appointment: appointment.id,
+                      }),
                     )
-                    .finally(() => setBusy(false));
-                }}
-              />
-            ))}
+                      .then(check)
+                      .then(onChanged)
+                      .catch((e: unknown) =>
+                        setError(
+                          e instanceof Error ? e.message : "Unable to apply this Royalty reward.",
+                        ),
+                      )
+                      .finally(() => setBusy(false));
+                  }}
+                />
+              )}
+            </Card>
+          ))}
           {!!error && <ErrorBox message={error} />}
         </>
       )}

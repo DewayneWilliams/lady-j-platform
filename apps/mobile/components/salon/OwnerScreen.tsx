@@ -1,3 +1,4 @@
+import { productRows, serviceRows } from "@/lib/salon/catalogData";
 import { useLocalSearchParams } from "expo-router";
 import OwnerFeedback, {
   appreciationMessages,
@@ -49,6 +50,7 @@ import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { db, check, asRows } from "@/lib/salon/client";
 import { signOutCurrentDevice } from "@/lib/salon/auth";
+import { devOwnerAutoSignIn } from "@/lib/salon/testMode";
 import {
   Appointment,
   Client,
@@ -447,8 +449,8 @@ export default function OwnerScreen() {
         setClients(r[1] as Client[]);
         setTransactions(r[2] as Transaction[]);
         setPurchases(r[3] as Purchase[]);
-        setServices(r[4] as Service[]);
-        setProducts(r[5] as Product[]);
+        setServices(serviceRows(r[4]));
+        setProducts(productRows(r[5]));
         setWorkshops(r[6] as Workshop[]);
         setProfiles(r[7] as Row[]);
         setAttendance(r[8] as Row[]);
@@ -1094,6 +1096,16 @@ export default function OwnerScreen() {
         <Card style={{ gap: 22, maxWidth: 550, alignSelf: "center" }}>
           <OT size={30}>Owner sign-in</OT>
           <OT>Only the verified salon owner can open the administrative workspace.</OT>
+          {devOwnerAutoSignIn && (
+            <OA
+              label="Continue as Development Test Owner"
+              onPress={() =>
+                void s.signInDevOwner().catch((e) =>
+                  s.notify(e instanceof Error ? e.message : "Development sign-in failed."),
+                )
+              }
+            />
+          )}
           <OA label="Owner Sign-In" onPress={() => go("owner-login")} />
           <OA label="Back to Business" secondary centered onPress={() => go("home")} />
         </Card>
@@ -1658,6 +1670,7 @@ export default function OwnerScreen() {
         setSection("Overview");
       }}
       demo={demo}
+      devOwner={s.devOwner}
       onSalon={() => go("home")}
       onAdd={() => ownerAction("appointment")}
     >
@@ -2617,6 +2630,7 @@ export default function OwnerScreen() {
                     demo={demo}
                     appointments={appointments}
                     clients={clients}
+                    onChanged={() => void load()}
                     onAction={(action) => {
                       if (action.type === "tab") {
                         setTab(action.value || "Today");

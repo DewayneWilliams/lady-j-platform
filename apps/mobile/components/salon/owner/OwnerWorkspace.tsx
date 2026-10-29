@@ -18,6 +18,7 @@ export default function OwnerWorkspace({
   tab,
   onTab,
   demo,
+  devOwner = false,
   onSalon,
   onAdd,
   onAction,
@@ -26,6 +27,8 @@ export default function OwnerWorkspace({
   tab: string;
   onTab: (name: string) => void;
   demo: boolean;
+  /** Signed in as the separate Development Test Owner (DEVELOPMENT builds only). */
+  devOwner?: boolean;
   onSalon: () => void;
   onAdd: () => void;
   onAction: () => void;
@@ -205,6 +208,26 @@ export default function OwnerWorkspace({
               <Icon name="Sparkles" size={15} color={c.warning} />
               <Txt size={12} color={c.warning} style={{ flex: 1 }}>
                 DEMO · OWNER MODE · Sample data
+              </Txt>
+            </View>
+          )}
+          {devOwner && !demo && (
+            <View
+              accessibilityLabel="Development Test Owner session"
+              style={{
+                backgroundColor: c.goldSurface,
+                paddingHorizontal: desktop ? 32 : 20,
+                paddingVertical: 6,
+                borderBottomWidth: 1,
+                borderColor: c.goldBorder,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <Icon name="ShieldCheck" size={15} color={c.warning} />
+              <Txt size={12} color={c.warning} style={{ flex: 1 }}>
+                DEVELOPMENT · Test Owner · Live Development data
               </Txt>
             </View>
           )}

@@ -22,7 +22,7 @@ export function OwnerText({
       size={size}
       bold={bold}
       color={muted ? c.mutedForeground : c.foreground}
-      className={"text-base"}
+      className={"text-sm"}
       style={centered ? { alignSelf: "stretch", textAlign: "center" } : undefined}
     >
       {children}
