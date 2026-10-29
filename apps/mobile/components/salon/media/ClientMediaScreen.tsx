@@ -11,7 +11,9 @@ export default function ClientMediaScreen() {
     <Shell>
       <Heading sub="Photos & videos shared privately with you.">My media</Heading>
       <Txt>
-        Your gallery is read-only. Only items Lady J has approved for your account appear here.
+        {s.devOwner
+          ? "Manage your Development photos and videos, sharing permissions and albums."
+          : "Your gallery is read-only. Only items Lady J has approved for your account appear here."}
       </Txt>
       <Action label="Open my gallery" onPress={() => setOpen(true)} />
       {open && (

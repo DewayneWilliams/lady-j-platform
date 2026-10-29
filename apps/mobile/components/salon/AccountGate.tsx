@@ -47,14 +47,14 @@ export default function AccountGate({ next = "booking" }: { next?: string }) {
           Create a free account to choose your time, book and manage your visits with Lady J.
         </Txt>
         <Card style={{ ...styles.actions, borderColor: c.goldBorder }}>
-          <Action
+          <Action accountAccess
             label="Create free account"
             gold
             prominent
             onPress={() => go("register", { next })}
             style={styles.action}
           />
-          <Action
+          <Action accountAccess
             label="I already have an account"
             secondary
             onPress={() => go("login", { next })}

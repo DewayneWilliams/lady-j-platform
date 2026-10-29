@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import DevelopmentModeSelector from "../DevelopmentModeSelector";
 import { Image } from "expo-image";
 import { VideoView, useVideoPlayer } from "expo-video";
 import Icon from "@/lib/icons/LucideIcon";
@@ -160,6 +161,7 @@ export default function MediaViewer({
         edges={{ top: "additive", bottom: "additive", left: "additive", right: "additive" }}
         style={{ flex: 1, backgroundColor: c.background }}
       >
+        <DevelopmentModeSelector onSwitch={onClose} />
         <View style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
           <Pressable
             accessibilityRole="button"
@@ -243,6 +245,7 @@ export function MediaComparison({ items, onClose }: { items: MediaItem[]; onClos
         edges={{ top: "additive", bottom: "additive", left: "additive", right: "additive" }}
         style={{ flex: 1, backgroundColor: c.background, padding: 16, gap: 16 }}
       >
+        <DevelopmentModeSelector onSwitch={onClose} />
         <View
           style={{
             flexDirection: "row",

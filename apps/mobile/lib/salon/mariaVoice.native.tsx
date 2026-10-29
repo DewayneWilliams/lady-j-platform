@@ -1,7 +1,7 @@
 import { PermissionsAndroid, Platform } from "react-native";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import type { MariaVoice, MariaVoiceOptions } from "./mariaVoice.types";
-import * as fallback from "./mariaVoice";
+import * as fallback from "./mariaVoiceFallback";
 
 type Core = {
   MariaVoiceProvider: typeof fallback.MariaVoiceProvider;

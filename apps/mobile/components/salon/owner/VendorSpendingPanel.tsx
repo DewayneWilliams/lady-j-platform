@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
 import { asRows, check, db } from "@/lib/salon/client";
+import { useSalon } from "@/lib/salon/SalonProvider";
 import { exportCsv } from "@/lib/salon/csvExport";
 import { ownerReportPdf } from "@/lib/salon/ownerReportPdf";
 import type { ReportDocument } from "@/lib/salon/ownerReports";
@@ -325,6 +326,7 @@ export default function VendorSpendingPanel({
   onBack?: () => void;
   demo?: boolean;
 }) {
+  const { devOwner } = useSalon();
   const c = useColors(),
     saving = useRef(false);
   const [vendors, setVendors] = useState<Vendor[]>([]),
@@ -336,7 +338,7 @@ export default function VendorSpendingPanel({
     [kind, setKind] = useState<"All" | "Retail" | "Backbar">("All"),
     [from, setFrom] = useState(day().slice(0, 7) + "-01"),
     [to, setTo] = useState(day()),
-    [mode, setMode] = useState<"live" | "demo">(demo ? "demo" : "live"),
+    [mode, setMode] = useState<"live" | "demo">(demo || devOwner ? "demo" : "live"),
     [sort, setSort] = useState<"spend" | "name">("spend"),
     [selected, setSelected] = useState("all");
   const [error, setError] = useState(""),
@@ -392,10 +394,10 @@ export default function VendorSpendingPanel({
     date.setUTCDate(date.getUTCDate() - (period === "7 Days" ? 6 : 29));
     return { from: date.toISOString().slice(0, 10), to: now };
   }, [from, period, to]);
-  const active = vendors.filter((item) => item.is_demo === (mode === "demo"));
+  const active = vendors.filter((item) => devOwner || item.is_demo === (mode === "demo"));
   const filtered = purchases.filter(
     (item) =>
-      item.is_demo === (mode === "demo") &&
+      (devOwner || item.is_demo === (mode === "demo")) &&
       item.purchase_date >= range.from &&
       item.purchase_date <= range.to &&
       (kind === "All" || item.inventory_kind === kind.toLowerCase()) &&

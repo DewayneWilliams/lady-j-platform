@@ -1,7 +1,9 @@
 import { displayDateTime } from "@/lib/salon/dates";
+import DevelopmentModeSelector, { DevelopmentModeDismissContext } from "../DevelopmentModeSelector";
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   View,
+  Platform,
   Modal,
   Pressable,
   FlatList,
@@ -111,13 +113,19 @@ export default function ClientMediaGallery({
   >([]);
   const [clientContacts, setClientContacts] = useState<{ id: string; granted: boolean }[]>([]);
   const [revokeConfirm, setRevokeConfirm] = useState(false);
-  const prefKey = "lj-media-sort:" + s.session?.user.id;
+  // SecureStore forbids colons; keep the existing web key to retain browser preferences.
+  const prefKey = (Platform.OS === "web" ? "lj-media-sort:" : "lj-media-sort.") + s.session?.user.id;
   useEffect(() => {
     let active = true;
     void sessionStorage.getItem(prefKey).then((value) => {
       if (active) {
         setFilters((v) => ({ ...v, sort: value === "asc" ? "asc" : "desc" }));
         setPrefsReady(true);
+      }
+    }).catch(() => {
+      if (active) {
+        setPrefsReady(true);
+        s.notify("Your saved media sort order could not be loaded. Showing newest first.");
       }
     });
     return () => {
@@ -313,6 +321,7 @@ export default function ClientMediaGallery({
     });
   }
   return (
+    <DevelopmentModeDismissContext.Provider value={onClose}>
     <Modal
       visible
       animationType="slide"
@@ -325,6 +334,7 @@ export default function ClientMediaGallery({
         edges={{ top: "additive", bottom: "additive", left: "additive", right: "additive" }}
         style={{ flex: 1, backgroundColor: c.background }}
       >
+        <DevelopmentModeSelector owner={owner} />
         <View style={{ flex: 1, maxWidth: 1280, width: "100%", alignSelf: "center" }}>
           <View
             style={{
@@ -418,7 +428,9 @@ export default function ClientMediaGallery({
                   accessibilityState={{ selected: filters.sort === sort }}
                   onPress={() => {
                     setFilters((v) => ({ ...v, sort }));
-                    void sessionStorage.setItem(prefKey, sort);
+                    void sessionStorage.setItem(prefKey, sort).catch(() =>
+                      s.notify("Your sort order changed, but could not be saved on this device."),
+                    );
                   }}
                   style={{
                     flex: 1,
@@ -1245,5 +1257,6 @@ export default function ClientMediaGallery({
         </MediaSheet>
       )}
     </Modal>
+    </DevelopmentModeDismissContext.Provider>
   );
 }

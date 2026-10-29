@@ -165,13 +165,13 @@ export default function OwnerWorkspace({
               <ThemeToggle color={c.headerInk} />
               {desktop ? (
                 <OwnerButton
-                  label={demo ? "CLIENT MODE" : "View salon"}
+                  label={demo || devOwner ? "CLIENT MODE" : "View salon"}
                   secondary
                   onPress={onSalon}
                 />
               ) : (
                 <Pressable
-                  accessibilityLabel={demo ? "Open Client View" : "View salon"}
+                  accessibilityLabel={demo || devOwner ? "Open Client View" : "View salon"}
                   accessibilityRole="button"
                   onPress={onSalon}
                   style={{
@@ -186,13 +186,13 @@ export default function OwnerWorkspace({
                 >
                   <Icon name="ArrowUpRight" size={18} color={c.headerInk} />
                   <Txt size={11} bold color={c.headerInk}>
-                    {demo ? "CLIENT MODE" : "Salon"}
+                    {demo || devOwner ? "CLIENT MODE" : "Salon"}
                   </Txt>
                 </Pressable>
               )}
             </View>
           </View>
-          {demo && (
+          {(demo || devOwner) && (
             <View
               style={{
                 backgroundColor: c.goldSurface,
@@ -207,27 +207,7 @@ export default function OwnerWorkspace({
             >
               <Icon name="Sparkles" size={15} color={c.warning} />
               <Txt size={12} color={c.warning} style={{ flex: 1 }}>
-                DEMO · OWNER MODE · Sample data
-              </Txt>
-            </View>
-          )}
-          {devOwner && !demo && (
-            <View
-              accessibilityLabel="Development Test Owner session"
-              style={{
-                backgroundColor: c.goldSurface,
-                paddingHorizontal: desktop ? 32 : 20,
-                paddingVertical: 6,
-                borderBottomWidth: 1,
-                borderColor: c.goldBorder,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <Icon name="ShieldCheck" size={15} color={c.warning} />
-              <Txt size={12} color={c.warning} style={{ flex: 1 }}>
-                DEVELOPMENT · Test Owner · Live Development data
+                DEMO · OWNER MODE · {devOwner ? "Development data" : "Sample data"}
               </Txt>
             </View>
           )}

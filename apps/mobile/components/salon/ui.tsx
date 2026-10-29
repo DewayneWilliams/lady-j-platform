@@ -1,6 +1,9 @@
 import React from "react";
+import { developmentDemoSelector } from "@/lib/salon/testMode";
+import SubtleShimmer from "./SubtleShimmer";
 import {
   View,
+  ActivityIndicator,
   Text,
   Pressable,
   TextInput,
@@ -184,6 +187,7 @@ export function Heading({
 export function Action({
   label: labelProp,
   onPress,
+  accountAccess = false,
   secondary = false,
   gold = false,
   inverted = false,
@@ -198,6 +202,7 @@ export function Action({
   id,
   contentColor: contentColorOverride,
 }: {
+  accountAccess?: boolean;
   label?: string;
   onPress?: () => void;
   secondary?: boolean;
@@ -228,7 +233,68 @@ export function Action({
           : gold
             ? c.primaryForeground
             : c.primaryForeground);
-  return null;
+  if (!developmentDemoSelector && !accountAccess) return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: unavailable, busy }}
+      testID={id || controlTestId("action", label, "action")}
+      disabled={unavailable}
+      onPress={onPress}
+      style={({ pressed }) => [
+        {
+          minHeight: prominent ? 52 : 46,
+          borderRadius: 10,
+          paddingHorizontal: 12,
+          paddingVertical: prominent ? 11 : 8,
+          maxWidth: "100%",
+          minWidth: 0,
+          flexShrink: 1,
+          flexDirection: "row",
+          gap: 8,
+          alignItems: "center",
+          justifyContent: "center",
+          alignSelf: "flex-start",
+          overflow: "hidden",
+          backgroundColor: secondary
+            ? c.card
+            : gold
+              ? c.brandAccentFill
+              : inverted
+                ? c.foreground
+                : c.primary,
+          borderColor: secondary
+            ? c.border
+            : gold
+              ? c.brandAccentFill
+              : inverted
+                ? c.foreground
+                : c.primary,
+          borderWidth: 1,
+          opacity: pressed ? 0.86 : 1,
+        },
+        style,
+        unavailable && { backgroundColor: c.muted, borderColor: c.border, opacity: 1 },
+      ]}
+    >
+      {shimmer && !unavailable && (
+        <SubtleShimmer interval={shimmerInterval} travelDistance={620} borderRadius={11} />
+      )}
+      {busy ? (
+        <ActivityIndicator color={contentColor} />
+      ) : icon ? (
+        <Icon name={icon} size={22} color={iconColor || contentColor} />
+      ) : null}
+      <ButtonLabel
+        size={prominent ? 22 : secondary ? 18 : 20}
+        color={contentColor}
+        style={{ textAlign: "center" }}
+      >
+        {label}
+      </ButtonLabel>
+    </Pressable>
+  );
 }
 export function IconButton({
   name,
@@ -315,7 +381,25 @@ export function Card({
 }
 export function Tag({ children, gold = false }: { children: React.ReactNode; gold?: boolean }) {
   const c = useColors();
-  return null;
+  if (!developmentDemoSelector) return null;
+  return (
+    <View
+      style={{
+        alignSelf: "flex-start",
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+        maxWidth: "100%",
+        minWidth: 0,
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 1,
+        backgroundColor: gold ? c.muted : c.secondary,
+      }}
+    >
+      <ButtonLabel color={gold ? c.warning : c.secondaryForeground}>{children}</ButtonLabel>
+    </View>
+  );
 }
 export function Field({
   label: labelProp,
@@ -323,6 +407,7 @@ export function Field({
   onChangeText,
   placeholder,
   secureTextEntry = false,
+  autoCapitalize,
   multiline = false,
   keyboardType = "default",
   large = false,
@@ -332,6 +417,7 @@ export function Field({
   onChangeText?: (v: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
   multiline?: boolean;
   keyboardType?: "default" | "email-address" | "numeric" | "phone-pad" | "decimal-pad";
   large?: boolean;
@@ -355,7 +441,7 @@ export function Field({
         secureTextEntry={secureTextEntry}
         multiline={multiline}
         keyboardType={keyboardType}
-        autoCapitalize={keyboardType === "email-address" || secureTextEntry ? "none" : "sentences"}
+        autoCapitalize={autoCapitalize ?? (keyboardType === "email-address" || secureTextEntry ? "none" : "sentences")}
         style={{
           fontFamily: fonts.body,
           fontSize: large ? 20 : 16,
@@ -494,7 +580,19 @@ export function Empty({
 }
 export function ErrorBox({ message, retry }: { message: string; retry?: () => void }) {
   const c = useColors();
-  return null;
+  if (!developmentDemoSelector || !message) return null;
+  return (
+    <Card
+      style={{
+        borderColor: c.destructive,
+        marginBottom: 16,
+        gap: 8,
+      }}
+    >
+      <Txt color={c.destructive}>{message}</Txt>
+      {retry && <LinkText onPress={retry}>Try again</LinkText>}
+    </Card>
+  );
 }
 export const shared = {
   row: { flexDirection: "row", alignItems: "center", gap: 10 },

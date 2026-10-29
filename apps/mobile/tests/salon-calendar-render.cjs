@@ -30,8 +30,8 @@ const compile = (p, modules) => {
 const host = ({ children, testID, style, ...p }) =>
   React.createElement(
     "div",
-    { "data-testid": testID, style, "aria-label": p.accessibilityLabel },
-    children,
+    { "data-testid": testID, style: typeof style === "function" ? style({ pressed: false }) : style, "aria-label": p.accessibilityLabel },
+    children ?? p.label,
   );
 const rn = { View: host, Pressable: host };
 const ui = {
@@ -40,6 +40,7 @@ const ui = {
     mutedForeground: "#666",
     calendarConfirmed: "#22A06B",
     calendarConsultation: "#2166D8",
+    calendarBlocked: "#000000",
   }),
   Txt: host,
   Card: host,
@@ -51,6 +52,9 @@ const dot = compile("components/salon/owner/CalendarActivityDot.tsx", {
   "../ui": ui,
   "@/lib/salon/calendarActivity": activity,
 });
+const blockMenu = compile("components/salon/owner/BlockTimeMenu.tsx", {
+  "react-native": rn, "../ui": ui,
+}).default;
 const calendar = compile("components/salon/owner/CalendarTools.tsx", {
   "react-native": rn,
   "@/lib/icons/LucideIcon": () => null,
@@ -60,7 +64,7 @@ const calendar = compile("components/salon/owner/CalendarTools.tsx", {
   "./OwnerUI": { OwnerButton: host, OwnerText: host },
   "./CalendarActivityDot": dot,
   "./CalendarLegend": () => null,
-  "./BlockTimeMenu": () => null,
+  "./BlockTimeMenu": blockMenu,
   "./CurrentDateOutline": () => null,
 }).default;
 const base = {
@@ -90,7 +94,7 @@ const render = (appointments) =>
 const contents = (html) =>
   html.match(/data-testid="calendar-dots-2026-10-20"[^>]*>(.*?)<\/div>/s)?.[1];
 require("node:test").test(
-  "month renders only present appointment colors, with no default dot outlines",
+  "month renders actual appointment and blocked activity without empty-date dots",
   () => {
     let html = render([]);
     assert.equal(contents(html), "");
@@ -101,9 +105,21 @@ require("node:test").test(
     html = render([{ ...base, status: "cancelled" }]);
     assert.equal(contents(html), "");
     html = render([{ ...base, kind: "block", block_reason: "personal" }]);
-    assert.equal(contents(html), "");
+    assert.equal((html.match(/aria-label="blocked activity"/g) || []).length, 1);
+    assert(contents(html).includes("background-color:#000000"));
     console.log(
-      "PASS: rendered month shows no dot outlines for empty/cancelled/block-only dates; duplicate appointments render one centered colored dot.",
+      "PASS: rendered month shows no dot outlines for empty/cancelled dates; blocks render a black indicator; duplicate appointments render one centered colored dot.",
     );
   },
 );
+
+require("node:test").test("calendar actions render Add Appointment then black Block Time in one nonwrapping row", () => {
+  const html = render([]);
+  const actions = html.slice(html.indexOf('data-testid="calendar-actions"'));
+  assert(actions.includes("flex-direction:row"));
+  assert(actions.includes("flex-wrap:nowrap"));
+  assert(actions.indexOf("Add Appointment") >= 0);
+  assert(actions.indexOf("Add Appointment") < actions.indexOf("Block Time"));
+  assert(actions.includes("width:100%"));
+  assert(actions.includes("background-color:#000000"));
+});

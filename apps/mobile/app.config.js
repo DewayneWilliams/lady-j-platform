@@ -1,4 +1,6 @@
+const appScheme = "lady-j";
 module.exports = {
+  extra: { authCallbackScheme: appScheme },
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
@@ -67,8 +69,7 @@ module.exports = {
 
 
 
-
-  scheme: "lady-j",
+  scheme: appScheme,
   slug: "lady-j",
   splash: {
     image: "./assets/images/splash.png",

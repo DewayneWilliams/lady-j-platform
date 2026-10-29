@@ -1,9 +1,9 @@
 import { db, check } from "./client";
 import { openAuthSessionAsync } from "expo-web-browser";
 import Constants from "expo-constants";
-import { Platform } from "react-native";
+import { Platform, Linking } from "react-native";
 import { sessionStorage } from "./sessionStorage";
-import { devOwnerCredentials } from "./testMode";
+import { devOwnerCredentials, isDevOwnerEmail } from "./testMode";
 export type SocialProvider = "google" | "facebook" | "apple";
 export type AuthProviders = Record<SocialProvider, boolean>;
 export async function availableAuthProviders(): Promise<AuthProviders> {
@@ -55,6 +55,24 @@ export function authDestination(next?: string) {
   return { page, params };
 }
 
+const realSessionKey = "lady-j-real-account-session-v1";
+// Keep the real account separate when the Development selector opens the test owner.
+export async function beginAccountAccess() {
+  const current = check(await db().auth.getSession()).session;
+  if (!isDevOwnerEmail(current?.user.email)) return;
+  const saved = await sessionStorage.getItem(realSessionKey);
+  if (saved) {
+    try {
+      const tokens = JSON.parse(saved);
+      check(await db().auth.setSession(tokens));
+      return;
+    } catch { await sessionStorage.removeItem(realSessionKey); }
+  }
+  const result = await db().auth.signOut({ scope: "local" });
+  if (result.error) throw new Error(result.error.message);
+}
+
+const pendingMarketingKey = "lady-j-auth-marketing-v1";
 const pendingDestinationKey = "lady-j-auth-destination-v1";
 export async function rememberAuthDestination(next?: string) {
   await sessionStorage.setItem(pendingDestinationKey, next || "account");
@@ -66,10 +84,11 @@ export async function consumeAuthDestination() {
 }
 
 function configuredScheme() {
-  const configured = Constants.expoConfig?.scheme;
-  const scheme = Array.isArray(configured) ? configured[0] : configured;
+  const configured = Constants.expoConfig?.extra?.authCallbackScheme || Constants.expoConfig?.scheme;
+  const candidates = Array.isArray(configured) ? configured : [configured];
+  const scheme = candidates.find(value => value && !["exp", "exps", "draftbit", "com.draftbit.livepreview"].includes(value));
   if (!scheme || !/^[a-z][a-z0-9+.-]*$/i.test(scheme))
-    throw new Error("Secure sign-in is not configured for this app build.");
+    throw new Error("Google sign-in needs a build with Lady J’s own app scheme. Use the web preview or a build from Publishing; this shared mobile preview cannot receive the account callback.");
   return scheme;
 }
 
@@ -80,27 +99,46 @@ export function oauthRedirectUrl() {
     return globalThis.location.origin + "/auth/callback";
   }
 
-  // Do not use Linking.createURL here. In a shared preview container it creates an
-  // exp:// launcher URL, which can reopen the launcher as "App Not Found". iOS
-  // ASWebAuthenticationSession captures this stable callback and returns it to the
-  // same presenting Preview app; published builds own the configured scheme.
+  // Keep the salon scheme when a shared preview overrides the native launcher schemes.
+  // iOS authentication sessions capture this callback; Android needs an installed handler.
   return `${configuredScheme()}://auth/callback`;
 }
 
-export async function completeOAuthCallback(callbackUrl: string) {
+const exchanges = new Map<string, ReturnType<typeof exchangeCallback>>();
+export function completeOAuthCallback(callbackUrl: string) {
+  const pending = exchanges.get(callbackUrl);
+  if (pending) return pending;
+  if (exchanges.size >= 8) exchanges.delete(exchanges.keys().next().value!);
+  const exchange = exchangeCallback(callbackUrl);
+  exchanges.set(callbackUrl, exchange);
+  return exchange;
+}
+async function exchangeCallback(callbackUrl: string) {
   const callback = new URL(callbackUrl);
   const error =
     callback.searchParams.get("error_description") || callback.searchParams.get("error");
   if (error) throw new Error(error);
+  const tokenHash = callback.searchParams.get("token_hash");
+  const type = callback.searchParams.get("type");
+  if (tokenHash && (type === "email" || type === "signup" || type === "recovery")) {
+    const data = check(await db().auth.verifyOtp({ token_hash: tokenHash, type }));
+    if (!data.session || !data.user) throw new Error("The email link could not be verified.");
+    return data;
+  }
   const code = callback.searchParams.get("code");
   if (!code) throw new Error("The sign-in response could not be verified. Please try again.");
   const data = check(await db().auth.exchangeCodeForSession(code));
   if (!data.session || !data.user)
     throw new Error("Sign-in has not been confirmed. Please try again.");
+  const marketing = await sessionStorage.getItem(pendingMarketingKey);
+  await sessionStorage.removeItem(pendingMarketingKey);
+  if (marketing === "true") check(await db().from("lj_profiles").update({ marketing_consent: true }).eq("id", data.session.user.id).select("id").single());
   return data;
 }
 
 export async function signOutCurrentDevice() {
+  exchanges.clear();
+  await sessionStorage.removeItem(realSessionKey);
   const client = db();
   const result = await client.auth.signOut();
   if (!result.error) return;
@@ -111,7 +149,12 @@ export async function signOutCurrentDevice() {
 }
 
 export async function socialSignIn(provider: SocialProvider, marketing: boolean) {
+  await sessionStorage.setItem(pendingMarketingKey, String(marketing));
   const redirectTo = oauthRedirectUrl();
+  const runtimeSchemes = Constants.expoConfig?.scheme;
+  const sharedPreview = (Array.isArray(runtimeSchemes) ? runtimeSchemes : [runtimeSchemes]).some(value => value === "exp" || value === "draftbit" || value === "com.draftbit.livepreview");
+  if (Platform.OS === "android" && sharedPreview && !(await Linking.canOpenURL(redirectTo)))
+    throw new Error("Google sign-in requires a Lady J build from Publishing on this Android device. The shared preview does not own Lady J’s callback. You can also sign in in the web preview.");
   const { url } = check(
     await db().auth.signInWithOAuth({
       provider,
@@ -119,6 +162,11 @@ export async function socialSignIn(provider: SocialProvider, marketing: boolean)
     }),
   );
   if (!url) throw new Error("This sign-in provider is not configured yet. Please use email.");
+  if (Platform.OS === "web") {
+    // Full-page PKCE avoids browser popup blocking after the async provider request.
+    globalThis.location.assign(url);
+    return null;
+  }
   const result = await openAuthSessionAsync(url, redirectTo);
   if (result.type !== "success")
     throw new Error("Sign-in was cancelled. Your account was not changed.");
@@ -129,7 +177,7 @@ export async function socialSignIn(provider: SocialProvider, marketing: boolean)
       await db()
         .from("lj_profiles")
         .update({ marketing_consent: true })
-        .eq("id", data.user.id)
+        .eq("id", data.session!.user.id)
         .select("id")
         .single(),
     );
@@ -140,6 +188,11 @@ export async function socialSignIn(provider: SocialProvider, marketing: boolean)
 export async function signInDevelopmentOwner() {
   const credentials = devOwnerCredentials();
   if (!credentials) throw new Error("Development owner testing is not enabled in this build.");
+  const current = check(await db().auth.getSession()).session;
+  if (current && !isDevOwnerEmail(current.user.email))
+    await sessionStorage.setItem(realSessionKey, JSON.stringify({
+      access_token: current.access_token, refresh_token: current.refresh_token,
+    }));
   const data = check(await db().auth.signInWithPassword(credentials));
   if (!data.session) throw new Error("The Development Test Owner could not be signed in.");
   return data.session;

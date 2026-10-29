@@ -1,3 +1,4 @@
+import DevelopmentModeSelector from "./DevelopmentModeSelector";
 import StatusNotice from "./StatusNotice";
 import { useBottomNavigationSpacing } from "./BottomNavigation";
 import React, { useRef, useState, useEffect } from "react";
@@ -20,6 +21,7 @@ import { clientNavigationCopy } from "@/lib/salon/clientLanguage";
 import { useTheme } from "@/theming/ThemeProvider";
 import Icon from "@/lib/icons/LucideIcon";
 import { useSalon } from "@/lib/salon/SalonProvider";
+import { developmentDemoSelector } from "@/lib/salon/testMode";
 import { useReducedMotionPreference } from "@/lib/salon/useReducedMotionPreference";
 import { Txt, ButtonLabel, useColors, shared, LinkText, ErrorBox } from "./ui";
 import FloatingBag from "./FloatingBag";
@@ -39,7 +41,10 @@ export function useNav() {
       account: "/account",
     };
     if (tabs[page]) router.navigate({ pathname: tabs[page], params });
-    else if (page === "owner") router.push("/owner");
+    else if (page === "owner") {
+      if (developmentDemoSelector) router.navigate("/owner");
+      else router.push("/owner");
+    }
     else router.push({ pathname: "/[page]", params: { page, ...params } });
   };
 }
@@ -305,40 +310,7 @@ export default function Shell({
           />
         </View>
       </View>
-      {s.testMode && (
-        <View
-          accessibilityLabel="Development test mode"
-          style={{
-            backgroundColor: c.goldSurface,
-            borderBottomWidth: 1,
-            borderColor: c.goldBorder,
-            paddingHorizontal: compact ? 12 : 40,
-            paddingVertical: 6,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            minHeight: 36,
-          }}
-        >
-          <Txt size={12} bold color={c.warning}>
-            DEMO · CLIENT MODE
-          </Txt>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open Owner Dashboard test view"
-            onPress={() => {
-              s.setDemoOwner(true);
-              go("owner");
-            }}
-            style={{ paddingHorizontal: 10, paddingVertical: 5 }}
-          >
-            <Txt size={12} bold color={c.brandAccent}>
-              OWNER MODE
-            </Txt>
-          </Pressable>
-        </View>
-      )}
+      <DevelopmentModeSelector />
       <View style={{ flex: 1, minHeight: 0 }}>
         <ScrollView
           ref={scroll}

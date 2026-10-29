@@ -1,3 +1,4 @@
+import { developmentDemoSelector } from "@/lib/salon/testMode";
 import CatalogGallery from "./CatalogGallery";
 import ServiceCategories from "./ServiceCategories";
 import React, { useState } from "react";
@@ -354,10 +355,47 @@ export function WorkshopsScreen() {
             flexDirection: "row",
             flexWrap: "wrap",
             gap: 16,
-            height: 8,
+            height: developmentDemoSelector ? undefined : 8,
           }}
         >
-          {s.workshops.map((workshop) => null)}
+          {developmentDemoSelector && s.workshops.map((workshop) => (
+            <Card
+              key={workshop.id}
+              style={{
+                padding: 0,
+                overflow: "hidden",
+                width: desktop ? "31%" : "100%",
+                flexGrow: 1,
+                maxWidth: desktop ? "33%" : undefined,
+              }}
+            >
+              <CatalogGallery photos={workshop.photos} cover={workshop.image} height={180} />
+              <View style={{ padding: 16, gap: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Pressable
+                    style={{ flex: 1 }}
+                    accessibilityRole="button"
+                    onPress={() => go("workshop", { id: workshop.id })}
+                  >
+                    <Txt serif size={24}>
+                      {workshop.name}
+                    </Txt>
+                  </Pressable>
+                  <FavoriteButton kind="workshop" itemId={workshop.id} />
+                </View>
+                <Txt size={13} color={c.mutedForeground}>
+                  {workshop.starts_at
+                    ? `${dateLabel(workshop.starts_at)} · ${timeLabel(workshop.starts_at)}`
+                    : "Date to be announced"}
+                </Txt>
+                <Action
+                  label="View Workshop"
+                  secondary
+                  onPress={() => go("workshop", { id: workshop.id })}
+                />
+              </View>
+            </Card>
+          ))}
         </View>
         {!s.workshops.length && (
           <Empty
@@ -409,7 +447,7 @@ export function DetailScreen({ kind, id }: { kind: "product" | "workshop"; id: s
           <FavoriteButton kind={kind} itemId={v.id} />
           <Txt size={24}>{money(v.price)}</Txt>
           <Txt color={c.mutedForeground}>
-            {v.is_demo && /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
+            {v.is_demo && !developmentDemoSelector && /demo|sample|illustrative|demonstration|fictional/i.test(v.description)
               ? "Ask the salon for details."
               : v.description}
           </Txt>

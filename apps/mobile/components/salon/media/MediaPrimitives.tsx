@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import DevelopmentModeSelector from "../DevelopmentModeSelector";
 import {
   View,
   Pressable,
@@ -190,6 +191,7 @@ export function MediaSheet({
         edges={{ top: "additive", bottom: "additive", left: "additive", right: "additive" }}
         style={{ flex: 1, backgroundColor: c.background }}
       >
+        <DevelopmentModeSelector onSwitch={onClose} />
         <View style={{ width: "100%", maxWidth: 900, alignSelf: "center", flex: 1 }}>
           <View
             style={{

@@ -33,4 +33,10 @@ export const MARIA_TOOL_NAMES = [
   "propose_update_product",
   "propose_reschedule_appointment",
   "propose_mark_appointment_completed",
+  "get_management_schema",
+  "list_management_records",
+  "propose_save_record",
+  "propose_delete_record",
+  "propose_owner_operation",
+  "get_gifts_referrals",
 ] as const;

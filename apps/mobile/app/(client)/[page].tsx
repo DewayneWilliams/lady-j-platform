@@ -34,6 +34,8 @@ const titles: Record<string, string> = {
   account: "My Account",
   login: "Sign in",
   register: "Create an account",
+  "forgot-password": "Reset password",
+  "reset-password": "New password",
   "owner-login": "Owner sign-in",
   profile: "My Profile",
   appointments: "My Appointments",
@@ -92,6 +94,8 @@ export default function Page() {
       break;
     case "login":
     case "register":
+    case "forgot-password":
+    case "reset-password":
     case "owner-login":
       content = <AuthScreen key={page} mode={page} next={next} />;
       break;

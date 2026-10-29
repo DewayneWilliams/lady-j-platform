@@ -76,3 +76,8 @@ Owner catalog tools support public photo galleries, combined service specials wi
 - Preserve the approved visuals while bundling the existing booking font, validating catalog responses, consuming linked service IDs and serializing native storage; previously hidden UI remains subject to design approval.
 - Maria is live for the verified Owner: ElevenLabs voice plus confirmation-gated tools over existing RPCs; no extra test owner because lj_owners is single-owner.
 - Development testing uses a separate auto-signed-in Development Test Owner granted through `lj_test_owner_access` (empty in Production) instead of loosening the single-owner `lj_owners` table.
+- Final Development testing shares persistent fictional records across Client, Owner and confirmation-gated Maria management; original hidden client controls are restored only in Development, preserving the published design.
+
+Real account authentication and recovery reuse the existing forms and remain independent of the login-free Development demo selector and Test Owner session.
+
+Owner Block Time retains the original adjacent black control, restores existing reasons and private details, and shows blocked periods in month indicators; native media sort keys use SecureStore-safe characters.

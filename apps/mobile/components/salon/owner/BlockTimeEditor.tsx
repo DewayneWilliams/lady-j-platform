@@ -7,7 +7,7 @@ import { localCalendarTime } from "@/lib/salon/calendarActivity";
 import { db, check } from "@/lib/salon/client";
 import { useSalon } from "@/lib/salon/SalonProvider";
 import { DateField, TimeField } from "../DateFields";
-import { Txt, useColors } from "../ui";
+import { Field, Txt, useColors } from "../ui";
 import { OwnerButton } from "./OwnerUI";
 
 export default function BlockTimeEditor({
@@ -31,6 +31,7 @@ export default function BlockTimeEditor({
 }) {
   const c = useColors(),
     s = useSalon();
+  const [description, setDescription] = useState(block?.block_description || block?.note || "");
   const [reason, setReason] = useState(block?.block_reason || initialReason);
   const [from, setFrom] = useState(block ? localCalendarTime(block.starts_at) : date + "T10:00");
   const [to, setTo] = useState(block ? localCalendarTime(block.ends_at) : date + "T11:00");
@@ -53,10 +54,13 @@ export default function BlockTimeEditor({
       setError("End must be after start.");
       return;
     }
+    if (reason === "other" && !description.trim()) {
+      setError("Enter a description for Other (Specify).");
+      return;
+    }
     saving.current = true;
     setBusy(true);
     onBusyChange(true);
-    const description = block?.block_description || (reason === "other" ? "Blocked time" : "");
     try {
       if (live) {
         check(
@@ -65,7 +69,7 @@ export default function BlockTimeEditor({
             p_start: startDate.toISOString(),
             p_end: endDate.toISOString(),
             p_reason: reason,
-            p_description: description,
+            p_description: description.trim(),
             p_all_day: false,
             p_repeat: "none",
             p_until: null,
@@ -87,8 +91,8 @@ export default function BlockTimeEditor({
           total: 0,
           deposit: 0,
           deposit_paid: false,
-          note: description,
-          block_description: description,
+          note: description.trim(),
+          block_description: description.trim(),
           block_reason: reason,
           block_repeat: "none",
           all_day: false,
@@ -108,6 +112,12 @@ export default function BlockTimeEditor({
   return (
     <View style={{ gap: 8 }}>
       <BlockReasonField value={reason} onChange={setReason} disabled={busy} />
+      <Field
+        label={reason === "other" ? "Custom description (required)" : "Details (optional, owner only)"}
+        value={description}
+        onChangeText={setDescription}
+        multiline
+      />
       <DateField
         calendar
         label="From"

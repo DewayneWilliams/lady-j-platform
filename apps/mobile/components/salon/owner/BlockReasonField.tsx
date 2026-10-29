@@ -45,7 +45,7 @@ export default function BlockReasonField({
           insets={{ top: 20, bottom: 20, left: 20, right: 20 }}
         >
           <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
-            {blockReasons.map((reason) => (
+            {allBlockReasons.map((reason) => (
               <SelectItem
                 key={reason.value}
                 label={reason.label}

@@ -231,6 +231,7 @@ export default function CalendarTools({
         testID="calendar-actions"
         style={{
           flexDirection: "row",
+          flexWrap: "nowrap",
           alignItems: "stretch",
           justifyContent: "center",
           gap: 10,

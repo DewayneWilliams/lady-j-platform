@@ -297,7 +297,7 @@ export default function OwnerScreen() {
       setSection("Consultations");
     }
   }, [routeParams.consultation]);
-  const demo = s.demoOwner && !s.owner,
+  const demo = s.testMode && s.demoOwner && !s.owner,
     allowed = s.owner || demo;
   useEffect(() => {
     setEditingContact(false);
@@ -2605,9 +2605,13 @@ export default function OwnerScreen() {
                         />
                         {!demo && (
                           <OA
-                            label="Sign out securely"
+                            label={s.devOwner ? "Client Mode" : "Sign out securely"}
                             secondary
                             onPress={() => {
+                              if (s.devOwner) {
+                                go("home");
+                                return;
+                              }
                               s.setDemoOwner(false);
                               void signOutCurrentDevice()
                                 .then(() => go("home"))

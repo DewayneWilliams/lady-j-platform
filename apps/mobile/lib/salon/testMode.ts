@@ -13,6 +13,10 @@ export const isDevOwnerEmail = (email?: string | null) =>
 export const devOwnerCredentials = () =>
   devOwnerAutoSignIn ? { email: devOwnerEmail!, password: devOwnerPassword! } : null;
 
-// The simulated client/owner preview is superseded by the real Development Test Owner session.
+// Keep the original selector available with either development data source. A configured
+// Test Owner uses the existing live Development tools rather than the limited local demo.
+export const developmentDemoSelector =
+  development && (process.env.EXPO_PUBLIC_DEVELOPMENT_TEST_MODE === "true" || devOwnerAutoSignIn);
+
 export const developmentTestMode =
   development && process.env.EXPO_PUBLIC_DEVELOPMENT_TEST_MODE === "true" && !devOwnerAutoSignIn;

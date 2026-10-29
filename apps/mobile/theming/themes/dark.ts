@@ -30,7 +30,7 @@ const theme: Theme = {
     paymentPendingBadge: "#FF6262",
     paymentPending: "#FF6262",
     calendarConfirmed: "#3DFF91",
-    calendarBlocked: "#FFFFFF",
+    calendarBlocked: "#000000",
     calendarVip: "#FFD65A",
     calendarConsultation: "#5B9BFF",
     consultationFill: "#5B9BFF",

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import { usePathname } from "expo-router";
 import { AppState, Platform } from "react-native";
 import { useForegroundRefresh } from "./useForegroundRefresh";
 import { orderServicesByCategory } from "./categories";
@@ -70,6 +71,9 @@ const Context = createContext<SalonState | null>(null);
 // stays signed out until the app is reopened.
 let devOwnerAutoAttempted = false;
 export function SalonProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const accountRoute = useRef(false);
+  accountRoute.current = ["/login", "/register", "/owner-login", "/forgot-password", "/reset-password", "/auth/callback"].includes(pathname);
   const [services, setServices] = useState<Service[]>([]),
     [homeSpecials, setHomeSpecials] = useState<Service[]>([]),
     [products, setProducts] = useState<Product[]>([]),
@@ -158,7 +162,7 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
           .from(signedIn ? "lj_settings" : "lj_public_settings")
           .select("*")
           .single(),
-        client.from("lj_promotions").select("*").eq("active", true),
+        signedIn ? client.from("lj_promotions").select("*").eq("active", true) : Promise.resolve({ data: [], error: null }),
         client.from("lj_public_home_specials").select("*").order("name").limit(2),
       ]);
       if (generation !== catalogGeneration.current) return;
@@ -246,9 +250,10 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
         notify(e instanceof Error ? e.message : "Unable to load your account.");
     }
   }, [customerId, notify]);
+  const canLoadCatalog = !devOwnerAutoSignIn || authReady;
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (canLoadCatalog) void refresh();
+  }, [refresh, canLoadCatalog]);
   useEffect(() => {
     if (!supabase) {
       setAuthReady(true);
@@ -257,7 +262,13 @@ export function SalonProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, s) => {
-      if (event === "INITIAL_SESSION" && !s && devOwnerAutoSignIn && !devOwnerAutoAttempted) {
+      if (
+        event === "INITIAL_SESSION" &&
+        devOwnerAutoSignIn &&
+        !s &&
+        !accountRoute.current &&
+        !devOwnerAutoAttempted
+      ) {
         devOwnerAutoAttempted = true;
         // Deferred: Supabase must not be called from inside its own auth callback.
         setTimeout(() => {

@@ -53,11 +53,9 @@ export function activitiesOnDate(activities: Appointment[], day: string) {
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at) || a.id.localeCompare(b.id));
 }
 export function dotsOnDate(activities: Appointment[], day: string): ActivityColor[] {
-  // Month dots describe booked client visits; private blocks remain in the agenda.
+  // Owner month activity includes blocked periods as well as booked visits.
   const present = new Set(
-    activitiesOnDate(activities, day)
-      .filter((item) => item.kind !== "block")
-      .map(activityColor),
+    activitiesOnDate(activities, day).map(activityColor),
   );
   return activityLegend.map((item) => item.key).filter((key) => present.has(key));
 }

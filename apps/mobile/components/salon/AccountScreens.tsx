@@ -8,6 +8,8 @@ import { useSalon } from "@/lib/salon/SalonProvider";
 import { db, check } from "@/lib/salon/client";
 import { money, dateLabel, timeLabel, type Product, type Service } from "@/lib/salon/types";
 import {
+  beginAccountAccess,
+  oauthRedirectUrl,
   availableAuthProviders,
   socialSignIn,
   authDestination,
@@ -243,7 +245,7 @@ export function AuthScreen({
   mode,
   next,
 }: {
-  mode: "login" | "register" | "owner-login";
+  mode: "login" | "register" | "owner-login" | "forgot-password" | "reset-password";
   next?: string;
 }) {
   const s = useSalon(),
@@ -254,6 +256,9 @@ export function AuthScreen({
     [birthday, setBirthday] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
+    [confirmation, setConfirmation] = useState(""),
+    [showPassword, setShowPassword] = useState(false),
+    [accountReady, setAccountReady] = useState(false),
     [consent, setConsent] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -262,7 +267,16 @@ export function AuthScreen({
   const [providers, setProviders] = useState<AuthProviders | null>(null),
     [providerError, setProviderError] = useState("");
   const owner = mode === "owner-login",
-    register = mode === "register";
+    register = mode === "register",
+    forgot = mode === "forgot-password",
+    reset = mode === "reset-password";
+  useEffect(() => {
+    if (!s.authReady) return;
+    let active = true;
+    void beginAccountAccess().then(() => { if (active) { s.exitTestMode(); setAccountReady(true); } })
+      .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "Account access could not be opened."); });
+    return () => { active = false; };
+  }, [s.authReady]);
   useEffect(() => {
     if (owner) return;
     let active = true;
@@ -283,29 +297,42 @@ export function AuthScreen({
     go(destination.page, destination.params);
   };
   useEffect(() => {
-    if (!owner && s.authReady && s.session) continueToAccount();
-  }, [owner, s.authReady, s.session]);
+    if (!owner && !forgot && !reset && accountReady && s.authReady && s.session && !s.devOwner) continueToAccount();
+  }, [owner, forgot, reset, accountReady, s.authReady, s.session, s.devOwner]);
   async function submit() {
     setError("");
     setSuccess("");
-    if (
-      !email.includes("@") ||
-      password.length < 8 ||
-      (register && (!firstName.trim() || !lastName.trim()))
-    ) {
-      setError(
-        "Enter your email and a password of at least 8 characters. Add your name when creating an account.",
-      );
+    if ((!reset && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) ||
+      (!forgot && (!password || ((register || reset) && password.length < 8))) ||
+      (register && (!firstName.trim() || !lastName.trim()))) {
+      setError("Enter a valid email and password. New passwords need at least 8 characters; registration also needs your first and last name.");
       return;
+    }
+    if ((register || reset) && password !== confirmation) {
+      setError("Your passwords do not match."); return;
     }
     setBusy(true);
     try {
+      if (forgot) {
+        check(await db().auth.resetPasswordForEmail(email.trim(), { redirectTo: oauthRedirectUrl() + "?next=reset-password" }));
+        setSuccess("If an account exists for this email, a password reset link is on its way. Check your inbox and spam folder.");
+        return;
+      }
+      if (reset) {
+        const current = check(await db().auth.getSession()).session;
+        if (!current || s.devOwner) throw new Error("Open the password reset link from your email first.");
+        check(await db().auth.updateUser({ password }));
+        setSuccess("Your password has been updated.");
+        return;
+      }
       if (register) {
+        await rememberAuthDestination(next);
         const r = check(
           await db().auth.signUp({
             email: email.trim(),
             password,
             options: {
+              emailRedirectTo: oauthRedirectUrl(),
               data: {
                 full_name: name,
                 first_name: firstName.trim(),
@@ -371,8 +398,8 @@ export function AuthScreen({
     setSuccess("");
     try {
       await rememberAuthDestination(next);
-      await socialSignIn(provider, consent);
-      continueToAccount();
+      const session = await socialSignIn(provider, consent);
+      if (session) continueToAccount();
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Sign-in could not be completed. Please try email.",
@@ -396,10 +423,10 @@ export function AuthScreen({
           ] as const
         ).map((v) => (
           <View key={v.key} style={{ gap: 3 }}>
-            <Action
+            <Action accountAccess
               label={"Continue with " + v.label}
               secondary
-              disabled={busy || !providers?.[v.key]}
+              disabled={busy || !accountReady || !providers?.[v.key]}
               onPress={() => void social(v.key)}
               style={{ alignSelf: "stretch", minHeight: 56 }}
             />
@@ -443,24 +470,31 @@ export function AuthScreen({
             textAlign: "center",
           }}
         >
-          {owner
+          {forgot ? "Reset your password" : reset ? "Choose a new password" : owner
             ? "Welcome back, Lady J."
             : register
               ? "A little care starts here."
               : "Your next moment awaits."}
         </Txt>
         <Txt size={17} color={c.mutedForeground}>
-          {owner
+          {forgot ? "Enter your account email and we’ll send you a secure reset link." : reset ? "Choose a password of at least 8 characters and confirm it below." : owner
             ? "Business management is exclusively for the verified salon owner."
             : "Choose your time and keep your bookings together. Your account is always free."}
         </Txt>
-        {!!error && <ErrorBox message={error} />}
+        {!!error && <Txt color={c.destructive}>{error}</Txt>}
         {!!success && (
           <Card>
             <Txt size={17}>{success}</Txt>
+            {register && <Action accountAccess label="Resend verification email" busy={busy} onPress={() => {
+              setBusy(true); setError("");
+              void db().auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: oauthRedirectUrl() } })
+                .then(result => { if (result.error) throw result.error; setSuccess("Verification email requested. Check your inbox and spam folder."); })
+                .catch(reason => setError(reason instanceof Error ? reason.message : "Unable to resend verification."))
+                .finally(() => setBusy(false));
+            }} />}
           </Card>
         )}
-        {!owner && anySocial && (
+        {!owner && !forgot && !reset && anySocial && (
           <View style={{ gap: 10 }}>
             <Txt size={14} color={c.mutedForeground}>
               Continuing creates a free account if needed. You agree to the Terms and acknowledge
@@ -490,20 +524,24 @@ export function AuthScreen({
               />
             </>
           )}
-          <Field
+          {!reset && <Field
             label="Email address"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
-          />
-          <Field
+          />}
+          {!forgot && <Field
             label="Password"
-            secureTextEntry
+            autoCapitalize="none"
+            secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
-            placeholder="At least 8 characters"
-          />
-          {!owner && (
+            placeholder={register || reset ? "At least 8 characters" : "Your password"}
+          />}
+          {(register || reset) && <Field autoCapitalize="none" label="Confirm password" value={confirmation} onChangeText={setConfirmation} secureTextEntry={!showPassword} />}
+          {!forgot && <LinkText onPress={() => setShowPassword(!showPassword)}>{showPassword ? "Hide password" : "Show password"}</LinkText>}
+          {!register && !forgot && !reset && <LinkText onPress={() => go("forgot-password")}>Forgot password?</LinkText>}
+          {!owner && !forgot && !reset && (
             <View style={{ gap: 10, marginBottom: 18 }}>
               <Check
                 label="Email me salon offers and workshop news (optional)."
@@ -524,21 +562,22 @@ export function AuthScreen({
               </View>
             </View>
           )}
-          <Action
+          <Action accountAccess
             label={
-              register ? "Create free account" : owner ? "Sign in as owner" : "Sign in with email"
+              forgot ? "Send reset link" : reset ? "Save new password" : register ? "Create free account" : owner ? "Sign in as owner" : "Sign in with email"
             }
             busy={busy}
+            disabled={!accountReady}
             gold
             onPress={() => void submit()}
             style={{ alignSelf: "stretch", minHeight: 56 }}
           />
         </View>
-        {!owner && !anySocial && socialOptions}
+        {!owner && !forgot && !reset && !anySocial && socialOptions}
         {!owner && (
           <>
-            <LinkText onPress={() => go(register ? "login" : "register", next ? { next } : {})}>
-              {register
+            <LinkText onPress={() => go(register || forgot || reset ? "login" : "register", next ? { next } : {})}>
+              {forgot || reset ? "Back to sign in" : register
                 ? "Already have an account? Sign in"
                 : "New to Lady J? Create a free account"}
             </LinkText>
@@ -548,7 +587,7 @@ export function AuthScreen({
         {owner && (
           <Card style={{ gap: 13, backgroundColor: c.secondary }}>
             <Txt size={15}>View appointments, clients and business details.</Txt>
-            <Action
+            <Action accountAccess
               label="View workspace"
               secondary
               onPress={() => {
@@ -600,8 +639,8 @@ export function AccountScreen() {
             body="Sign in to privately manage your appointments, workshop purchases, orders and personal details."
             action={
               <View style={[shared.row, { flexWrap: "wrap", justifyContent: "center" }]}>
-                <Action label="Sign in" onPress={() => go("login", { next: accountNext })} />
-                <Action
+                <Action accountAccess label="Sign in" onPress={() => go("login", { next: accountNext })} />
+                <Action accountAccess
                   label="Create an account"
                   secondary
                   onPress={() => go("register", { next: accountNext })}
@@ -658,6 +697,10 @@ export function AccountScreen() {
   ] as const;
   return (
     <Shell footer={false} contentTopPadding={0}>
+      {(s.devOwner || s.testMode) && <View style={{ flexDirection: "row", justifyContent: "center", gap: 12 }}>
+        <LinkText onPress={() => go("login")}>Login</LinkText>
+        <LinkText onPress={() => go("register")}>Create Account</LinkText>
+      </View>}
       <View
         style={{
           width: "100%",
@@ -781,8 +824,12 @@ export function AccountScreen() {
         />
         <AccountMenuRow
           icon="LogOut"
-          title={s.testMode && !s.session ? "Exit Test Mode" : "Log Out"}
+          title={s.devOwner ? "Back to Salon" : s.testMode && !s.session ? "Exit Test Mode" : "Log Out"}
           onPress={() => {
+            if (s.devOwner) {
+              go("home");
+              return;
+            }
             if (s.testMode && !s.session) {
               s.exitTestMode();
               go("home");
